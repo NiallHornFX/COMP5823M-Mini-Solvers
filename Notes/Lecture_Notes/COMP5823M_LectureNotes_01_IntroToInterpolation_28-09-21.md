@@ -14,16 +14,55 @@ ___
 **Primary Reference Literature** :
 
 * **Computer Animation, Algorithms and Techniques**, 3rd Ed, (Parent, R)
+
+Note while both the module material and my lecture notes are primarily based out of the reference textbook along with other sources, I may change up the variables and notation to what makes most sense to be based on my previous experience / use cases with such equations. An example of this is the textbook uses $u$ to denote the coefficient, where as it makes more sense to use $t$ as this is used is other sources most commonly. 
+
 ___
 
 #### Interpolating Values : Basics 
-Basic info about what is animation, specifying key frames and using interoplation to generate inbetween frames. Not writing notes on this.
+**Interpolation vs Approximation** : The difference been interpolation and approximation is that the function intersects all data points as oppose to just lying close to them / intersecting only some (Including start and end points). 
 
-Interpolation vs Approximation, difference been that interoplation, function intersects all points (keyframes) vs just lying close to them / intersecting only some (Including start and end points). 
+##### Linear Interpolation
 
-Seeing joint angles as high dimensional space (but it never is, its always reduced to 2 dimensions, f(t) = angle for each joint axis, so not sure why this concept is even mentioned).
+Most basic type of interpolation (first order) a line formed between two data points, interpolate along the line by some $t$ value. 
 
-Linear Interpolation, Geometric (function of u or t). vs Algebaric form derivations, form linear system, to solve for coefficents or expad the coefficients out to matrix form and solve for P values directly.
+Can be described in Geometric or Algebraic form, we have two interpolants i.e. coefficients $t, (1-t)$ which always sum to 1. This property ensures the curve (line in this case) falls within the geometric convex hull of entities been interpolated. Geometrically this is denoted in the form of :
+$$
+P(t) = (1-t)P_0 + tP_1
+$$
+However in more general geometric form it is typically denoted as :
+$$
+P(t) = F_0(t)P_0 + F_1(t)P_1
+$$
+Where $F_0,F_1$ are blending functions between the explcitlly declared geometric points $P_0,P_1$ hence why this is called the geometric form. 
+
+However it can also be re-written algebraically / in polynomial form, where terms are ordered (right to left) based on the coefficients with the variable raised to some power, with the final constant term been the rightmost, in the case of Linear Interpolation the highest degree / power is of course just 1, as Linear Interpolation is first order interpolation. This can be denoted : 
+$$
+P(t) = (P_1 - P_0)t + P_0 \\ P(t)= a_1t+a_0
+$$
+Both these forms (Geometric and Algebraic) can be put into Matrix representation, typically the algebraic form is used for this case, and is the form of each interpolation that will most likely be used to compute the resulting interpolated values for our use cases. And thus for matrix representations I will just use this form and omit the geometric version. 
+
+Algebraic Matrix form of Linear Interpolation : 
+$$
+P(t) = [t, 1]\begin{bmatrix}a_1\\a_0\end{bmatrix} = U^T A
+$$
+(I may switch to using actual column vectors for all vectors oppose to using transpose notation). Which in its fully expanded form:
+$$
+P(t) = [t, 1]\begin{bmatrix}-1&1\\1&0\end{bmatrix} \begin{bmatrix}P_0\\P_1\end{bmatrix} = U^T MB
+$$
+Where $U$ (In the textbook) denotes $t$ the variable vector, M is the coefficient vector and B is the known data points we want to interpolate between. This essentially creates a small $2x2$ linear system. Which could be re-ordered in the form of $Ax=b$ to solve for the interpolants coefficients.  We'll get back to this later. 
+
+##### Parameterisation by Arc Length
+
+Even though the most basic interpolation is linear, there is not necessarily a linear relationship between the changes in the parameters and the distance travelled along the curve (arc length) , hence higher order interpolation schemes can be used, consisting of higher order non linear polynomials in algebraic forms. However this means that non linear curves used, can result in non monotonic / constant velocity like results, where as the interpolation coefficient increases, the distance travelled can become non linear, this is evident in certain interpolation methods / curves. 
+
+Hence we move to methods when interpolation is paremtized by arc length as oppose to just linear length as with linear interpolation, this is vital for using a single non linear polynomial to interpolate data ethier globally or by piecewise. 
+
+!!
+
+
+
+
 
 Quadratic and Cubic Interpolation equations.
 
