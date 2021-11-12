@@ -4,7 +4,7 @@
 ___
 #### Interpolation Between nD Shapes
 
-3D Shape Interpolation
+##### 3D Shape Interpolation
 
 * Surface Based : Vertex Matching, Vertex Based Interpolation, Difficult to handle holes in topology. (FFD, Pick-Pulling modify surfaces only)
 * Volume Based : Blending Volumes deformations, less sensitive to surface topology, more expensive as requires full volumetric representation. 
@@ -49,7 +49,7 @@ Other methods :
 
 * Mapping objects to unit sphere. (Sig 1992, Shape Transformation for Polyhedral Objects)
 
-* Wang, Harmonic Parameterisation by Electorstatics (He plugging a lot of his papers here ! ) Parameterisation for correspondence mapping using intermediate unit sphere representation. Then it becomes a simple sphere mapping problem for correspondence. 
+* Wang, Harmonic Parameterisation by Electrostatics (He plugging a lot of his papers here ! ) Parameterisation for correspondence mapping using intermediate unit sphere representation. Then it becomes a simple sphere mapping problem for correspondence. 
 
 ##### 2D Morphing : 
 
