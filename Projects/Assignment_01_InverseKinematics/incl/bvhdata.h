@@ -37,7 +37,6 @@ struct joint
 
 	Eigen::Vector3f offset; 
 
-
 	joint *parent;
 	std::vector<joint*> children; 
 
@@ -49,7 +48,7 @@ class BVH_Data
 {
 public:
 	BVH_Data(std::string filename);
-	~BVH_Data();
+	~BVH_Data() {}
 
 
 private:

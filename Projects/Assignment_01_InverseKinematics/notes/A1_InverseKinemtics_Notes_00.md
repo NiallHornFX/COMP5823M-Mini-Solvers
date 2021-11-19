@@ -32,7 +32,9 @@ ___
 
 BVH File defines Hierarchy of joints at each frame, for some number of frames. The Joints are defined in rest position, then at the bottom half, each line defines each joints offset per frame. It can be parsed as a recursive tree of joints starting from root, where each joint has its own child joints down to each end joint / leaf. 
 
-The First half of the file denotes the joint hierarchy starting below the `HIERACHY` header, with the first joint been the root node (typically hips). Each joint is then a recursive hierarchy of child joints, until the `End Site` is reached i.e. the leaf node of that branch, this also has an offset and will be used for the end effector in IK context later. 
+The First half of the file denotes the skeleton hierarchy starting below the `HIERACHY` header, with the first joint been the root node (typically hips). Each joint is then a recursive hierarchy of child joints, until the `End Site` is reached i.e. the leaf node of that branch, this also has an offset and will be used for the end effector in IK context later. 
+
+Technically they are segments with joints be defined after the joint keyword. But we just treat these segments/bones as joints (unless they are root or end site) and the bones are implicitly defined between them. 
 
 Each joint, consists of Offset per joint and Channels per joint. There's no definition of bones / linkages themselves, they are implicitly defined between joints. 
 
@@ -73,23 +75,23 @@ Frame Time: 0.041667
 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 
 ```
 
+Typically only the root has 6 channels, with the children have 3 channels. 
+
 ___
 
-##### BVH_Data Class :
+#### BVH_Data Class :
 
-bvhdata.h, This file also is where joint and channel are declared.
-
-
+`bvhdata` is where the `BVH_Data` class is declared, This file also is where joint and channel are declared. 
 
 Plan to have both the Loading,Parsing and Writing within the same class, this class will also store the parsed state of the Skeleton / Tree. 
 
-This will contain the time based state of the skeleton tree, both as loaded from the original BVH file, and then will be modified from the IK Solve. 
+This will contain the time based state of the skeleton tree, in the form of per channel frame data loaded from the original BVH file.  This will later be modified from the IK Solve. 
 
 Maybe I can serialize and extract this out and store in some separate skeleton class later. 
 
+First part of the parsing is checking which part of the BVH File we are in, secondly we check if we are in a ROOT or JOINT like, if so we create a new joint, and then for each successive line we update its data, we need to create a local stack to push each new joints data into (because of the recursive nature of the hierarchy).
 
-
-
+So because parsing is line by line, each new loop iteration has no knowledge of previous hence the need for a stack of joints.
 
 Each joint has array of pointer to its channels.
 
@@ -97,11 +99,21 @@ If joint is end_site, its offset is the end postion.
 
 Each Channel stores its type (of the 6DOFs), an Index. 
 
-But then each channel has frame dependent data, I'm not sure if it would make sense to store this per frame, oppose to concatenating together. If the latter we know the offset per frame is just the number of channels. 
+##### Channel Per Frame Data : 
+
+But then each channel has frame dependent data, I'm not sure if it would make sense to store this per frame, oppose to concatenating together. If the latter we know the offset per frame is just the number of channels. I think it might just be easier to store channels as single vector and then yeah, define the offset based on the current set frame. 
+
+But we could store per channel, an array of per frame channel values directly. 
+
+I think the sample code, uses index offsets to get the current channel data per frame
 
 The example code maps the joint pointers to joint names etc, i'm gonna skip this for now and just id joints by indices along the tree. 
 
+We can index channels as we encounter them in the tree, this should lead to their linear indices within the motion data per frame. Thus if we store channels in a per frame array, we should be able to look up each frame (outer array), each channel (by index), inner array.
 
+##### Using Sample Code for Parsing
+
+I'm thinking about using the sample code for parsing due to time limitations, but it would be better to write my own and possibly adapt it to make more sense for me. 
 
 ___
 
