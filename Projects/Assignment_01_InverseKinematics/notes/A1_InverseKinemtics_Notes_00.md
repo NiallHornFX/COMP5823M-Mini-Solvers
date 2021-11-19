@@ -6,7 +6,13 @@ ___
 
 #### Misc Notes
 
-Aim for project : A viewer application with a viewport, DearImGui based IM Mode GUI for control which I may implement via a controller class, with mouse pick-point to define end effector positions / position constraints, load BVH Files, some sort of timeline to scrub the animation. Control for which IK method is used, etc. Then for visualization of the skeleton bones as lines, but ideally as bone geo as well, along with spheres for joints and target positions/end effector. Have a ground plane / grid, and some sort of viewport fog/horizon if there's times will implement shadows from a headlight source light, basically its gonna be a tiny anim app (but you cannot set/store keyframes etc) its mainly for loading BVH Files and writing them back out based on user modified end effectors and resulting joints configuration. Might be a good idea to follow Model,View,Controller paradigm for this app. Eigen will be used for Linear Algebra, Modern OpenGL for rendering. 
+Aim for project : A viewer application with a viewport, DearImGui based IM Mode GUI for control which I may implement via a controller class, with mouse pick-point to define end effector positions / position constraints, load BVH Files, some sort of timeline to scrub the animation. Control for which IK method is used, etc. 
+
+Then for visualization of the skeleton bones as lines, but ideally as bone geo as well, along with spheres for joints and target positions/end effector. Have a ground plane / grid, and some sort of viewport fog/horizon if there's times will implement shadows from a headlight source light, basically its gonna be a tiny anim app (but you cannot set/store keyframes etc) its mainly for loading BVH Files and writing them back out based on user modified end effectors and resulting joints configuration. 
+
+Might be a good idea to follow Model,View,Controller paradigm for this app. Eigen will be used for Linear Algebra, Modern OpenGL for rendering. 
+
+I would of used Qt for the application, GUI, OpenGL etc. But for this project i'm gonna stick with Imgui. 
 
 While IK is used for solving the joint angles from the BVH joint configuration, FK is used to then define the transforms for rendering / viz. 
 
@@ -91,29 +97,104 @@ Maybe I can serialize and extract this out and store in some separate skeleton c
 
 First part of the parsing is checking which part of the BVH File we are in, secondly we check if we are in a ROOT or JOINT like, if so we create a new joint, and then for each successive line we update its data, we need to create a local stack to push each new joints data into (because of the recursive nature of the hierarchy).
 
-So because parsing is line by line, each new loop iteration has no knowledge of previous hence the need for a stack of joints.
+So because parsing is line by line, each new loop iteration has no knowledge of previous hence the need for a stack of joints (using a vector, so not really a stack). A new joint is started after ethier `ROOT` or `JOINT` keyword, and then For each subsequent line, if the starting char is `{` the current new joint is referenced, else if the line starting char is `}` the back vector joint is then extracted (ie top of the stack) and referenced untill the final enclosing `}` is reached which is the first joint added. Essentially each  `{` defines the start of the scope of the current joint, when the next `JOINT` is encountered a new joint is created and its parent is the previously created joint. 
 
-Each joint has array of pointer to its channels.
+We can see part of the parsing code here to explain this better, note joint_stack is just a std::vector<joint*> but it would make more sense to use a std stack container : 
 
-If joint is end_site, its offset is the end postion. 
+```c++
+// BVH_Data::Load() 
+// [..]
+// Start of Joint Block
+if (strcmp(token, "{") == 0)
+{
+
+joint_stack.push_back(joint);
+joint = new_joint;
+continue;
+}
+
+// End of Joint Block
+if (strcmp(token, "}") == 0)
+{
+
+joint = joint_stack.back();
+joint_stack.pop_back();
+is_site = false;
+continue;
+}
+
+// Start of Joint Information
+if ((strcmp(token, "ROOT") == 0) ||
+(strcmp(token, "JOINT") == 0))
+{
+
+new_joint = new Joint();
+new_joint->idx = joints.size();
+new_joint->parent = joint;
+// Set if end (end site)
+new_joint->is_end = false;
+// Set if root
+if (strcmp(token, "ROOT") == 0) new_joint->is_root = true; else new_joint->is_root = false; 
+new_joint->offset[0] = 0.0;  new_joint->offset[1] = 0.0;  new_joint->offset[2] = 0.0;
+//new_joint->site[0] = 0.0;  new_joint->site[1] = 0.0;  new_joint->site[2] = 0.0;
+
+// Append to joint array
+joints.push_back(new_joint);
+
+// If valid parent, add self as child joint. 
+if (joint) joint->children.push_back(new_joint);
+
+
+token = strtok(NULL, "");
+while (*token == ' ')  token++;
+new_joint->name = token;
+
+
+//joint_index[new_joint->name] = new_joint;
+continue;
+}
+
+// Start of end information
+if ((strcmp(token, "End") == 0))
+{
+new_joint = joint;
+is_site = true;
+continue;
+}
+// [..]
+```
+
+Each joint has array of pointer to its channels. If joint is end_site, its offset is the end postion. 
 
 Each Channel stores its type (of the 6DOFs), an Index. 
 
 ##### Channel Per Frame Data : 
 
-But then each channel has frame dependent data, I'm not sure if it would make sense to store this per frame, oppose to concatenating together. If the latter we know the offset per frame is just the number of channels. I think it might just be easier to store channels as single vector and then yeah, define the offset based on the current set frame. 
+But then each channel has frame dependent data, I'm not sure if it would make sense to store this per frame, oppose to concatenating together into single array of all channels (for all frames). If the latter we know the offset per frame is just the number of channels. I think it might just be easier to store channels as single vector and then define the offset based on the current set frame. 
 
 But we could store per channel, an array of per frame channel values directly. 
 
-I think the sample code, uses index offsets to get the current channel data per frame
+The sample code, uses index offsets to get the current channel data per frame from the "motion" array, which is the per frame channel data. 
 
 The example code maps the joint pointers to joint names etc, i'm gonna skip this for now and just id joints by indices along the tree. 
 
 We can index channels as we encounter them in the tree, this should lead to their linear indices within the motion data per frame. Thus if we store channels in a per frame array, we should be able to look up each frame (outer array), each channel (by index), inner array.
 
+The sample code decouples the channels themselves (per joint) from the per frame motion data, which is just stored as an array of doubles. The size of this is the number of frames  * number of channels (of all joints). Thus using the channel index we can dereference each channels data per frame via :
+
+```c++
+motion[frame * num_channel + channel_idx]
+```
+
 ##### Using Sample Code for Parsing
 
 I'm thinking about using the sample code for parsing due to time limitations, but it would be better to write my own and possibly adapt it to make more sense for me. 
+
+Ok yeah for now I am going to try and integrate this code, which was not even written by the University it seems to be from some Japanese due about 20 years ago. It has goto statements and some ugly syntax choices, but i'm so short on time I don't care too much at the moment. I'm not gonna feel bad as I think most other people have used this code to some extent, even projects on github using BVH files use this code. Would of been nice to write my own parser based on this, but due to time its ok. 
+
+I don't have much (any) experience of parsing hierarchal files, its something I need to work on. 
+
+Remember with Eigen to use [0],[1],[2] for 3D vector indices, as they are just typedefs' matrices there is no x,y,z components. 
 
 ___
 
@@ -123,6 +204,6 @@ If we use the nodes of a tree to represent joints as that would seem logical in 
 
 ___
 
-OpenGL Renderer : 
+##### OpenGL Renderer : 
 
-Using Modern OpenGL with GLFW and GLEW, each class eg bone.h has its own draw/render code, global render context is defined within application code. 
+Using Modern OpenGL with GLFW and GLEW, each class eg bone.h has its own draw/render code, global render context is defined within application code. We then need to integrate DearImgui into this to it can pass the GUI data/buffers for rendering. Also need to make sure GLFW input polling is forwarded to DearImgui. 

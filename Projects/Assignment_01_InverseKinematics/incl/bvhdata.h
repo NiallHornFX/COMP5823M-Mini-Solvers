@@ -10,49 +10,63 @@
 #include "ext/Eigen/Core"
 
 // FDs
-struct joint;
-struct channel;
+struct Joint;
+struct Channel;
+
+// Type Def
+using real = double; 
 
 
-enum channelType
+enum ChannelEnum
 {
-	x_pos = 0, y_pos, z_pos,
-	x_rot, y_rot, z_rot
+	X_ROTATION = 0, Y_ROTATION, Z_ROTATION,
+	X_POSITION, Y_POSITION, Z_POSITION
 };
 
-struct channel
+struct Channel
 {
-	joint *sJoint;         // self joint of channel
-	channelType type;      // DOF type
-	std::size_t idx;       // index.
+	Joint *joint;            // self joint of channel
+	ChannelEnum type;        // DOF type
+	std::size_t index;       // index.
 };
 
-struct joint
+struct Joint
 {
 	std::string name; 
 	std::size_t idx; 
 
-	bool is_root = false;
-	bool is_end = false;
+	bool is_root, is_end;
 
-	Eigen::Vector3f offset; 
+	Eigen::Vector3d offset; 
 
-	joint *parent;
-	std::vector<joint*> children; 
+	Joint *parent;
+	std::vector<Joint*> children; 
 
-	std::vector<channel*> channels; 
+	std::vector<Channel*> channels; 
 
 };
 
 class BVH_Data
 {
 public:
-	BVH_Data(std::string filename);
-	~BVH_Data() {}
+	BVH_Data() = delete;
+	BVH_Data(std::string fileName);
+	~BVH_Data();
 
+
+	void Load();
+	void Clear(); 
+	void Debug(bool to_file = false);
 
 private:
-	std::vector<joint*> joints; 
-	std::vector<channel*> channels; 
+	std::string filename;
+	std::vector<Joint*>   joints; 
+	std::vector<Channel*> channels; 
+
+	std::size_t num_channel;
+	std::size_t num_frame;
+	real interval;
+	real *motion; 
+	
 
 };
