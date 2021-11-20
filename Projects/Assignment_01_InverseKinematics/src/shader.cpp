@@ -1,68 +1,53 @@
 // Implements 
 #include "shader.h" 
 
-// Project Headers
-#include <GLEW/glew.h>
+// Ext Headers
+#include "ext/GLEW/glew.h" // GLEW
 
-Shader::Shader(const char *vertpath, const char *fragpath)
+#define BUFFER_SIZE 512
+
+Shader::Shader(const char *sname, const char *vertpath, const char *fragpath)
 {
-	// String objects to hold GLSL Code from File.
-	std::string vertexCode;
-	std::string fragmentCode;
+	name = sname; 
 
-	// ifstream object to load Shader Files. 
-	std::ifstream vShaderFile;
-	std::ifstream fShaderFile;
-
-	// Enable Expection Checking Bits Before MFs Getting Files 
-	// Allows the Catch Statement to look out for these expections and catch. 
+	std::ifstream vShaderFile, fShaderFile;
 	vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 	fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 	try
 	{
-		// Open Files
-		vShaderFile.open(vertpath); // Load Vert Shader txt from Func Input Path.
-		fShaderFile.open(fragpath); // Load Frag Shader txt from Func Input Path.
-									// Use StringStream and String to handle ifStream buffer to string conversion. 
-		std::stringstream vShaderStream, fShaderStream; // SStreams objs to convert to strings.
-														// Read File Buffers (pointers) into StringStream objects - 
+		vShaderFile.open(vertpath); 
+		fShaderFile.open(fragpath); 
+
+		std::stringstream vShaderStream, fShaderStream; 
+
 		vShaderStream << vShaderFile.rdbuf();
 		fShaderStream << fShaderFile.rdbuf();
-		// Close file objs
+
 		vShaderFile.close();
 		fShaderFile.close();
-		// Convert From (string)Streams Into  Strings using sstream str() MF.
-		vertexCode = vShaderStream.str();
-		fragmentCode = fShaderStream.str();
 
-		// Set Vertex/Frag Class Members to ^^ Strings.
-		vert_shader_code = vertexCode; 
-		frag_shader_code = fragmentCode;
+		vert_shader_code = vShaderStream.str();
+		frag_shader_code = fShaderStream.str();
 	}
 	catch (std::ifstream::failure err) // Catch ifstream failure error to object err
 	{
-		// Handle Excpetion, cerr Error to Consle.
-		std::cerr << "ERROR::SHADER::FILE_NOT_READ \n";
+		std::cerr << "ERROR::Shader::" << name << "::Failed to load shader code\n";
+		std::terminate();
 	}
 
-	// Pass back to Char String Literal (Char Pointer).
-	const char *vShaderCode = vertexCode.c_str();
-	const char *fShaderCode = fragmentCode.c_str();
+	const char *vShaderCode = vert_shader_code.c_str();
+	const char *fShaderCode = frag_shader_code.c_str();
 
-	
-	// Shader Creation & Compilation 
+	// Intermediate Shaders (Vertex, Fragment) handles. 
 	unsigned int vertexS, fragmentS;
 
-	// Vertex Shader Creation & Compilation -
+	// Build Vertex Shader
 	vertexS = glCreateShader(GL_VERTEX_SHADER);
-	// Pass Charptr code into shadersource. 
 	glShaderSource(vertexS, 1, &vShaderCode, NULL);
-	// Compile - 
 	glCompileShader(vertexS);
-	// Call Shader Error Check Func - 
 	check_compile(vertexS, "Vertex_Shader");
 
-	// Fragment Shader Creation & Compilation -
+	// Build Fragment Shader
 	fragmentS = glCreateShader(GL_FRAGMENT_SHADER);
 	// Pass Charptr code into shadersource. 
 	glShaderSource(fragmentS, 1, &fShaderCode, NULL);
@@ -71,15 +56,14 @@ Shader::Shader(const char *vertpath, const char *fragpath)
 	// Call Shader Error Check Func - 
 	check_compile(fragmentS, "Fragment_Shader");
 
-	// Shader Program Creation
-	ID = glCreateProgram(); // Store in Shader Member uint ID. 
+	// Build Shader Program
+	ID = glCreateProgram(); 
 	glAttachShader(ID, vertexS);
 	glAttachShader(ID, fragmentS);
 	glLinkProgram(ID);
-	// Call Shader Linking Error Check Func - 
 	check_link();
 
-	// Now Shaders are Compiled/Linked, Delete them.
+	// Delete Intermediate Shaders
 	glDeleteShader(vertexS);
 	glDeleteShader(fragmentS);
 	
@@ -87,7 +71,7 @@ Shader::Shader(const char *vertpath, const char *fragpath)
 
 Shader::~Shader()
 {
-	std::cout << "Shader Destructor Called" << "\n";
+	glDeleteProgram(ID);
 }
 
 void Shader::use()
@@ -95,8 +79,7 @@ void Shader::use()
 	glUseProgram(ID);
 }
 
-// Set Uniform Member Functions - 
-
+// ========================== Set Uniform Member Functions ========================== 
 void Shader::setBool(const std::string &name, bool value) const
 {
 	glUniform1i(glGetUniformLocation(ID, name.c_str()), (int)value); // Cast Value to int.
@@ -114,77 +97,55 @@ void Shader::setFloat(const std::string &name, float value) const
 
 void Shader::setVec(const std::string &name, const glm::vec3 value) const
 {
-	glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, value);
+	glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
 }
 
-// Shader Compile Error Check Function -
-/*
-Take in uint ref param to define shader to check for glComplieShader
-errors. Also Input Char Pointer string of shader type so I can print out what shader error'd.
-Compiled Shader ID is not Member ID (that is linked Shader ID).
-*/
+// ========================== Check Compile and Link ========================== 
 
-void Shader::check_compile(unsigned int &shader, char *type)
+void Shader::check_compile(unsigned int &shader, std::string type)
 {
-	const int len = 512; // length of error log char array. 
 	int sucess;
-	char err_log[len];
+	char err_log[BUFFER_SIZE];
 
-	// Check For Compile Status via GetShaderiv func, set to sucess int.
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &sucess);
 
-	// If Not Sucess (thus sucess undefined/non-intialzed) print error log out (via cout)
 	if (!sucess)
 	{
-		glGetShaderInfoLog(shader, len, NULL, err_log);
-		std::cout << "ERROR:SHADER:" << type << "COMPILE_FAILED" << std::endl;
-		std::cout << err_log << std::endl;
-	}
-	else
-	{
-		std::cout << "DEBUG:SHADER " << shader << " COMPLIE SUCEEDED" << std::endl;
+		glGetShaderInfoLog(shader, BUFFER_SIZE, NULL, err_log);
+		std::cout << "ERROR::Shader::" << name << " " << type << "::Compile Failed : " 
+			<< err_log << std::endl;
 	}
 }
-
-// Shader Link Error Check Function -
-/*
-Take in uint ref param to define shader to check for ShaderProgram Link Errors
-*/
 
 void Shader::check_link()
 {
-	// ID IS Shader ID Member (Shader Program to check for Linking Errors).
-	unsigned int shaderprog = ID;
-
 	int sucess;
-	const int len = 512;
-	char err_log[len];
+	char err_log[BUFFER_SIZE];
 
-	// Check For ShaderProg Status via glGetProgramiv func, set to sucess int.
-	glGetProgramiv(shaderprog, GL_LINK_STATUS, &sucess);
+	glGetProgramiv(ID, GL_LINK_STATUS, &sucess);
 
-	// If Not Sucess (thus sucess undefined/non-intialzed) print error log out (via cout)
 	if (!sucess)
 	{
-		glGetProgramInfoLog(shaderprog, len, NULL, err_log);
-		std::cout << "ERROR:SHADER:PROGRAM:" << "LINKAGE_FAILED" << std::endl;
-		std::cout << err_log << std::endl;
-	}
-	else
-	{
-		std::cout << "DEBUG:SHADER:PROGRAM " << shaderprog << " LINKAGE SUCEEDED" << std::endl;
+		glGetProgramInfoLog(ID, BUFFER_SIZE, NULL, err_log);
+		std::cerr << "ERROR::Shader::" << name << "::Linkage Failed : " 
+			<< err_log << std::endl;
 	}
 }
 
+// ========================== Debug / Output Shader Code ========================== 
 void Shader::debug_vert()
 {
 	if (vert_shader_code.size() >= 1)
 	{
-		std::cout << "DEBUG: VERTEX SHADER: " << vert_shader_code; 
+		std::cout << "DEBUG::Shader_" << name 
+			<< "\n==== Vertex Shader Code BEGIN ====\n" 
+			<< vert_shader_code
+			<< "\n==== Vertex Shader Code END ====\n";
 	}
 	else
 	{
-		std::cout << "ERROR: VERTEX SHADER FAILED TO STRING \n";
+		std::cerr << "ERROR:Shader_" << name
+			<< " Invalid Vertex Shader Code" << std::endl;
 	}
 }
 
@@ -192,17 +153,14 @@ void Shader::debug_frag()
 {
 	if (frag_shader_code.size() >= 1)
 	{
-		std::cout << "DEBUG: FRAGMENT SHADER: " << frag_shader_code;
+		std::cout << "DEBUG::Shader_" << name
+			<< "\n==== Fragment Shader Code BEGIN ====\n"
+			<< frag_shader_code
+			<< "\n==== Fragment Shader Code END ====\n";
 	}
 	else
 	{
-		std::cout << "ERROR: FRAGMENT SHADER FAILED TO STRING \n";
+		std::cerr << "ERROR:Shader_" << name
+			<< " Invalid Fragment Shader Code" << std::endl;
 	}
 }
-
-unsigned int Shader::get_id()
-{
-	return ID;
-}
-
-// End of Shader Member Functions Implmentation.

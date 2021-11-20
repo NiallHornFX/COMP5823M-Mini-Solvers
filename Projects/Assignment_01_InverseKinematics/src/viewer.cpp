@@ -2,11 +2,13 @@
 #include "viewer.h"
 
 // Project Headers
-// shader.h
+#include "shader.h"
 
 // Ext Headers
-#include "ext/GLEW/glew.h" // GLEW
-#include "ext/GLFW/glfw3.h" // GLFW
+// GLEW
+#include "ext/GLEW/glew.h" 
+// GLFW
+#include "ext/GLFW/glfw3.h" 
 // GLM
 #include "ext/glm/gtc/matrix_transform.hpp"
 #include "ext/glm/gtc/type_ptr.hpp"
@@ -19,15 +21,21 @@
 Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	: width(W), height(H), title(Title)
 {
-	// Init
+	// ==== Init ====
 	anim_loop = true; 
 	anim_frame = 0; 
-	
+	tick_c = 0;
+
+	// ==== OpenGL Setup ==== 
+
 	// Setup OpenGL Context and Window :
 	window_context(); 
-
 	// Load OpenGL Extensions
 	extensions_load();
+
+	// Shader Test
+	Shader test_shader("test_shader", "../../shaders/test.vert", "../../shaders/test.frag");
+	test_shader.setVec("col", glm::vec3(1.f, 0.f, 0.f));
 }
 
 Viewer::~Viewer() 
@@ -102,7 +110,6 @@ void Viewer::render()
 
 	// Intresting stuff [..]
 
-
 	// Swap and Poll
 	glfwSwapBuffers(window);
 	glfwPollEvents();
@@ -112,11 +119,16 @@ void Viewer::tick()
 {
 	// Pefrom tick
 
-	// Cool operations ...
+	// App Operations
+	update_window();
 
+	// Cool operations ...
+	// Get BVH Update
+	// IK 
 
 	// Render
 	render();
+	tick_c++;
 }
 
 void Viewer::exec()
@@ -131,4 +143,12 @@ void Viewer::exec()
 		// Inline
 		kill = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS; 
 	}
+}
+
+void Viewer::update_window()
+{
+	// Update Window Title 
+	std::string title_u; 
+	title_u = title + "  " + std::to_string(tick_c);
+	glfwSetWindowTitle(window, title_u.c_str());
 }

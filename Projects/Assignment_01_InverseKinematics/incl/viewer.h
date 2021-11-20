@@ -7,7 +7,7 @@
 // Project Headers
 
 // Ext Headers
-#include "ext\glm\glm.hpp";
+#include "ext/glm/glm.hpp"
 
 // Typedef 
 using byte = unsigned char;
@@ -18,7 +18,6 @@ using byte = unsigned char;
 
 // FD 
 class GLFWwindow;
-class shader;
 
 // Viewer application for rendering, GUI and handling user input.
 
@@ -43,6 +42,11 @@ public:
 	void exec(); // Exec Viewer Application 
 	void tick(); // Single Tick
 
+	void update_window();
+
+
+	//void get_animData(); 
+
 private:
 
 	// Render State
@@ -56,6 +60,8 @@ private:
 	// Animation Controls
 	std::size_t anim_frame; 
 	bool anim_loop; 
+
+	std::size_t tick_c; 
 };
 
 #endif

@@ -4,7 +4,7 @@
 
 ___
 
-#### Misc Notes
+#### Initial Notes
 
 Aim for project : A viewer application with a viewport, DearImGui based IM Mode GUI for control which I may implement via a controller class, with mouse pick-point to define end effector positions / position constraints, load BVH Files, some sort of timeline to scrub the animation. Control for which IK method is used, etc. 
 
@@ -23,7 +23,7 @@ While I'd really love to write detail notes again this project is due in 2 weeks
 * OpenGL (w/ GLFW + GLEW) : Rendering, Dynamically linked (with static symbol libraries)
 * GLM : OpenGL Related math
 * DearImGui : UI
-* Eigen IK LinAlg (Will convert to/from GLM where needed)
+* Eigen IK Linear Algebra (Will convert to/from GLM where needed)
 
 ##### Main Components to do : 
 
@@ -83,6 +83,10 @@ Frame Time: 0.041667
 ```
 
 Typically only the root has 6 channels, with the children have 3 channels. 
+
+
+
+To Render the resulting BVH Data, we just use FK, ie we are apply successive rotations along each joint hierarchy within the space of the (relative to) parent joint, for pure BVH this is easy as we have the offset that defines the start of the joint (and thus bone) we know the next joint offset is the end of the bone (linkage) and we can then just look up the channel data for the current frame.
 
 ___
 
@@ -199,6 +203,10 @@ I don't have much (any) experience of parsing hierarchal files, its something I 
 
 Remember with Eigen to use [0],[1],[2] for 3D vector indices, as they are just typedefs' matrices there is no x,y,z components. 
 
+##### File Input
+
+Initially file will be passed via args, but would be cool to have string field in the GUI to quickly switch between BVH files. 
+
 ___
 
 #### Skeleton Tree Data Structure
@@ -206,6 +214,10 @@ ___
 If we use the nodes of a tree to represent joints as that would seem logical in terms of how joints are the nodes of bones in a skeleton, it would mean that we each bone thus tree segment / link could only be connected by two joints at most. The textbook recommends you flip this logic and use nodes to represent bones (linkages) and the links to represent joints (explicit link objects), however for BVH I will use the former logic as I know each bone won't have more than two connections. 
 
 For the BVH Loading, there is an array of joints, whose first joint should be root, starting from here we can loop down to the child joint, each channel per joint represents its DOFs (3 per joint (rotation) apart from root which also has translation / position DOFs).
+
+
+
+Ideally I'd take the resulting BVH Joints + Channels and put it into a nicer tree structure that makes it easier to apply per joint transforms (rotations) atop of the existing BVH anim data per frame to add the modifications from the IK solve, however for now this might just be done, before drawing, based on a separate array of stored IK offsets for each joint. 
 
 ___
 
@@ -215,25 +227,31 @@ Using Modern OpenGL with GLFW and GLEW, each class eg bone.h has its own draw/re
 
 This is based within the core application call `viewer.h` i'm still deciding how modular I want the code to be, ideally its as modular as possible so re-use on later projects is easier, however because of the limited time, modularity is not a priority. Can also refactor and breakup into more modular classes later (eg separate MVC classes, Abstracted OpenGL objects/constructs etc). Ie I could separate viewer into the application side, control side, renderer side classes, but for now will keep as one big file for time sake. 
 
-
-
-
-
-
-
 Rendering won't be done within BVH_Data as I want to separate it out, Bone class will render single bone, based on data, (either as line or geo), skeleton class will whole skeleton (of bones). These render methods will then be called within OpenGL Context. This also makes sense as channel data may be modified from Inverse Kinematics of bones. 
 
-Need an Primtive base class, to define OpenGL calls eg Setup, Pass Texture/State, Render. 
+##### Animation State
 
-Bone class Inherits from Primtive
+Because the application is ticking constantly, I don't want to couple the ticking of the viewer to the anim frame of the BVH. So I will have a "global" animation frame set, that either loops continually or is set by user input so a single frame. This will be continually incremented per tick to keep looping or stay static. 
 
-Skeleton Class (Composite of bones to then loop and draw for per frame BVH / Skeleton Data)
+I'm still deciding if the actual Anim Loading + IK calc will be called from within Viewer or do I do this is some other more abstract application_class. Ideally i'd decouple the viewer from this stuff, have the application do the tick itself (which calls render of viewer) with updated skeleton data based on current ticks modified (or not) BVH data, from IK solve. OR I just integrate all this into viewer class as a single application class that handles both the anim state and the viewer related tasks. 
 
-Other Primitives : Ground Plane, Axis Gnomon.
+##### Shader Class
 
-Will have a separate shader class
+Will have a separate shader class that defines both a vertex and fragment shader for each object. This will handle shader loading, compiling and uniform setting (along with texture samplers).
 
+##### Primitive Class 
 
+Will define a render object base class `primitive.h`, to define OpenGL calls eg Setup, Pass Texture/State, shaders, Render self. 
+
+Primitive Classes (Things needed in app to draw)
+
+* Bone : Draws bone / linkage as either line or bone mesh
+* Ground : Draws ground plane with tiled grid texture
+* Gnomon : Draws world and local coord frame of joints axis gnomons
+
+##### Other Classes Used within Viewer
+
+Skeleton Class is not inherited from Primitive, but instead contains the array of all bone primitives, defining the skeleton (fetched from BVH_Data), Skeleton will also apply medications to joints based on the IK Solve. 
 
 ___
 
