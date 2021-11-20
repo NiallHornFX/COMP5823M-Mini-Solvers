@@ -1,27 +1,28 @@
-// BVHData Class, responsible for loading, parsing, writing and maintaing the resulting skeleton state.
+#ifndef BVH_DATA_H
+#define BVH_DATA_H
 
-// Std Includes
+// Std Headers
 #include <iostream>
 #include <string>
 #include <vector>
 
-// Extern Includes
-// Eigen
-#include "ext/Eigen/Core"
-
-// FDs
-struct Joint;
-struct Channel;
+// Ext Headers
+#include "ext/Eigen/Core" // Eigen
 
 // Type Def
 using real = double; 
 
+// FDs
+struct Joint;
+struct Channel;
 
 enum ChannelEnum
 {
 	X_ROTATION = 0, Y_ROTATION, Z_ROTATION,
 	X_POSITION, Y_POSITION, Z_POSITION
 };
+
+// Info : Structs for Joint and Channel Objects 
 
 struct Channel
 {
@@ -46,6 +47,8 @@ struct Joint
 
 };
 
+// Info : BVHData Class, responsible for loading, parsing BVH Animation file to Joints and Channel Data. 
+
 class BVH_Data
 {
 public:
@@ -53,10 +56,12 @@ public:
 	BVH_Data(std::string fileName);
 	~BVH_Data();
 
-
-	void Load();
+	// Load and Parse BVH File into Joints and Channels
+	void Load(); 
+	// Reset Data
 	void Clear(); 
-	void Debug(bool to_file = false);
+	// Dump State
+	void Debug(bool to_file = false); 
 
 private:
 	std::string filename;
@@ -67,6 +72,7 @@ private:
 	std::size_t num_frame;
 	real interval;
 	real *motion; 
-	
-
 };
+
+
+#endif

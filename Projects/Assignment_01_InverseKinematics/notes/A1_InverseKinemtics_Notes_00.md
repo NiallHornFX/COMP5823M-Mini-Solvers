@@ -20,14 +20,15 @@ While I'd really love to write detail notes again this project is due in 2 weeks
 
 ##### External Libraries : 
 
-* OpenGL (w/ GLFW + GLEW) : Rendering
+* OpenGL (w/ GLFW + GLEW) : Rendering, Dynamically linked (with static symbol libraries)
+* GLM : OpenGL Related math
 * DearImGui : UI
-* Eigen LinAlg
+* Eigen IK LinAlg (Will convert to/from GLM where needed)
 
 ##### Main Components to do : 
 
 * BVH File Parser, Loader, Writer.  
-* Skeleton Data Structure from BVH
+* Viewer Application, OpenGL State Setup
 * Rendering of BVH File.
 * GUI + OpenGL Application for viewing Bones and Joints of loaded BVH File
 * Basic Pseudo-Inverse Inverse Kinematics Implementation to allow use modification of end effectors. 
@@ -186,6 +187,8 @@ The sample code decouples the channels themselves (per joint) from the per frame
 motion[frame * num_channel + channel_idx]
 ```
 
+Because we know only the root has translation and we know the rotation channel order is (z, y, x) we don't need to worry about checking for each channel type when rendering, we can just follow this order to get each rotation component per joint (and thus bone segment).
+
 ##### Using Sample Code for Parsing
 
 I'm thinking about using the sample code for parsing due to time limitations, but it would be better to write my own and possibly adapt it to make more sense for me. 
@@ -202,8 +205,38 @@ ___
 
 If we use the nodes of a tree to represent joints as that would seem logical in terms of how joints are the nodes of bones in a skeleton, it would mean that we each bone thus tree segment / link could only be connected by two joints at most. The textbook recommends you flip this logic and use nodes to represent bones (linkages) and the links to represent joints (explicit link objects), however for BVH I will use the former logic as I know each bone won't have more than two connections. 
 
+For the BVH Loading, there is an array of joints, whose first joint should be root, starting from here we can loop down to the child joint, each channel per joint represents its DOFs (3 per joint (rotation) apart from root which also has translation / position DOFs).
+
 ___
 
 ##### OpenGL Renderer : 
 
 Using Modern OpenGL with GLFW and GLEW, each class eg bone.h has its own draw/render code, global render context is defined within application code. We then need to integrate DearImgui into this to it can pass the GUI data/buffers for rendering. Also need to make sure GLFW input polling is forwarded to DearImgui. 
+
+This is based within the core application call `viewer.h` i'm still deciding how modular I want the code to be, ideally its as modular as possible so re-use on later projects is easier, however because of the limited time, modularity is not a priority. Can also refactor and breakup into more modular classes later (eg separate MVC classes, Abstracted OpenGL objects/constructs etc). Ie I could separate viewer into the application side, control side, renderer side classes, but for now will keep as one big file for time sake. 
+
+
+
+
+
+
+
+Rendering won't be done within BVH_Data as I want to separate it out, Bone class will render single bone, based on data, (either as line or geo), skeleton class will whole skeleton (of bones). These render methods will then be called within OpenGL Context. This also makes sense as channel data may be modified from Inverse Kinematics of bones. 
+
+Need an Primtive base class, to define OpenGL calls eg Setup, Pass Texture/State, Render. 
+
+Bone class Inherits from Primtive
+
+Skeleton Class (Composite of bones to then loop and draw for per frame BVH / Skeleton Data)
+
+Other Primitives : Ground Plane, Axis Gnomon.
+
+Will have a separate shader class
+
+
+
+___
+
+User Interaction with Bones/Joints
+
+Ray casting from mouse ? Selection from list of joints via GUI ? 

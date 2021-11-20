@@ -40,31 +40,12 @@ void BVH_Data::Load()
 	bool              is_site = false;
 	double			  x, y, z;
 	std::size_t       i, j;
-	std::vector<Joint*>  joint_stack;
+	std::vector<Joint*>  joint_stack; // Reccursive Join stack
 	Joint*    joint     = nullptr;
 	Joint*    new_joint = nullptr;
 
-	auto bvh_error = []() -> void {
-
-	};
-
+	// Clear Current State
 	Clear();
-
-	// Get Motion Name
-	/*
-	file_name = bvh_file_name;
-	const char *  mn_first = bvh_file_name;
-	const char *  mn_last = bvh_file_name + strlen(bvh_file_name);
-	if (strrchr(bvh_file_name, '\\') != NULL)
-		mn_first = strrchr(bvh_file_name, '\\') + 1;
-	else if (strrchr(bvh_file_name, '/') != NULL)
-		mn_first = strrchr(bvh_file_name, '/') + 1;
-	if (strrchr(bvh_file_name, '.') != NULL)
-		mn_last = strrchr(bvh_file_name, '.');
-	if (mn_last < mn_first)
-		mn_last = bvh_file_name + strlen(bvh_file_name);
-	motion_name.assign(mn_first, mn_last);
-	*/
 
 	std::ifstream file(filename);
 	// Check file exists
@@ -86,7 +67,6 @@ void BVH_Data::Load()
 		// Start of Joint Block
 		if (strcmp(token, "{") == 0)
 		{
-
 			joint_stack.push_back(joint);
 			joint = new_joint;
 			continue;
@@ -95,7 +75,6 @@ void BVH_Data::Load()
 		// End of Joint Block
 		if (strcmp(token, "}") == 0)
 		{
-
 			joint = joint_stack.back();
 			joint_stack.pop_back();
 			is_site = false;
@@ -121,11 +100,9 @@ void BVH_Data::Load()
 			// If valid parent, add self as child joint. 
 			if (joint) joint->children.push_back(new_joint);
 
-
 			token = strtok(NULL, "");
 			while (*token == ' ')  token++;
 			new_joint->name = token;
-
 
 			//joint_index[new_joint->name] = new_joint;
 			continue;
