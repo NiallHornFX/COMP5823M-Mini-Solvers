@@ -36,6 +36,9 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// Shader Test
 	Shader test_shader("test_shader", "../../shaders/test.vert", "../../shaders/test.frag");
 	test_shader.setVec("col", glm::vec3(1.f, 0.f, 0.f));
+
+	// Camera Test
+	camera = Camera(glm::vec3(0.f, 0.f, 0.f), -1.f, W, H);
 }
 
 Viewer::~Viewer() 
@@ -89,19 +92,26 @@ void Viewer::extensions_load()
 	render_device = glGetString(GL_RENDERER);
 	version = glGetString(GL_VERSION);
 	// Cleanup Debug Output
-	std::cout << "<OPENGL VERSION INFO BEGIN> \n";
-	std::cout << "RENDER DEVICE = " << render_device << "\n";
-	std::cout << "VERSION = " << version << "\n";
-	std::cout << "<OPENGL VERSION INFO END> \n \n";
+	std::cout << "======== DEBUG::OPENGL::BEGIN ========\n"
+		<< "RENDER DEVICE = " << render_device << "\n"
+		<< "VERSION = " << version << "\n";
+	std::cout << "======== DEBUG::OPENGL::END ========\n\n";
+}
+
+// Init Render State
+void Viewer::render_prep()
+{
+	// Blending and Depth. 
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	// State Enable
+	glEnable(GL_PROGRAM_POINT_SIZE);
 }
 
 void Viewer::render()
 {
-	glEnable(GL_DEPTH_TEST); // Put these in pre_renderstate setup?
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_PROGRAM_POINT_SIZE);
-
 	// Step - 
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -121,6 +131,10 @@ void Viewer::tick()
 
 	// App Operations
 	update_window();
+	update_camera();
+
+	// Debug Camera State
+	std::cout << camera.debug().rdbuf();
 
 	// Cool operations ...
 	// Get BVH Update
@@ -133,13 +147,19 @@ void Viewer::tick()
 
 void Viewer::exec()
 {
-	// execte viewer indefintly
+	// ----- Init Operations ----
+	render_prep();
+	
+	// ---- App Loop ----
 	bool kill = false; 
 	while (1 && !kill)
 	{
+		// Tick viewer application
 		tick();
 
 		// Poll Inputs
+		glfwPollEvents();
+
 		// Inline
 		kill = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS; 
 	}
@@ -151,4 +171,10 @@ void Viewer::update_window()
 	std::string title_u; 
 	title_u = title + "  " + std::to_string(tick_c);
 	glfwSetWindowTitle(window, title_u.c_str());
+}
+
+void Viewer::update_camera()
+{
+	camera.update_camera(window, 1.f, dt);
+	// Need to pass camera matrices to each primitives shader. 
 }

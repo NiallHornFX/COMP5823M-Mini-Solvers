@@ -84,9 +84,11 @@ Frame Time: 0.041667
 
 Typically only the root has 6 channels, with the children have 3 channels. 
 
-
+##### Rendering BVH Data
 
 To Render the resulting BVH Data, we just use FK, ie we are apply successive rotations along each joint hierarchy within the space of the (relative to) parent joint, for pure BVH this is easy as we have the offset that defines the start of the joint (and thus bone) we know the next joint offset is the end of the bone (linkage) and we can then just look up the channel data for the current frame.
+
+Starting from the root (which should be the first element of the joint array) do stack based depth traversal to render each bone, by applying offset and rotation relative to parents transform matrix (concatenation of all previous joint transforms).
 
 ___
 
@@ -225,7 +227,9 @@ ___
 
 Using Modern OpenGL with GLFW and GLEW, each class eg bone.h has its own draw/render code, global render context is defined within application code. We then need to integrate DearImgui into this to it can pass the GUI data/buffers for rendering. Also need to make sure GLFW input polling is forwarded to DearImgui. 
 
-This is based within the core application call `viewer.h` i'm still deciding how modular I want the code to be, ideally its as modular as possible so re-use on later projects is easier, however because of the limited time, modularity is not a priority. Can also refactor and breakup into more modular classes later (eg separate MVC classes, Abstracted OpenGL objects/constructs etc). Ie I could separate viewer into the application side, control side, renderer side classes, but for now will keep as one big file for time sake. 
+This is based within the core application call `viewer.h` i'm still deciding how modular I want the code to be, ideally its as modular as possible so re-use on later projects is easier, however because of the limited time, modularity is not a priority. Can also refactor and breakup into more modular classes later (eg separate MVC classes, Abstracted OpenGL objects/constructs etc). Ie I could separate viewer into the application side, control side, renderer side classes, but for now will keep as one big file for time sake. The more modular, the harder it is to check the state is been updated and needing to pass state between classes etc, so need to find a balance. 
+
+Ideally i'd have a core viewer app I could then link to, but I don't, so will just have to modify on a per project basis, right now I don't care about this code been reused for other projects, just need to get this assignment done and worry about defining a common viewer app base later on. 
 
 Rendering won't be done within BVH_Data as I want to separate it out, Bone class will render single bone, based on data, (either as line or geo), skeleton class will whole skeleton (of bones). These render methods will then be called within OpenGL Context. This also makes sense as channel data may be modified from Inverse Kinematics of bones. 
 
@@ -235,6 +239,8 @@ Because the application is ticking constantly, I don't want to couple the tickin
 
 I'm still deciding if the actual Anim Loading + IK calc will be called from within Viewer or do I do this is some other more abstract application_class. Ideally i'd decouple the viewer from this stuff, have the application do the tick itself (which calls render of viewer) with updated skeleton data based on current ticks modified (or not) BVH data, from IK solve. OR I just integrate all this into viewer class as a single application class that handles both the anim state and the viewer related tasks. 
 
+Could use a separate class that's a member within Viewer (or nested class approach) to keep the Anim logic / state still within the viewer app, but separated, without separating the viewer class into separate app + renderer. 
+
 ##### Shader Class
 
 Will have a separate shader class that defines both a vertex and fragment shader for each object. This will handle shader loading, compiling and uniform setting (along with texture samplers).
@@ -243,11 +249,16 @@ Will have a separate shader class that defines both a vertex and fragment shader
 
 Will define a render object base class `primitive.h`, to define OpenGL calls eg Setup, Pass Texture/State, shaders, Render self. 
 
+Because Primitive renders the object, we need to pass the camera transforms from viewer app to the primitive to set the uniforms within its shader. 
+
+Primitive Class Base Members/Functions
+
 Primitive Classes (Things needed in app to draw)
 
 * Bone : Draws bone / linkage as either line or bone mesh
 * Ground : Draws ground plane with tiled grid texture
 * Gnomon : Draws world and local coord frame of joints axis gnomons
+* Sphere : End Effector Sphere
 
 ##### Other Classes Used within Viewer
 

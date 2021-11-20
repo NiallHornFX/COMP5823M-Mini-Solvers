@@ -5,6 +5,7 @@
 #include <string>
 
 // Project Headers
+#include "camera.h"
 
 // Ext Headers
 #include "ext/glm/glm.hpp"
@@ -33,7 +34,9 @@ public:
 	void extensions_load();
 
 	// OpenGL 
+	void render_prep();
 	void render();
+	void update_camera();
 
 	// Imgui Setup
 	//
@@ -57,8 +60,12 @@ private:
 	const byte *render_device;
 	const byte *version;
 
+	float dt; 
+
 	// Camera 
-	//cam
+	Camera camera; 
+
+	// Primtivies
 
 	// Animation Controls
 	std::size_t anim_frame; 

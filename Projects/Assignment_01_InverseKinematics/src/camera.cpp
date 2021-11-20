@@ -3,10 +3,12 @@
 
 // Ext Headers 
 #include "ext/GLEW/glew.h" // GLEW
+#include "ext/GLFW/glfw3.h" // GLFW
 
 // Std Headers
 #include <iostream>
 #include <algorithm>
+
 
 
 Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : Cam_Pos(pos)
@@ -15,10 +17,13 @@ Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : 
 	Cam_Target_Pos = Cam_Pos + glm::vec3(0.0f, 0.0f, target_offset);
 	Cam_Dir = glm::normalize(Cam_Pos - Cam_Target_Pos);
 
+	// Global World Up vector. 
+	Cam_Up = glm::vec3(0.0f, 1.0f, 0.0f);
+
 	// Calc Local Camera Basis/Axis
-	Cam_Basis_X = glm::normalize(glm::cross(WORLD_UP, Cam_Dir));
+	Cam_Basis_X = glm::normalize(glm::cross(Cam_Up, Cam_Dir));
 	Cam_Basis_Y = glm::normalize(glm::cross(Cam_Dir, Cam_Basis_X));
-	Cam_Basis_Z = glm::normalize(Cam_Dir); 
+	Cam_Basis_Z = glm::normalize(Cam_Dir); // Local Z is just the TargetDirection.
 
 	Sensitvity = 0.75f;
 
@@ -40,7 +45,7 @@ Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : 
 
 glm::mat4 Camera::get_ViewMatrix()
 {
-	return glm::lookAt(Cam_Pos, Cam_Pos + Cam_Target_Pos, WORLD_UP);
+	return glm::lookAt(Cam_Pos, Cam_Pos + Cam_Target_Pos, Cam_Up);
 }
 
 glm::mat4 Camera::get_PerspMatrix()
@@ -48,7 +53,7 @@ glm::mat4 Camera::get_PerspMatrix()
 	return glm::perspective(glm::radians(FOV + Zoom), Aspect_Ratio, Near_Plane, Far_Plane);
 }
 
-void Camera::keyboard_Camera(GLFWwindow *window, float Camera_Speed, float dt)
+void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt)
 {
 	int W_state = glfwGetKey(window, GLFW_KEY_W);
 	int A_state = glfwGetKey(window, GLFW_KEY_A);
@@ -76,11 +81,11 @@ void Camera::keyboard_Camera(GLFWwindow *window, float Camera_Speed, float dt)
 	}
 
 	// Update Camera Basis Vectors
-	Update_Camera_Vectors();
+	update_basis();
 }
 
 
-void Camera::Update_Camera_Vectors()
+void Camera::update_basis()
 {
 	// Clamp Pitch
 	std::min(std::max(Pitch, Pitch_Min), Pitch_Max);
@@ -96,6 +101,17 @@ void Camera::Update_Camera_Vectors()
 	// Update Basis Vectors 
 	Cam_Dir = glm::normalize(Cam_Pos - Cam_Target_Pos);
 	Cam_Basis_Z = glm::normalize(Cam_Dir); 
-	Cam_Basis_X = glm::normalize(glm::cross(WORLD_UP, Cam_Dir));
+	Cam_Basis_X = glm::normalize(glm::cross(Cam_Up, Cam_Dir));
 	Cam_Basis_Y = glm::normalize(glm::cross(Cam_Dir, Cam_Basis_X));
+}
+
+std::ostringstream Camera::debug()
+{
+	std::ostringstream out;
+	out << "======== DEBUG::Camera::BEGIN ========\n"
+		<< "Pos = " << "[" << Cam_Pos.x << "," << Cam_Pos.y << "," << Cam_Pos.z << "]\n"
+		<< "Target = " << "[" << Cam_Target_Pos.x << "," << Cam_Target_Pos.y << "," << Cam_Target_Pos.z << "]\n";
+	out << "======== DEBUG::Camera::END ========\n";
+
+	return out; 
 }

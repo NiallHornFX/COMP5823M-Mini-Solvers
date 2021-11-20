@@ -1,28 +1,31 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-// Ext Headers
+// Std Headers
+#include <sstream>
+
+// Ext Headers 
 // GLM
 #include "ext/glm/gtc/matrix_transform.hpp"
 #include "ext/glm/gtc/type_ptr.hpp"
-// GLFW
-#include "ext/GLFW/glfw3.h" 
 
-const glm::vec3 WORLD_UP = glm::vec3(0.0f, 1.0f, 0.0f);
+// FDs
+class GLFWwindow;
 
-// Info : Basic Camera class using GLFW for input polling. 
+// Info : Basic Camera class using GLFW for input polling
 
 class Camera
 {
 public:
 	Camera(glm::vec3 pos, float target_offset, float width, float height);
-	Camera() = delete;
+	Camera() {};
 	~Camera() = default; 
 
 	// View Members
 	glm::vec3 Cam_Pos;
 	glm::vec3 Cam_Target_Pos; 
 	glm::vec3 Cam_Dir;
+	glm::vec3 Cam_Up;
 
 	// Camera Basis Members
 	glm::vec3 Cam_Basis_X;
@@ -43,9 +46,17 @@ public:
 
 public:
 	glm::mat4 get_ViewMatrix();
+
 	glm::mat4 get_PerspMatrix();
-	void keyboard_Camera(GLFWwindow *window, float Camera_Speed, float dt);
-	void Update_Camera_Vectors();
+
+	void update_camera(GLFWwindow *window, float Camera_Speed, float dt);
+
+
+	std::ostringstream debug();
+
+private:
+	void update_basis();
+
 };
 
 #endif

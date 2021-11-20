@@ -1,9 +1,12 @@
 #version 430 core 
 
-in vec4 vpos; 
-in vec4 gl_FragCoord; 
+// Input
+in vec4 pos_view; 
+
+// Output
 out vec4 frag_color; 
 
+// Uniforms
 uniform vec3 col;
 
 void main()

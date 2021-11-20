@@ -16,36 +16,6 @@ using real = double;
 struct Joint;
 struct Channel;
 
-enum ChannelEnum
-{
-	X_ROTATION = 0, Y_ROTATION, Z_ROTATION,
-	X_POSITION, Y_POSITION, Z_POSITION
-};
-
-// Info : Structs for Joint and Channel Objects 
-
-struct Channel
-{
-	Joint *joint;            // self joint of channel
-	ChannelEnum type;        // DOF type
-	std::size_t index;       // index.
-};
-
-struct Joint
-{
-	std::string name; 
-	std::size_t idx; 
-
-	bool is_root, is_end;
-
-	Eigen::Vector3d offset; 
-
-	Joint *parent;
-	std::vector<Joint*> children; 
-
-	std::vector<Channel*> channels; 
-
-};
 
 // Info : BVHData Class, responsible for loading, parsing BVH Animation file to Joints and Channel Data. 
 
@@ -73,6 +43,36 @@ private:
 	real interval;
 	real *motion; 
 };
+
+
+// Info : Structs for Joint and Channel Objects 
+enum ChannelEnum
+{
+	X_ROTATION = 0, Y_ROTATION, Z_ROTATION,
+	X_POSITION, Y_POSITION, Z_POSITION
+};
+
+struct Channel
+{
+	Joint *joint;            // self joint of channel
+	ChannelEnum type;        // DOF type
+	std::size_t index;       // index.
+};
+
+struct Joint
+{
+	std::string name;
+	std::size_t idx;
+
+	bool is_root, is_end;
+
+	Eigen::Vector3d offset;
+	Joint *parent;
+	std::vector<Joint*> children;
+
+	std::vector<Channel*> channels;
+};
+
 
 
 #endif
