@@ -88,6 +88,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\bvhdata.cpp" />
+    <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\viewer.cpp" />
@@ -95,6 +96,7 @@
   <ItemGroup>
     <ClInclude Include="incl\bone.h" />
     <ClInclude Include="incl\bvhdata.h" />
+    <ClInclude Include="incl\camera.h" />
     <ClInclude Include="incl\shader.h" />
     <ClInclude Include="incl\viewer.h" />
   </ItemGroup>

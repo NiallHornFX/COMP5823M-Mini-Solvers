@@ -57,6 +57,9 @@ private:
 	const byte *render_device;
 	const byte *version;
 
+	// Camera 
+	//cam
+
 	// Animation Controls
 	std::size_t anim_frame; 
 	bool anim_loop; 
