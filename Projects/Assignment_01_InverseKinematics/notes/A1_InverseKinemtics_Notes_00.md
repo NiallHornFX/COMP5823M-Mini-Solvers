@@ -233,6 +233,12 @@ Ideally i'd have a core viewer app I could then link to, but I don't, so will ju
 
 Rendering won't be done within BVH_Data as I want to separate it out, Bone class will render single bone, based on data, (either as line or geo), skeleton class will whole skeleton (of bones). These render methods will then be called within OpenGL Context. This also makes sense as channel data may be modified from Inverse Kinematics of bones. 
 
+##### OpenGL Issues
+
+
+
+Render doc seems to sometimes report No Resource when using OOP approach, despite the fact there seems to be no issues. 
+
 ##### Animation State
 
 Because the application is ticking constantly, I don't want to couple the ticking of the viewer to the anim frame of the BVH. So I will have a "global" animation frame set, that either loops continually or is set by user input so a single frame. This will be continually incremented per tick to keep looping or stay static. 

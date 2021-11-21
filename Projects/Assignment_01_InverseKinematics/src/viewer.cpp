@@ -98,10 +98,8 @@ void Viewer::render_prep()
 {
 	// Blending and Depth. 
 	glEnable(GL_DEPTH_TEST);
-	//glEnable(GL_BLEND);
+	glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	// State Enable
 }
 
 void Viewer::render()
@@ -110,16 +108,15 @@ void Viewer::render()
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// If Enabled (primtive, draw) ...
-
 	// Test Draw Primtivies
-
+	/*
 	for (Primitive &prim : prims)
 	{
 		prim.set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 		prim.render();
 	}
 	// Intresting stuff [..]
+	*/
 
 	// Swap and Poll
 	glfwSwapBuffers(window);
@@ -153,9 +150,9 @@ void Viewer::exec()
 	//render_prep();
 
 	// Create Test Primtiive
-	test_mesh();
+	//test_mesh();
 
-	get_GLError();
+	//get_GLError();
 	
 	// ---- App Loop ----
 	while (!glfwWindowShouldClose(window))
@@ -190,7 +187,6 @@ void Viewer::test_mesh()
 {
 	Primitive prim_test("test");
 
-	
 	float test_verts[3 * 11] =
 	{
 		// Face 0
