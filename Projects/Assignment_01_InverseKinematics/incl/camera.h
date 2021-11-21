@@ -10,7 +10,7 @@
 #include "ext/glm/gtc/type_ptr.hpp"
 
 // FDs
-class GLFWwindow;
+struct GLFWwindow;
 
 // Info : Basic Camera class using GLFW for input polling
 

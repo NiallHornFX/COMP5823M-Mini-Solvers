@@ -1,14 +1,23 @@
 // Implements 
 #include "shader.h" 
 
+// Std Headers
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
 // Ext Headers
-#include "ext/GLEW/glew.h" // GLEW
+// GLEW
+#include "ext/GLEW/glew.h" 
+// GLM
+#include "ext/glm/gtc/type_ptr.hpp"
 
 #define BUFFER_SIZE 512
 
 Shader::Shader(const char *sname, const char *vertpath, const char *fragpath)
 {
 	name = sname; 
+	valid_state = false; 
 
 	std::ifstream vShaderFile, fShaderFile;
 	vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -31,7 +40,7 @@ Shader::Shader(const char *sname, const char *vertpath, const char *fragpath)
 	}
 	catch (std::ifstream::failure err) // Catch ifstream failure error to object err
 	{
-		std::cerr << "ERROR::Shader::" << name << "::Failed to load shader code\n";
+		std::cerr << "ERROR::Shader::" << name << "::Failed to load shader code::" << err.what() << std::endl;
 		std::terminate();
 	}
 
@@ -62,6 +71,8 @@ Shader::Shader(const char *sname, const char *vertpath, const char *fragpath)
 	glAttachShader(ID, fragmentS);
 	glLinkProgram(ID);
 	check_link();
+
+	valid_state = true; 
 
 	// Delete Intermediate Shaders
 	glDeleteShader(vertexS);
@@ -97,8 +108,19 @@ void Shader::setFloat(const std::string &name, float value) const
 
 void Shader::setVec(const std::string &name, const glm::vec3 value) const
 {
-	glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+	glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, glm::value_ptr(value));
 }
+
+void Shader::setMat3(const std::string &name, const glm::mat3x3 value) const
+{
+	glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
+}
+
+void Shader::setMat4(const std::string &name, const glm::mat4x4 value) const
+{
+	glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
+}
+
 
 // ========================== Check Compile and Link ========================== 
 
@@ -114,6 +136,7 @@ void Shader::check_compile(unsigned int &shader, std::string type)
 		glGetShaderInfoLog(shader, BUFFER_SIZE, NULL, err_log);
 		std::cout << "ERROR::Shader::" << name << " " << type << "::Compile Failed : " 
 			<< err_log << std::endl;
+		std::terminate();
 	}
 }
 
@@ -129,6 +152,7 @@ void Shader::check_link()
 		glGetProgramInfoLog(ID, BUFFER_SIZE, NULL, err_log);
 		std::cerr << "ERROR::Shader::" << name << "::Linkage Failed : " 
 			<< err_log << std::endl;
+		std::terminate();
 	}
 }
 

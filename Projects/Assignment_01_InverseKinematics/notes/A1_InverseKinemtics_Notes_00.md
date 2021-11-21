@@ -239,7 +239,7 @@ Because the application is ticking constantly, I don't want to couple the tickin
 
 I'm still deciding if the actual Anim Loading + IK calc will be called from within Viewer or do I do this is some other more abstract application_class. Ideally i'd decouple the viewer from this stuff, have the application do the tick itself (which calls render of viewer) with updated skeleton data based on current ticks modified (or not) BVH data, from IK solve. OR I just integrate all this into viewer class as a single application class that handles both the anim state and the viewer related tasks. 
 
-Could use a separate class that's a member within Viewer (or nested class approach) to keep the Anim logic / state still within the viewer app, but separated, without separating the viewer class into separate app + renderer. 
+Could use a separate class that's a member within Viewer (or nested class approach) to keep the Anim logic / state still within the viewer app, but separated, without separating the viewer class into separate app + renderer. This could be how isolate the state of the solver for each project (using the same core viewer app) could define a base class like `Solver_Base` which is then derived into `Animation_Solver` for this project where the BVH + IK Solver is contained within the viewer app. 
 
 ##### Shader Class
 
@@ -251,18 +251,30 @@ Will define a render object base class `primitive.h`, to define OpenGL calls eg 
 
 Because Primitive renders the object, we need to pass the camera transforms from viewer app to the primitive to set the uniforms within its shader. 
 
-Primitive Class Base Members/Functions
+Primitive Class Base Members/Functions :
 
-Primitive Classes (Things needed in app to draw)
+Member functions like render(), createbuffers() will be virtual to allow for overriding eg for mesh class.  
 
-* Bone : Draws bone / linkage as either line or bone mesh
-* Ground : Draws ground plane with tiled grid texture
-* Gnomon : Draws world and local coord frame of joints axis gnomons
-* Sphere : End Effector Sphere
 
-##### Other Classes Used within Viewer
 
-Skeleton Class is not inherited from Primitive, but instead contains the array of all bone primitives, defining the skeleton (fetched from BVH_Data), Skeleton will also apply medications to joints based on the IK Solve. 
+Oppose to having a big monolithic constructor, where all data is passed, this class will rely on basic initialization and then separate calls to pass mesh data, texture data, shader data etc via setter like member functions. 
+
+In terms of rendering I'm not going to be using indexed drawing for now, will just render triangle soup via Draw Arrays, can switch to element buffers / indexed drawing later if need be. Could have separate primitive bases for indexed vs non indexed drawing but that's over abstraction / modularisation I don't have time for now. 
+
+Primitive Derived Classes
+
+* `Mesh` derives from `Primitive` and adds obj loading to get the mesh data to set and textures
+
+Primitive Based Classes : (Things needed in app to draw)
+
+* Bone : Draws bone / linkage as either line or bone mesh - Derived from `Mesh`
+* Ground : Draws ground plane with tiled grid texture - Derived from `Mesh`
+* Gnomon : Draws world and local coord frame of joints axis gnomons - Derived from `Primitive` (Data passed directly).
+* Sphere : End Effector Sphere - Derived from `Mesh` 
+
+##### Skeleton Class
+
+Skeleton Class is not inherited from Primitive, but instead contains the array of all bone mesh primitives, defining the skeleton (fetched from BVH_Data), Skeleton will also apply modifications to joints based on the IK Solve.  Its render call, calls render for each bone applying transformations based on joints + channels. 
 
 ___
 

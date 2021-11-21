@@ -128,6 +128,12 @@ void Viewer::render()
 void Viewer::tick()
 {
 	// Pefrom tick
+	std::cout << "tick : " << std::endl;
+	
+	if  (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+	{
+		std::cout << "PRESSED \n";
+	}
 
 	// App Operations
 	update_window();
@@ -151,17 +157,10 @@ void Viewer::exec()
 	render_prep();
 	
 	// ---- App Loop ----
-	bool kill = false; 
-	while (1 && !kill)
+	while (!glfwWindowShouldClose(window))
 	{
 		// Tick viewer application
 		tick();
-
-		// Poll Inputs
-		glfwPollEvents();
-
-		// Inline
-		kill = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS; 
 	}
 }
 
@@ -177,4 +176,18 @@ void Viewer::update_camera()
 {
 	camera.update_camera(window, 1.f, dt);
 	// Need to pass camera matrices to each primitives shader. 
+}
+
+void Viewer::get_GLError()
+{
+	GLenum err = glGetError();
+	int i = 0;
+	while (err != GL_NO_ERROR)
+	{
+		if (i <= 10)
+		{
+			std::cerr << "ERROR::Viewer::GL_ERROR = " << err << "\n";
+			i++;
+		}
+	}
 }

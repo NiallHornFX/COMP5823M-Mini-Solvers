@@ -55,27 +55,25 @@ glm::mat4 Camera::get_PerspMatrix()
 
 void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt)
 {
-	int W_state = glfwGetKey(window, GLFW_KEY_W);
-	int A_state = glfwGetKey(window, GLFW_KEY_A);
-	int S_state = glfwGetKey(window, GLFW_KEY_S);
-	int D_state = glfwGetKey(window, GLFW_KEY_D);
+	glfwPollEvents();
 
-	if (GLFW_KEY_W == GLFW_PRESS || W_state == GLFW_PRESS) // Forwards along cam Z
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // Forwards along cam Z
 	{
+		std::cout << "W PRESSED \n"; // GLFW Not reciving inputs ...
 		Cam_Pos -= Cam_Basis_Z * (Camera_Speed * dt);
 	}
 
-	if (GLFW_KEY_S == GLFW_PRESS || S_state == GLFW_PRESS) // Backwards along cam Z
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) // Backwards along cam Z
 	{
 		Cam_Pos += Cam_Basis_Z * (Camera_Speed * dt);
 	}
 
-	if (GLFW_KEY_A == GLFW_PRESS || A_state == GLFW_PRESS) // Left along cam X
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) // Left along cam X
 	{
 		Cam_Pos -= Cam_Basis_X * (Camera_Speed * dt);
 	}
 
-	if (GLFW_KEY_D == GLFW_PRESS || D_state == GLFW_PRESS) // Right along cam X
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) // Right along cam X
 	{
 		Cam_Pos += Cam_Basis_X * (Camera_Speed * dt);
 	}

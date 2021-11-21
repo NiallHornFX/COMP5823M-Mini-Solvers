@@ -18,7 +18,7 @@ using byte = unsigned char;
 #define GL_MINOR 3
 
 // FD 
-class GLFWwindow;
+struct GLFWwindow;
 
 // Viewer application for rendering, GUI and handling user input.
 
@@ -51,6 +51,9 @@ public:
 	//void get_animData(); 
 
 private:
+	void get_GLError();
+
+private:
 
 	// Render State
 	GLFWwindow *window; 
@@ -61,6 +64,7 @@ private:
 	const byte *version;
 
 	float dt; 
+	float cur_t, prev_t; 
 
 	// Camera 
 	Camera camera; 
@@ -73,5 +77,8 @@ private:
 
 	std::size_t tick_c; 
 };
+
+
+// GLFW Callbacks ...
 
 #endif
