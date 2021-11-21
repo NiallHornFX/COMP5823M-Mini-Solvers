@@ -32,14 +32,14 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	window_context(); 
 	// Load OpenGL Extensions
 	extensions_load();
-	
 	// Create Camera
-	camera = Camera(glm::vec3(0.f, 0.f, 0.f), -1.f, W, H);
+	camera = Camera(glm::vec3(0.f, 0.f, 1.f), -1.f, W, H);
 }
 
 Viewer::~Viewer() 
 {
 	glfwDestroyWindow(window); window = nullptr;
+	glfwTerminate();
 }
 
 void Viewer::window_context()
@@ -103,7 +103,6 @@ void Viewer::render_prep()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// State Enable
-	glEnable(GL_PROGRAM_POINT_SIZE);
 }
 
 void Viewer::render()
@@ -113,6 +112,8 @@ void Viewer::render()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// If Enabled (primtive, draw) ...
+
+	get_GLError();
 
 	// Test Draw Primtivies
 	for (Primitive &prim : prims)
@@ -131,14 +132,6 @@ void Viewer::render()
 void Viewer::tick()
 {
 	// Pefrom tick
-	std::cout << "tick :" << std::endl;
-	
-
-	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-	{
-		std::cout << "PRESSED \n";
-	}
-
 	// App Operations
 	update_window();
 	update_camera();
@@ -148,11 +141,13 @@ void Viewer::tick()
 	//std::cout << camera.debug().str();
 
 	// Cool operations ...
-	// Get BVH Update
+	// Get Skeleton Update
 	// IK 
 
 	// Render
 	render();
+
+
 	tick_c++;
 }
 
@@ -182,7 +177,8 @@ void Viewer::update_window()
 
 void Viewer::update_camera()
 {
-	camera.update_camera(window, 1.f, dt);
+	//camera.update_camera(window, 1.f, dt);
+	camera.update_camera(window, 1.f, 1.f);
 	// Need to pass camera matrices to each primitives shader. 
 }
 
@@ -216,8 +212,9 @@ void Viewer::test_mesh()
 		-0.5,  0.5, -0.5, 0., 0., 0., 0.0, 1.0, 0.0, 0., 0.,
 	};
 
-	prim_test.set_data_mesh(test_verts, 6);
-	prim_test.set_shader("../../shaders/test.vert", "../../shaders/test.frag");
-	prim_test.shader.setVec("col", glm::vec3(1.f, 0.f, 0.f));
-	prims.push_back(prim_test);
+	//prim_test.set_data_mesh(test_verts, 6);
+	//prim_test.set_shader("../../shaders/test.vert", "../../shaders/test.frag");
+	//prim_test.shader.setVec("col", glm::vec3(1.f, 0.f, 0.f));
+	//prim_test.mode = Render_Mode::RENDER_MESH;
+	//prims.push_back(prim_test);
 }

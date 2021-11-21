@@ -51,7 +51,7 @@ public:
 public:
 	// Intrinsics
 	std::string name;
-	glm::mat4x4 model; 
+	glm::mat4 model; 
 
 	// Shader
 	Shader shader; 

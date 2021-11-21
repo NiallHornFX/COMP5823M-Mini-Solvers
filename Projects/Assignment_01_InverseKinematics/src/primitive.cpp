@@ -21,7 +21,7 @@ Primitive::Primitive(const char *Name)
 	flags.shader_set   = false;
 
 	// Init World to ident
-	model = glm::mat4x4(1);
+	model = glm::mat4(1);
 }
 
 Primitive::~Primitive()
@@ -42,6 +42,7 @@ void Primitive::render()
 
 	// Bind Primitive State
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBindVertexArray(VAO);
 	shader.use();
 
 	switch (mode)

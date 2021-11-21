@@ -33,5 +33,8 @@ void main()
 	// ====== Direct Output ======
 	frag_col = v_C; 
 	frag_uv  = v_UV;
+	
+	// Debug 
+	gl_Position = vec4(v_P, 1.0); 
 }
 
