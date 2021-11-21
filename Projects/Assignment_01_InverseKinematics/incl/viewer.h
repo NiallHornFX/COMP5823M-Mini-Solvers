@@ -6,6 +6,7 @@
 
 // Project Headers
 #include "camera.h"
+#include "primitive.h"
 
 // Ext Headers
 #include "ext/glm/glm.hpp"
@@ -50,6 +51,9 @@ public:
 
 	//void get_animData(); 
 
+	// Debug
+	void test_mesh(); 
+
 private:
 	void get_GLError();
 
@@ -70,6 +74,7 @@ private:
 	Camera camera; 
 
 	// Primtivies
+	std::vector<Primitive> prims; 
 
 	// Animation Controls
 	std::size_t anim_frame; 
@@ -79,6 +84,5 @@ private:
 };
 
 
-// GLFW Callbacks ...
 
 #endif

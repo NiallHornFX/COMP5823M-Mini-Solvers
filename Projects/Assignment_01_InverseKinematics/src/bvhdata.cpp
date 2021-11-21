@@ -8,7 +8,7 @@
 
 #define  BUFFER_LENGTH  1024*4
 
-// Info : BVH Loader based on code provided by Masaki OSHITA (www.oshita-lab.org)
+// Info : BVH Loader based on code by Masaki OSHITA (www.oshita-lab.org)
 
 BVH_Data::BVH_Data(std::string fileName)
 {

@@ -59,7 +59,6 @@ void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt)
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // Forwards along cam Z
 	{
-		std::cout << "W PRESSED \n"; // GLFW Not reciving inputs ...
 		Cam_Pos -= Cam_Basis_Z * (Camera_Speed * dt);
 	}
 

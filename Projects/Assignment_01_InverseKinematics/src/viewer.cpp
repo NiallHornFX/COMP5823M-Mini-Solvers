@@ -16,7 +16,7 @@
 // Std Headers
 #include <iostream>
 #include <vector>
-
+#include <thread>
 
 Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	: width(W), height(H), title(Title)
@@ -32,12 +32,8 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	window_context(); 
 	// Load OpenGL Extensions
 	extensions_load();
-
-	// Shader Test
-	Shader test_shader("test_shader", "../../shaders/test.vert", "../../shaders/test.frag");
-	test_shader.setVec("col", glm::vec3(1.f, 0.f, 0.f));
-
-	// Camera Test
+	
+	// Create Camera
 	camera = Camera(glm::vec3(0.f, 0.f, 0.f), -1.f, W, H);
 }
 
@@ -118,6 +114,13 @@ void Viewer::render()
 
 	// If Enabled (primtive, draw) ...
 
+	// Test Draw Primtivies
+	for (Primitive &prim : prims)
+	{
+		prim.set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		prim.render();
+	}
+
 	// Intresting stuff [..]
 
 	// Swap and Poll
@@ -128,9 +131,10 @@ void Viewer::render()
 void Viewer::tick()
 {
 	// Pefrom tick
-	std::cout << "tick : " << std::endl;
+	std::cout << "tick :" << std::endl;
 	
-	if  (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
 	{
 		std::cout << "PRESSED \n";
 	}
@@ -140,7 +144,8 @@ void Viewer::tick()
 	update_camera();
 
 	// Debug Camera State
-	std::cout << camera.debug().rdbuf();
+	//std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	//std::cout << camera.debug().str();
 
 	// Cool operations ...
 	// Get BVH Update
@@ -155,6 +160,9 @@ void Viewer::exec()
 {
 	// ----- Init Operations ----
 	render_prep();
+
+	// Create Test Primtiive
+	test_mesh();
 	
 	// ---- App Loop ----
 	while (!glfwWindowShouldClose(window))
@@ -190,4 +198,26 @@ void Viewer::get_GLError()
 			i++;
 		}
 	}
+}
+
+void Viewer::test_mesh()
+{
+	Primitive prim_test("test");
+
+	float test_verts[6 * 11] =
+	{
+		// Face 0
+		0.5, -0.5, 0.5,  0., 0., 0., 1.0, 0.0, 1.0, 0., 0.,
+		-0.5, -0.5, 0.5, 0., 0., 0., 0.0, 0.0, 1.0, 0., 0.,
+		-0.5, 0.5, 0.5, 0., 0., 0., 0.0, 1.0, 1.0, 0., 0.,
+
+		-0.5, -0.5, 0.5, 0., 0., 0., 0.0, 0.0, 1.0, 0., 0.,
+		-0.5, -0.5, -0.5, 0., 0., 0., 0.0, 0.0, 0.0, 0., 0.,
+		-0.5,  0.5, -0.5, 0., 0., 0., 0.0, 1.0, 0.0, 0., 0.,
+	};
+
+	prim_test.set_data_mesh(test_verts, 6);
+	prim_test.set_shader("../../shaders/test.vert", "../../shaders/test.frag");
+	prim_test.shader.setVec("col", glm::vec3(1.f, 0.f, 0.f));
+	prims.push_back(prim_test);
 }

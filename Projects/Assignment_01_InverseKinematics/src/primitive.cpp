@@ -98,16 +98,23 @@ void Primitive::set_data_mesh(const std::vector<vert> &data)
 		vert_data.push_back(vert.uv.x),  vert_data.push_back(vert.uv.y);
 	}
 
-	flags.data_set = true; 
+	flags.data_set = true;
+
+	// Setup Buffers
+	create_buffers();
 }
 void Primitive::set_data_mesh(const float *data, std::size_t vert_n)
 {
 	flags.data_set = false; 
 	// Copy Mesh Data
 	vert_data.clear();
+	vert_data.resize(vert_n * 11);
 	vert_count = vert_n;
 	std::memcpy(vert_data.data(), data, (vert_n * 11 * sizeof(float)));
 	flags.data_set = true; 
+
+	// Setup Buffers
+	create_buffers();
 }
 
 
