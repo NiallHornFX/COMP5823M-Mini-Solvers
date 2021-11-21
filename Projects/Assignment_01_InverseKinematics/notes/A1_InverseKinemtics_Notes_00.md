@@ -235,7 +235,7 @@ Rendering won't be done within BVH_Data as I want to separate it out, Bone class
 
 ##### OpenGL Issues
 
-
+Keep running into Shader Not bound issues, not sure if its due to some sort of issue with the context. 
 
 Render doc seems to sometimes report No Resource when using OOP approach, despite the fact there seems to be no issues. 
 

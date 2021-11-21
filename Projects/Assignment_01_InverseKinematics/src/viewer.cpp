@@ -109,14 +109,8 @@ void Viewer::render()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Test Draw Primtivies
-	/*
-	for (Primitive &prim : prims)
-	{
-		prim.set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-		prim.render();
-	}
-	// Intresting stuff [..]
-	*/
+	//prim_t.set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+	prim_t.render();
 
 	// Swap and Poll
 	glfwSwapBuffers(window);
@@ -147,10 +141,10 @@ void Viewer::tick()
 void Viewer::exec()
 {
 	// ----- Init Operations ----
-	//render_prep();
+	render_prep();
 
 	// Create Test Primtiive
-	//test_mesh();
+	test_prim();
 
 	//get_GLError();
 	
@@ -183,19 +177,19 @@ void Viewer::get_GLError()
 	if (err != GL_NO_ERROR) std::cerr << "ERROR::Viewer::GL_ERROR = " << err << std::endl;
 }
 
-void Viewer::test_mesh()
+void Viewer::test_prim()
 {
-	Primitive prim_test("test");
+	 prim_t = Primitive("test");
 
 	float test_verts[3 * 11] =
 	{
 		// Face 0
-		0.0, 0.0, 0.0,  0.0, 0.0, 0.0,	1.0, 0.0, 0.0,	0.0, 0.0,
-		1.0, 0.0, 0.0,  0.0, 0.0, 0.0,	0.0, 1.0, 0.0,	0.0, 0.0,
-		0.5, 1.0, 0.0,  0.0, 0.0, 0.0,	0.0, 0.0, 1.0,	0.0, 0.0
+		0.0, 0.0, 0.0,  1.0, 1.0, 1.0,	1.0, 0.0, 0.0,	0.1, 0.2,
+		1.0, 0.0, 0.0,  1.0, 1.0, 1.0,	0.0, 1.0, 0.0,	0.1, 0.2,
+		0.5, 1.0, 0.0,  1.0, 1.0, 1.0,	0.0, 0.0, 1.0,	0.1, 0.2
 	};
-	prim_test.set_data_mesh(test_verts, 3);
-	prim_test.set_shader("../../shaders/test.vert", "../../shaders/test.frag");
-	prim_test.mode = Render_Mode::RENDER_MESH;
-	prims.push_back(prim_test);
+	prim_t.set_data_mesh(test_verts, 3);
+	//prim_t.set_shader("../../shaders/test.vert", "../../shaders/test.frag");
+	shader = Shader("test", "../../shaders/test.vert", "../../shaders/test.frag");
+	prim_t.mode = Render_Mode::RENDER_MESH;
 }

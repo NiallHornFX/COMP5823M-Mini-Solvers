@@ -52,7 +52,7 @@ public:
 	//void get_animData(); 
 
 	// Debug
-	void test_mesh(); 
+	void test_prim(); 
 
 private:
 	void get_GLError();
@@ -74,7 +74,11 @@ private:
 	Camera camera; 
 
 	// Primtivies
-	std::vector<Primitive> prims; 
+	//std::vector<Primitive> prims; 
+
+	// Debugging
+	Primitive prim_t;
+	Shader shader;
 
 	// Animation Controls
 	std::size_t anim_frame; 

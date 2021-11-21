@@ -29,6 +29,7 @@ enum Render_Mode
 class Primitive
 {
 public:
+	Primitive() {}
 	Primitive(const char *Name);
 	~Primitive();
 

@@ -33,17 +33,18 @@ Primitive::~Primitive()
 void Primitive::render()
 {
 	// Check for state to render
+	/*
 	bool set = (flags.buffers_set & flags.camTrs_set & flags.data_set & flags.shader_set);
 	if (!set)
 	{
 		std::cerr << "ERROR::Primitive::" << name << " Render called, with incorrectly set state." << std::endl;
 		std::terminate();
-	}
+	} */
 
 	// Bind Primitive State
-	//glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBindVertexArray(VAO);
 	shader.use();
+
+	glBindVertexArray(VAO);
 
 	switch (mode)
 	{
@@ -64,6 +65,7 @@ void Primitive::render()
 		{
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			glDrawArrays(GL_TRIANGLES, 0, vert_count);
+			break;
 		}
 	}
 
@@ -125,11 +127,6 @@ void Primitive::create_buffers()
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 
-	for (int i = 0; i < vert_data.size(); ++i)
-	{
-		std::cout << vert_data[i] << "\n";
-	}
-
 	// Fill with mesh data (Assumes Mesh is in correct layout within mesh_data float array)
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -174,7 +171,7 @@ void Primitive::set_shader(const char *vert_path, const char *frag_path)
 	shader = Shader(shader_name.c_str(), vert_path, frag_path);
 
 	// Set Model Matrix
-	shader.setMat4("model", model);
+	//shader.setMat4("model", model);
 
 	if (shader.valid_state) flags.shader_set = true; 
 }
@@ -182,7 +179,7 @@ void Primitive::set_shader(const char *vert_path, const char *frag_path)
 void Primitive::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
 	if (!flags.shader_set) return; 
-	// Set Shader Camera Matrices (assume unfiorms exist)
+
 	shader.setMat4("view", view);
 	shader.setMat4("proj", persp);
 	flags.camTrs_set = true;

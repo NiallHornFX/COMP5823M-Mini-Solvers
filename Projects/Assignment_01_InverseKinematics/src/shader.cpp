@@ -17,17 +17,26 @@
 Shader::Shader(const char *sname, const char *vertpath, const char *fragpath)
 {
 	name = sname; 
-	valid_state = false; 
+	valid_state = false;
+	vert_path = vertpath, frag_path = fragpath; 
+} 
 
+Shader::~Shader()
+{
+	//glDeleteProgram(ID);
+}
+
+void Shader::load()
+{
 	std::ifstream vShaderFile, fShaderFile;
 	vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 	fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 	try
 	{
-		vShaderFile.open(vertpath); 
-		fShaderFile.open(fragpath); 
+		vShaderFile.open(vert_path);
+		fShaderFile.open(frag_path);
 
-		std::stringstream vShaderStream, fShaderStream; 
+		std::stringstream vShaderStream, fShaderStream;
 
 		vShaderStream << vShaderFile.rdbuf();
 		fShaderStream << fShaderFile.rdbuf();
@@ -58,31 +67,22 @@ Shader::Shader(const char *sname, const char *vertpath, const char *fragpath)
 
 	// Build Fragment Shader
 	fragmentS = glCreateShader(GL_FRAGMENT_SHADER);
-	// Pass Charptr code into shadersource. 
 	glShaderSource(fragmentS, 1, &fShaderCode, NULL);
-	// Compile - 
 	glCompileShader(fragmentS);
-	// Call Shader Error Check Func - 
 	check_compile(fragmentS, "Fragment_Shader");
 
 	// Build Shader Program
-	ID = glCreateProgram(); 
+	ID = glCreateProgram();
 	glAttachShader(ID, vertexS);
 	glAttachShader(ID, fragmentS);
 	glLinkProgram(ID);
 	check_link();
 
-	valid_state = true; 
-
 	// Delete Intermediate Shaders
 	glDeleteShader(vertexS);
 	glDeleteShader(fragmentS);
-	
-} // End of Shader::Constructor. 
 
-Shader::~Shader()
-{
-	glDeleteProgram(ID);
+	valid_state = true;
 }
 
 void Shader::use()
@@ -93,37 +93,60 @@ void Shader::use()
 // ========================== Set Uniform Member Functions ========================== 
 void Shader::setBool(const std::string &name, bool value) const
 {
-	glUniform1i(glGetUniformLocation(ID, name.c_str()), (int)value); 
+	glUseProgram(ID);
+	GLint id = glGetUniformLocation(ID, name.c_str());
+	if (!id){ std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; std::terminate();}
+	glUniform1i(id, (int)value); 
+	glUseProgram(0);
 }
 
 void Shader::setInt(const std::string &name, int value) const
 {
-	glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
+	glUseProgram(ID);
+	GLint id = glGetUniformLocation(ID, name.c_str());
+	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; std::terminate(); }
+	glUniform1i(id, value);
+	glUseProgram(0);
 }
 
 void Shader::setFloat(const std::string &name, float value) const
 {
-	glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
+	glUseProgram(ID);
+	GLint id = glGetUniformLocation(ID, name.c_str());
+	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; std::terminate(); }
+	glUniform1f(id, value);
+	glUseProgram(0);
 }
 
 void Shader::setVec(const std::string &name, const glm::vec3 value) const
 {
-	glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, glm::value_ptr(value));
+	glUseProgram(ID);
+	GLint id = glGetUniformLocation(ID, name.c_str());
+	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; std::terminate(); }
+	glUniform3fv(id, 1, glm::value_ptr(value));
+	glUseProgram(0);
 }
 
 void Shader::setMat3(const std::string &name, const glm::mat3x3 value) const
 {
-	glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
+	glUseProgram(ID);
+	GLint id = glGetUniformLocation(ID, name.c_str());
+	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; std::terminate(); }
+	glUniformMatrix3fv(id, 1, GL_FALSE, glm::value_ptr(value));
+	glUseProgram(0);
 }
 
 void Shader::setMat4(const std::string &name, const glm::mat4x4 value) const
 {
-	glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
+	glUseProgram(ID);
+	GLint id = glGetUniformLocation(ID, name.c_str());
+	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; std::terminate(); }
+	glUniformMatrix4fv(id, 1, GL_FALSE, glm::value_ptr(value));
+	glUseProgram(0);
 }
 
 
 // ========================== Check Compile and Link ========================== 
-
 void Shader::check_compile(unsigned int &shader, std::string type)
 {
 	int sucess;

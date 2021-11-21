@@ -2,8 +2,11 @@
 #define SHADER_H
 
 // Ext Headers
+// GLEW
+#include "ext/GLEW/glew.h" 
 // GLM
 #include "ext/glm/glm.hpp"
+#include "ext/glm/gtc/type_ptr.hpp"
 
 // Std Headers
 #include <string>
@@ -18,6 +21,7 @@ public:
 	Shader(const char *name, const char *vertparth, const char *fragpath);
 	~Shader();
 
+	void load();
 	void use();
 
 	// Set Shader Uniforms
@@ -36,12 +40,13 @@ public:
 
 public:
 	std::string name;
-	unsigned int ID; // Shader Program id.
+	
+	GLuint ID; 
 	bool valid_state;
 
 private:
-	std::string vert_shader_code;
-	std::string frag_shader_code; 
+	std::string vert_path, frag_path;
+	std::string vert_shader_code, frag_shader_code;
 };
 
 #endif 
