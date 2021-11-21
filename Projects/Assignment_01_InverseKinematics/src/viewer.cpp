@@ -27,11 +27,11 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	tick_c = 0;
 
 	// ==== OpenGL Setup ==== 
-
-	// Setup OpenGL Context and Window :
+	// Setup OpenGL Context and Window
 	window_context(); 
 	// Load OpenGL Extensions
 	extensions_load();
+
 	// Create Camera
 	camera = Camera(glm::vec3(0.f, 0.f, 1.f), -1.f, W, H);
 }
@@ -51,7 +51,6 @@ void Viewer::window_context()
 		std::cerr << "Error::Viewer:: GLFW failed to initalize.\n";
 		std::terminate();
 	}
-
 	// Window State
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, GL_MAJOR);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, GL_MINOR);
@@ -99,8 +98,8 @@ void Viewer::render_prep()
 {
 	// Blending and Depth. 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glEnable(GL_BLEND);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// State Enable
 }
@@ -113,15 +112,13 @@ void Viewer::render()
 
 	// If Enabled (primtive, draw) ...
 
-	get_GLError();
-
 	// Test Draw Primtivies
+
 	for (Primitive &prim : prims)
 	{
 		prim.set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 		prim.render();
 	}
-
 	// Intresting stuff [..]
 
 	// Swap and Poll
@@ -137,7 +134,7 @@ void Viewer::tick()
 	update_camera();
 
 	// Debug Camera State
-	//std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	//std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	//std::cout << camera.debug().str();
 
 	// Cool operations ...
@@ -147,17 +144,18 @@ void Viewer::tick()
 	// Render
 	render();
 
-
 	tick_c++;
 }
 
 void Viewer::exec()
 {
 	// ----- Init Operations ----
-	render_prep();
+	//render_prep();
 
 	// Create Test Primtiive
 	test_mesh();
+
+	get_GLError();
 	
 	// ---- App Loop ----
 	while (!glfwWindowShouldClose(window))
@@ -185,36 +183,23 @@ void Viewer::update_camera()
 void Viewer::get_GLError()
 {
 	GLenum err = glGetError();
-	int i = 0;
-	while (err != GL_NO_ERROR)
-	{
-		if (i <= 10)
-		{
-			std::cerr << "ERROR::Viewer::GL_ERROR = " << err << "\n";
-			i++;
-		}
-	}
+	if (err != GL_NO_ERROR) std::cerr << "ERROR::Viewer::GL_ERROR = " << err << std::endl;
 }
 
 void Viewer::test_mesh()
 {
 	Primitive prim_test("test");
 
-	float test_verts[6 * 11] =
+	
+	float test_verts[3 * 11] =
 	{
 		// Face 0
-		0.5, -0.5, 0.5,  0., 0., 0., 1.0, 0.0, 1.0, 0., 0.,
-		-0.5, -0.5, 0.5, 0., 0., 0., 0.0, 0.0, 1.0, 0., 0.,
-		-0.5, 0.5, 0.5, 0., 0., 0., 0.0, 1.0, 1.0, 0., 0.,
-
-		-0.5, -0.5, 0.5, 0., 0., 0., 0.0, 0.0, 1.0, 0., 0.,
-		-0.5, -0.5, -0.5, 0., 0., 0., 0.0, 0.0, 0.0, 0., 0.,
-		-0.5,  0.5, -0.5, 0., 0., 0., 0.0, 1.0, 0.0, 0., 0.,
+		0.0, 0.0, 0.0,  0.0, 0.0, 0.0,	1.0, 0.0, 0.0,	0.0, 0.0,
+		1.0, 0.0, 0.0,  0.0, 0.0, 0.0,	0.0, 1.0, 0.0,	0.0, 0.0,
+		0.5, 1.0, 0.0,  0.0, 0.0, 0.0,	0.0, 0.0, 1.0,	0.0, 0.0
 	};
-
-	//prim_test.set_data_mesh(test_verts, 6);
-	//prim_test.set_shader("../../shaders/test.vert", "../../shaders/test.frag");
-	//prim_test.shader.setVec("col", glm::vec3(1.f, 0.f, 0.f));
-	//prim_test.mode = Render_Mode::RENDER_MESH;
-	//prims.push_back(prim_test);
+	prim_test.set_data_mesh(test_verts, 3);
+	prim_test.set_shader("../../shaders/test.vert", "../../shaders/test.frag");
+	prim_test.mode = Render_Mode::RENDER_MESH;
+	prims.push_back(prim_test);
 }

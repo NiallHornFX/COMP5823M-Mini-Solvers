@@ -2,14 +2,11 @@
 #include "camera.h"
 
 // Ext Headers 
-#include "ext/GLEW/glew.h" // GLEW
 #include "ext/GLFW/glfw3.h" // GLFW
 
 // Std Headers
 #include <iostream>
 #include <algorithm>
-
-
 
 Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : Cam_Pos(pos)
 {
@@ -29,7 +26,7 @@ Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : 
 
 	// Eventually add Constructor Variants, to Support User Defined Values For these - 
 	// Set Default Yaw/Pitch Angles - 
-	Yaw = -90.0f;
+	Yaw =   0.0f;
 	Pitch = 0.0f;
 
 	// Set Max/Clamps for Yaw,Pitch (Deg) - 
@@ -50,7 +47,7 @@ glm::mat4 Camera::get_ViewMatrix()
 
 glm::mat4 Camera::get_PerspMatrix()
 {
-	return glm::perspective(glm::radians(FOV + Zoom), Aspect_Ratio, Near_Plane, Far_Plane);
+	return glm::perspective(glm::radians(FOV), Aspect_Ratio, Near_Plane, Far_Plane);
 }
 
 void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt)
@@ -106,6 +103,9 @@ std::ostringstream Camera::debug()
 {
 	std::ostringstream out;
 	out << "======== DEBUG::Camera::BEGIN ========\n"
+		<< "X = " << "[" << Cam_Basis_X.x << "," << Cam_Basis_X.y << "," << Cam_Basis_X.z << "]\n"
+		<< "Y = " << "[" << Cam_Basis_Y.x << "," << Cam_Basis_Y.y << "," << Cam_Basis_Y.z << "]\n"
+		<< "Z = " << "[" << Cam_Basis_Z.x << "," << Cam_Basis_Z.y << "," << Cam_Basis_Z.z << "]\n"
 		<< "Pos = " << "[" << Cam_Pos.x << "," << Cam_Pos.y << "," << Cam_Pos.z << "]\n"
 		<< "Target = " << "[" << Cam_Target_Pos.x << "," << Cam_Target_Pos.y << "," << Cam_Target_Pos.z << "]\n";
 	out << "======== DEBUG::Camera::END ========\n";

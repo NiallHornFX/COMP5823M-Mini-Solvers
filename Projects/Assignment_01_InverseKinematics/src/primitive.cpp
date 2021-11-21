@@ -41,7 +41,7 @@ void Primitive::render()
 	}
 
 	// Bind Primitive State
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	//glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBindVertexArray(VAO);
 	shader.use();
 
@@ -49,7 +49,7 @@ void Primitive::render()
 	{
 		case (RENDER_POINTS) :
 		{
-			glPointSize(1.f);
+			glPointSize(10.f);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 			glDrawArrays(GL_POINTS, 0, vert_count);
 			break;
@@ -66,11 +66,11 @@ void Primitive::render()
 			glDrawArrays(GL_TRIANGLES, 0, vert_count);
 		}
 	}
-	
+
 	// Clear State
 	glUseProgram(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
+	glBindVertexArray(0);
 }
 
 // ======= Info : Mesh Data  =======
@@ -125,10 +125,15 @@ void Primitive::create_buffers()
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 
+	for (int i = 0; i < vert_data.size(); ++i)
+	{
+		std::cout << vert_data[i] << "\n";
+	}
+
 	// Fill with mesh data (Assumes Mesh is in correct layout within mesh_data float array)
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), reinterpret_cast<void*>(vert_data.data()), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
 
 	// Vertex Attribute 
 	// Position (0)
