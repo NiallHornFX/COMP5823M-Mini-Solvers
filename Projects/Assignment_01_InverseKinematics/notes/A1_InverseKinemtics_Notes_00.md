@@ -217,11 +217,11 @@ If we use the nodes of a tree to represent joints as that would seem logical in 
 
 For the BVH Loading, there is an array of joints, whose first joint should be root, starting from here we can loop down to the child joint, each channel per joint represents its DOFs (3 per joint (rotation) apart from root which also has translation / position DOFs).
 
-
-
 Ideally I'd take the resulting BVH Joints + Channels and put it into a nicer tree structure that makes it easier to apply per joint transforms (rotations) atop of the existing BVH anim data per frame to add the modifications from the IK solve, however for now this might just be done, before drawing, based on a separate array of stored IK offsets for each joint. 
 
 ___
+
+#### Viewer / Application Class
 
 ##### OpenGL Renderer : 
 
@@ -249,6 +249,10 @@ Could of been the primitive lifetime, and lack of proper copy ctor, from local v
 
 Don't terminate on invalid uniform, as may of just been optimized out, alright for debugging though, as this is what led me to realize the shader was not been ran (along with seeing a fixed colour on the triangle when no colour was set, very weird, didn't know OpenGL would still execute without shader guess it reverts to legacy).
 
+So I think removing the shading loading + building from the Ctor, and doing it as a separate call (still called from Primitive class) fixed the issue. The issue been that the shader program was not executing at all, hence all the warnings from RenderDoc about the vertex shader, but no shader stage was running (modifying gl_Position did nothing).
+
+If `glDeleteProgram(ID);` is called within Shaders Dtor I get an OpenGL 1281 error which is invalid value, but the shader execution still seems to work correctly, I'm not sure where this is occurring because the shader should have the same lifetime as the viewer (primitives currently created in viewer for debugging), wonder if its when `Primitive::set_shader()` replaces the default initialized shader with the user defined shader, Implicit copy assignment is done so maybe this causes the shader dealloc before the copy, but still seems to work. For now i've commented out the `glDeleteProgram(ID);`  call within the shader Dtor. 
+
 ##### Animation State
 
 Because the application is ticking constantly, I don't want to couple the ticking of the viewer to the anim frame of the BVH. So I will have a "global" animation frame set, that either loops continually or is set by user input so a single frame. This will be continually incremented per tick to keep looping or stay static. 
@@ -270,8 +274,6 @@ Because Primitive renders the object, we need to pass the camera transforms from
 Primitive Class Base Members/Functions :
 
 Member functions like render(), createbuffers() will be virtual to allow for overriding eg for mesh class.  
-
-
 
 Oppose to having a big monolithic constructor, where all data is passed, this class will rely on basic initialization and then separate calls to pass mesh data, texture data, shader data etc via setter like member functions. 
 

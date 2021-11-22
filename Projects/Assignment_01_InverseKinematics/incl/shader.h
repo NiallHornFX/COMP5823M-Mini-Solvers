@@ -25,12 +25,12 @@ public:
 	void use();
 
 	// Set Shader Uniforms
-	void setBool(const std::string &name, bool value)        const;
-	void setInt(const std::string &name, int value)          const;
-	void setFloat(const std::string &name, float value)      const;
-	void setVec(const std::string &name, glm::vec3 value)    const;
-	void setMat3(const std::string &name, glm::mat3x3 value) const;
-	void setMat4(const std::string &name, glm::mat4x4 value) const;
+	void setBool (const std::string &name, bool value)          const;
+	void setInt  (const std::string &name, int value)           const;
+	void setFloat(const std::string &name, float value)         const;
+	void setVec  (const std::string &name, glm::vec3 value)     const;
+	void setMat3 (const std::string &name, glm::mat3x3 value)   const;
+	void setMat4 (const std::string &name, glm::mat4x4 value)   const;
 
 	// Debug
 	void check_compile(unsigned int &shader, std::string type);
@@ -40,7 +40,6 @@ public:
 
 public:
 	std::string name;
-	
 	GLuint ID; 
 	bool valid_state;
 

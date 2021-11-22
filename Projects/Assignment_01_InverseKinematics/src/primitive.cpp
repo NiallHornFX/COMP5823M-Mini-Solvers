@@ -33,13 +33,12 @@ Primitive::~Primitive()
 void Primitive::render()
 {
 	// Check for state to render
-	/*
 	bool set = (flags.buffers_set & flags.camTrs_set & flags.data_set & flags.shader_set);
 	if (!set)
 	{
 		std::cerr << "ERROR::Primitive::" << name << " Render called, with incorrectly set state." << std::endl;
 		std::terminate();
-	} */
+	} 
 
 	// Bind Primitive State
 	shader.use();

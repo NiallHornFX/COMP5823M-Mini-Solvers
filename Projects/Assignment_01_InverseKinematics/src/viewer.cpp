@@ -127,8 +127,8 @@ void Viewer::tick()
 	update_camera();
 
 	// Debug Camera State
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	std::cout << camera.debug().str();
+	//std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	//std::cout << camera.debug().str();
 
 	// Cool operations ...
 	// Get Skeleton Update
@@ -148,8 +148,6 @@ void Viewer::exec()
 	// Create Test Primtiive
 	test_prim();
 
-	//get_GLError();
-	
 	// ---- App Loop ----
 	while (!glfwWindowShouldClose(window) && !esc_pressed())
 	{
@@ -169,7 +167,7 @@ void Viewer::update_window()
 void Viewer::update_camera()
 {
 	//camera.update_camera(window, 1.f, dt);
-	camera.update_camera(window, 1.f, 0.1f);
+	camera.update_camera(window, 1.f, 0.01f);
 	// Need to pass camera matrices to each primitives shader. 
 }
 
@@ -179,6 +177,8 @@ void Viewer::get_GLError()
 	if (err != GL_NO_ERROR) std::cerr << "ERROR::Viewer::GL_ERROR = " << err << std::endl;
 }
 
+
+// Temp, testing primtive rendering via Primitive Class
 void Viewer::test_prim()
 {
 	 //prim_t = new Primitive("test");

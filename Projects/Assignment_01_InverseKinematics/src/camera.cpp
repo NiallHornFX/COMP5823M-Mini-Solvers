@@ -20,14 +20,12 @@ Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : 
 	// Calc Local Camera Basis/Axis
 	Cam_Basis_X = glm::normalize(glm::cross(Cam_Up, Cam_Dir));
 	Cam_Basis_Y = glm::normalize(glm::cross(Cam_Dir, Cam_Basis_X));
-	Cam_Basis_Z = glm::normalize(Cam_Dir); // Local Z is just the TargetDirection.
+	Cam_Basis_Z = glm::normalize(Cam_Dir);
 
 	Sensitvity = 0.75f;
 
-	// Eventually add Constructor Variants, to Support User Defined Values For these - 
 	// Set Default Yaw/Pitch Angles - 
-	Yaw =   0.0f;
-	Pitch = 0.0f;
+	Yaw =   0.0f, Pitch = 0.0f;
 
 	// Set Max/Clamps for Yaw,Pitch (Deg) - 
 	Yaw_Min = -180.0f, Yaw_Max = 120.0f;
