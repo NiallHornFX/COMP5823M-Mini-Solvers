@@ -22,6 +22,10 @@ Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : 
 	Cam_Basis_Y = glm::normalize(glm::cross(Cam_Dir, Cam_Basis_X));
 	Cam_Basis_Z = glm::normalize(Cam_Dir); // Local Z is just the TargetDirection.
 
+	Cam_Basis_X = glm::vec3(1.f, 0.f, 0.f);
+	Cam_Basis_Y = glm::vec3(0.f, 1.f, 0.f);
+	Cam_Basis_Z = Cam_Dir;
+
 	Sensitvity = 0.75f;
 
 	// Eventually add Constructor Variants, to Support User Defined Values For these - 

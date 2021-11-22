@@ -235,9 +235,19 @@ Rendering won't be done within BVH_Data as I want to separate it out, Bone class
 
 ##### OpenGL Issues
 
-Keep running into Shader Not bound issues, not sure if its due to some sort of issue with the context. 
+I had some crazy OpenGL issues, I think its because of lifetime / scope / context issues because of  the separation (object wrapping) of OpenGL constructs, more so that any previous program i've written. 
+
+Keep running into Shader Not bound issues (Renderdoc), not sure if its due to some sort of issue with the context. 
+
+Seems the fragment shader is not running thus the output colour of the geo is coming from the vertex shader? It could be Undefined Behaviour, there's no build / link errors.
+
+Removed Shader loading in shader ctor. Use separate load() member function to load post construction. RAII could be cause of issues. Could also try using glDetachShader() after linking to decouple its lifetime. 
 
 Render doc seems to sometimes report No Resource when using OOP approach, despite the fact there seems to be no issues. 
+
+Could of been the primitive lifetime, and lack of proper copy ctor, from local var to member within viewer class. 
+
+Don't terminate on invalid uniform, as may of just been optimized out, alright for debugging though, as this is what led me to realize the shader was not been ran (along with seeing a fixed colour on the triangle when no colour was set, very weird, didn't know OpenGL would still execute without shader guess it reverts to legacy).
 
 ##### Animation State
 

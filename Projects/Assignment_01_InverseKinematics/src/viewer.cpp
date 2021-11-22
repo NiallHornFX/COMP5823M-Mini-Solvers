@@ -33,7 +33,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	extensions_load();
 
 	// Create Camera
-	camera = Camera(glm::vec3(0.f, 0.f, 1.f), -1.f, W, H);
+	camera = Camera(glm::vec3(0.f, 0.f, 0.f), -1.f, W, H);
 }
 
 Viewer::~Viewer() 
@@ -98,7 +98,7 @@ void Viewer::render_prep()
 {
 	// Blending and Depth. 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
+	//glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
@@ -109,8 +109,10 @@ void Viewer::render()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Test Draw Primtivies
-	//prim_t.set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-	prim_t.render();
+	prim_t->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+	get_GLError();
+	prim_t->render();
+	get_GLError();
 
 	// Swap and Poll
 	glfwSwapBuffers(window);
@@ -125,8 +127,8 @@ void Viewer::tick()
 	update_camera();
 
 	// Debug Camera State
-	//std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	//std::cout << camera.debug().str();
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	std::cout << camera.debug().str();
 
 	// Cool operations ...
 	// Get Skeleton Update
@@ -167,7 +169,7 @@ void Viewer::update_window()
 void Viewer::update_camera()
 {
 	//camera.update_camera(window, 1.f, dt);
-	camera.update_camera(window, 1.f, 1.f);
+	//camera.update_camera(window, 1.f, 1.f);
 	// Need to pass camera matrices to each primitives shader. 
 }
 
@@ -179,17 +181,16 @@ void Viewer::get_GLError()
 
 void Viewer::test_prim()
 {
-	 prim_t = Primitive("test");
+	 prim_t = new Primitive("test");
 
-	float test_verts[3 * 11] =
+	float test_verts[11 * 3] =
 	{
 		// Face 0
 		0.0, 0.0, 0.0,  1.0, 1.0, 1.0,	1.0, 0.0, 0.0,	0.1, 0.2,
 		1.0, 0.0, 0.0,  1.0, 1.0, 1.0,	0.0, 1.0, 0.0,	0.1, 0.2,
 		0.5, 1.0, 0.0,  1.0, 1.0, 1.0,	0.0, 0.0, 1.0,	0.1, 0.2
 	};
-	prim_t.set_data_mesh(test_verts, 3);
-	//prim_t.set_shader("../../shaders/test.vert", "../../shaders/test.frag");
-	shader = Shader("test", "../../shaders/test.vert", "../../shaders/test.frag");
-	prim_t.mode = Render_Mode::RENDER_MESH;
+	prim_t->set_data_mesh(test_verts, 3);
+	prim_t->set_shader("test.vert", "test.frag");
+	prim_t->mode = Render_Mode::RENDER_MESH;
 }

@@ -77,7 +77,7 @@ private:
 	//std::vector<Primitive> prims; 
 
 	// Debugging
-	Primitive prim_t;
+	Primitive *prim_t;
 	Shader shader;
 
 	// Animation Controls

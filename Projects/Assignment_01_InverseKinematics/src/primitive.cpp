@@ -45,7 +45,6 @@ void Primitive::render()
 	shader.use();
 
 	glBindVertexArray(VAO);
-
 	switch (mode)
 	{
 		case (RENDER_POINTS) :
@@ -169,18 +168,16 @@ void Primitive::set_shader(const char *vert_path, const char *frag_path)
 {
 	std::string shader_name = name + "_Shader";
 	shader = Shader(shader_name.c_str(), vert_path, frag_path);
-
+	shader.load();
 	// Set Model Matrix
 	//shader.setMat4("model", model);
-
 	if (shader.valid_state) flags.shader_set = true; 
 }
 
 void Primitive::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
 	if (!flags.shader_set) return; 
-
 	shader.setMat4("view", view);
-	shader.setMat4("proj", persp);
+	//shader.setMat4("proj", persp);
 	flags.camTrs_set = true;
 }
