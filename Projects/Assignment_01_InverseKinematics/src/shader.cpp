@@ -23,7 +23,7 @@ Shader::Shader(const char *sname, const char *vertpath, const char *fragpath)
 
 Shader::~Shader()
 {
-	glDeleteProgram(ID);
+	//glDeleteProgram(ID);
 }
 
 void Shader::load()

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 
+
 Mesh::Mesh(const char *name, const char *filePath)
 	: Primitive(name), file_path(filePath)
 {
