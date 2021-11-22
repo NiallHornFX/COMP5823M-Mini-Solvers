@@ -220,7 +220,7 @@ void Viewer::test_mesh()
 	mesh_t->load_obj(true);
 	mesh_t->set_shader("test_tex.vert", "test_tex.frag");
 	//mesh_t->load_texture("check.jpg", 0);
-	mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
+	//mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
 	mesh_t->mode = Render_Mode::RENDER_MESH;
 
 	prims.push_back(mesh_t);

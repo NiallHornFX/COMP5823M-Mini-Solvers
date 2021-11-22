@@ -165,7 +165,6 @@ void Mesh::load_texture(const char *filepath, uint unit)
 	tex->load();
 
 	if (tex->valid_state) has_tex = true; else return; 
-
 	shader.setInt("tex", unit);
 	use_tex = true; 
 }
