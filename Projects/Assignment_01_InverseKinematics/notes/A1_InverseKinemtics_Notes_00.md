@@ -259,9 +259,17 @@ Another issue, if you try and call any OpenGL code for testing, eg mesh loading,
 
 So issues are a combo of  :
 
-* GL Operations occurring in Ctor of classes (whom may not be in valid context OR not initialized to valid resources )
+* GL Operations occurring in Ctor of classes (whom may not be in valid context OR not initialized to valid resources ). Specifically because the shader class is called within viewer::render() via its Primitive::render() member function, existing within another classes scope seems to cause issues. 
 
 * Classes doing GL operations / allocations occurring on default initialization of stack based members (and later copy operations onto these members result in invalid state of GL objects/resources and calls). 
+
+Texture bug - "Frame not in module", don't reinterpret_cast<void*> the texture_data as it changes the address (in this case) unlike static_cast which guarantees to preserve it. Still seem to be getting this issue now and again even though this initially fixed it. Seems to happen if UVs are out of bounds. Just turn off debugging, its not a bug, just a warning on the texture usage (via sampler in GLSL), signals invalid usage. 
+
+Because verts are not shared we get incorrect UVs, need to watch out for this also. (Not sure if this is the case ...)
+
+Weird issue where if Uniform is set within render loop of primitive/mesh it breaks, but if set from the scope of the viewer it works fine.  (Uniforms need to be reset when changed if uniform was set before operation). It causes the shader to become unbound (same issue that I seemed to solve last night, need to ensure shader is valid, not sure why uniform modification would cause this issue). Seems if uniforms are set from wrong location it invalidates the shader, even if it executes. 
+
+Could just wrap uniform access in a getter and call from viewer render loop. 
 
 ##### Animation State
 

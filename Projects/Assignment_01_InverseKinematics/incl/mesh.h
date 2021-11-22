@@ -44,6 +44,7 @@ public:
 
 	// State
 	bool has_tex;
+	bool wireframe; 
 
 	// Texture 
 	bool use_tex;

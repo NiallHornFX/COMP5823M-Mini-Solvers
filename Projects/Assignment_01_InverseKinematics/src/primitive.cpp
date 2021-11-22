@@ -44,6 +44,9 @@ void Primitive::render()
 	// Bind Primitive State
 	shader.use();
 
+	// Reset Uniforms
+	//shader.setMat4("model")
+
 	// Render in set mode
 	glBindVertexArray(VAO);
 	switch (mode)
@@ -52,13 +55,13 @@ void Primitive::render()
 		{
 			glPointSize(10.f);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-			glDrawArrays(GL_POINTS, 0, vert_count);
+			glDrawArrays(GL_TRIANGLES, 0, vert_count);
 			break;
 		}
 		case (RENDER_LINES) :
 		{
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			glDrawArrays(GL_LINES, 0, vert_count);
+			glDrawArrays(GL_TRIANGLES, 0, vert_count);
 			break;
 		}
 		case (RENDER_MESH) :
@@ -188,11 +191,15 @@ void Primitive::update_data_colour(const std::vector<glm::vec3> &colData)
 
 void Primitive::set_shader(const char *vert_path, const char *frag_path)
 {
+	// Create Shader
 	std::string shader_name = name + "_Shader";
 	shader = Shader(shader_name.c_str(), vert_path, frag_path);
+
+	// Load and build shader
 	shader.load();
+
 	// Set Model Matrix
-	//shader.setMat4("model", model);
+	shader.setMat4("model", model);
 	if (shader.valid_state) flags.shader_set = true; 
 }
 
@@ -226,4 +233,10 @@ void Primitive::debug() const
 			<< "Tex =  [" << vert_data[i++] << "," << vert_data[i++] << "\n";
 	}
 	std::cout << "======== DEBUG::Camera::Primitive_" << name << "::Vertex_Data::END ========\n";
+}
+
+void Primitive::scale(const glm::vec3 &scale)
+{
+	if (!flags.shader_set) return;
+	shader.setMat4("model", glm::scale(model, scale));
 }

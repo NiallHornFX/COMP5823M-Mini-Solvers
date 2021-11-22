@@ -52,6 +52,11 @@ public:
 
 	void set_shader(const char *vert_path, const char *frag_path);
 
+	// Model Transforms
+	void scale(const glm::vec3 &scale);
+	//void translate(const glm::vec3 &offs);
+	//void rotate(float r_ang, const glm::vec3 &axis);
+
 
 public:
 	// Intrinsics

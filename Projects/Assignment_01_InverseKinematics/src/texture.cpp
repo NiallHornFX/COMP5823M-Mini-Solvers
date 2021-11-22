@@ -53,14 +53,13 @@ void Texture::load()
 	// Gen Texture and Bind
 	glGenTextures(1, &ID);
 	glBindTexture(GL_TEXTURE_2D, ID);
-
 	switch (nChannels)
 	{
 	case 3:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, reinterpret_cast<void*>(tex_data));
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, static_cast<void*>(tex_data));
 		break;
 	case 4:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<void*>(tex_data));
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, static_cast<void*>(tex_data));
 	}
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -90,8 +89,8 @@ void Texture::set_params(filter_type filter)
 	}
 
 	// Enforce mirrored repat. 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT); // X (S)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT); // Y (T)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // X (S)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // Y (T)
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -111,19 +110,6 @@ void Texture::activate()
 		case 3:
 			glActiveTexture(GL_TEXTURE3);
 			break;
-		case 4:
-			glActiveTexture(GL_TEXTURE4);
-			break;
-		case 5:
-			glActiveTexture(GL_TEXTURE5);
-			break;
-		case 6:
-			glActiveTexture(GL_TEXTURE6);
-			break;
-		case 7:
-			glActiveTexture(GL_TEXTURE7);
-			break;
-
 		default: std::cerr << "ERROR::Texture::" << name << ":: texture unit out of bounds" << std::endl;
 	}
 }

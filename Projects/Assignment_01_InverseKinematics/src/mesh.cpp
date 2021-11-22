@@ -14,6 +14,7 @@ Mesh::Mesh(const char *name, const char *filePath)
 	use_tex = false; 
 	tex = nullptr;
 	has_tex = false;
+	wireframe = false; 
 }
 
 Mesh::~Mesh()
@@ -198,6 +199,9 @@ void Mesh::render()
 	// Bind Primitive State
 	shader.use();
 
+	// Reset Uniforms
+	//shader.setMat4("model", model);
+
 	// Activate and Bind Texture
 	if (use_tex)
 	{
@@ -212,13 +216,13 @@ void Mesh::render()
 		{
 			glPointSize(10.f);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-			glDrawArrays(GL_POINTS, 0, vert_count);
+			glDrawArrays(GL_TRIANGLES, 0, vert_count);
 			break;
 		}
 		case (RENDER_LINES):
 		{
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			glDrawArrays(GL_LINES, 0, vert_count);
+			glDrawArrays(GL_TRIANGLES, 0, vert_count);
 			break;
 		}
 		case (RENDER_MESH):

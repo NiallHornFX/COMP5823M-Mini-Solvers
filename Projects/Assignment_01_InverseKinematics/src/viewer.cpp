@@ -31,7 +31,6 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	window_context(); 
 	// Load OpenGL Extensions
 	extensions_load();
-
 	// Create Camera
 	camera = Camera(glm::vec3(0.f, 0.5f, 1.f), -100.f, W, H);
 }
@@ -98,8 +97,8 @@ void Viewer::render_prep()
 {
 	// Blending and Depth. 
 	glEnable(GL_DEPTH_TEST);
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void Viewer::render()
@@ -113,6 +112,7 @@ void Viewer::render()
 	for (Primitive *p : prims)
 	{
 		p->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		p->scale(glm::vec3(0.1, 0.1, 0.1));
 		p->render();
 	}
 	get_GLError();
@@ -216,11 +216,18 @@ void Viewer::test_prim()
 // Obj Loading Test
 void Viewer::test_mesh()
 {
-	Mesh *mesh_t = new Mesh("Test", "triplane.obj");
-	mesh_t->load_obj(true);
-	mesh_t->set_shader("test_tex.vert", "test_tex.frag");
+	Mesh *mesh_t = new Mesh("Test", "bone.obj");
+	//mesh_t->load_obj(true);
+	//mesh_t->set_shader("test_tex.vert", "test_tex.frag");
+	//mesh_t->set_shader("test_tex.vert", "grid.frag");
 	//mesh_t->load_texture("check.jpg", 0);
 	//mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
+	//mesh_t->mode = Render_Mode::RENDER_MESH;
+
+	mesh_t->load_obj(false);
+	mesh_t->set_shader("test.vert", "test.frag");
+	mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
+	//mesh_t->model = glm::scale(mesh_t->model, glm::vec3(0.1, 0.1, 0.1));
 	mesh_t->mode = Render_Mode::RENDER_MESH;
 
 	prims.push_back(mesh_t);

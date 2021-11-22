@@ -32,7 +32,7 @@ Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : 
 	Pitch_Min = -89.0f, Pitch_Max = 89.0f;
 
 	// Set Defualt Perspective Members - 
-	FOV = 90.0f;
+	FOV = 80.0f;
 	Aspect_Ratio = width / height;
 	Near_Plane = 0.01f;
 	Far_Plane = 100.0f;
