@@ -14,6 +14,8 @@
 
 #define BUFFER_SIZE 512
 
+// Creation of Shader,Loading and Building, now decoupled from Ctor, for completeness of OpenGL state. 
+
 Shader::Shader(const char *sname, const char *vertpath, const char *fragpath)
 {
 	name = sname; 

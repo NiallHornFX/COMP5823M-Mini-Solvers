@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 
+#define DEBUG_LOG
+
 
 Mesh::Mesh(const char *name, const char *filePath)
 	: Primitive(name), file_path(filePath)
@@ -17,14 +19,20 @@ Mesh::~Mesh()
 
 }
 
-void Mesh::load_obj()
+// For now mesh is treated as triangle soup. No reuse of shared vertices. 
+// Very basic, assumes obj file has tris. 
+void Mesh::load_obj(bool has_tex)
 {
+	// Check file exists
 	std::ifstream in(file_path);
-	if (!in.is_open)
+	if (!in.is_open())
 	{
 		std::cerr << "ERROR::Mesh::" << name << ":: Invalid .obj file passed" << std::endl;
 		return;
 	}
+
+	// Debug Stream
+	std::ostringstream dbg; 
 
 	std::string line;
 	while (std::getline(in, line))
@@ -34,49 +42,113 @@ void Mesh::load_obj()
 		std::istringstream ss(line);
 		ss >> str;
 
+		dbg << "DEBUG " << str << "\n";
+
+		if (str == "#" || str == "g" || str == "s") continue;
+
 		// Vertex Postion
 		if (str == "v")
 		{
-			vec3<float> vp;
-			ss >> vp.x;
-			ss >> vp.y;
-			ss >> vp.z;
-			v_pos.push_back(vp);
+			float xx, yy, zz;
+			ss >> xx;
+			ss >> yy;
+			ss >> zz;
+			obj_data.v_p.emplace_back(xx, yy, zz);
+			dbg << "v_" << obj_data.v_p.size() << " = " << xx << "," << yy << "," << zz << "\n";
 		}
-
 		// Vertex Normal 
 		if (str == "vn")
 		{
-			vec3<float> vn;
-			ss >> vn.x;
-			ss >> vn.y;
-			ss >> vn.z;
-			v_n.push_back(vn);
+			float xx, yy, zz;
+			ss >> xx;
+			ss >> yy;
+			ss >> zz;
+			obj_data.v_n.emplace_back(xx, yy, zz);
+			dbg << "vn_" << obj_data.v_p.size() << " = " << xx << "," << yy << "," << zz << "\n";
 		}
-		// Faces and Indices 
+		// Vertex Texture
+		if (has_tex)
+		{
+			// Vertex Texture Coord 
+			if (str == "vt")
+			{
+				float uu, vv; 
+				ss >> uu;
+				ss >> vv;
+				obj_data.v_t.emplace_back(uu, vv);
+				dbg << "vt_" << obj_data.v_p.size() << " = " << uu << "," << vv << "\n";
+			}
+		}
+		// Faces / Indices
 		if (str == "f")
 		{
-			// Vert Postion & Normal Indices. 
-			int vpos_v0, vpos_v1, vpos_v2, vn_v0, vn_v1, vn_v2;
-			char c; // For Scratch "//" Between Faces. 
-			ss >> vpos_v0; ss >> c; ss >> c; ss >> vn_v0; v_idx.push_back(vec2<int>(vpos_v0, vn_v0));
-			ss >> vpos_v1; ss >> c; ss >> c; ss >> vn_v1; v_idx.push_back(vec2<int>(vpos_v1, vn_v1));
-			ss >> vpos_v2; ss >> c; ss >> c; ss >> vn_v2; v_idx.push_back(vec2<int>(vpos_v2, vn_v2));
+			if (has_tex) // Get each face vertex (w/ texture coords)
+			{
+				for (int i = 0; i < 3; ++i)
+				{
+					// Vert Postion & Normal Indices. 
+					int32_t i_vp, i_vn, i_vt;
+					char c; // scratch write
 
-			// Set Vertices 
-			vertex v0, v1, v2;
-			// Get Vertex Pos and Normals from Indcies (i-1)
-			vec3<float> v0_pos = v_pos[vpos_v0 - 1]; vec3<float> v0_n = v_n[vn_v0 - 1];
-			vec3<float> v1_pos = v_pos[vpos_v1 - 1]; vec3<float> v1_n = v_n[vn_v0 - 1];
-			vec3<float> v2_pos = v_pos[vpos_v2 - 1]; vec3<float> v2_n = v_n[vn_v0 - 1];
-			// Per Vertex Vector (Non Unique)
-			v0.pos = v0_pos; v0.normal = v0_n; verts.push_back(std::move(v0));
-			v1.pos = v1_pos; v1.normal = v1_n; verts.push_back(std::move(v1));
-			v2.pos = v2_pos; v2.normal = v2_n; verts.push_back(std::move(v2));
+					// Face Vertex Data
+					ss >> i_vp; // v_p index
+					ss >> c; // '/'
+					ss >> c; // '/'
+					ss >> i_vn; // 'v_n' index
+					ss >> c; // '/'
+					ss >> c; // '/'
+					ss >> i_vt; // 'v_t' index
 
-			// Face Triangle (Mesh Vector) - 
-			mesh.push_back(new triangle(v0, v1, v2, mat));
+					// Create Vertex
+					vert vertex;
+					// neg 1 offset for obj indices '1' based. 
+					vertex.pos    = obj_data.v_p[i_vp - 1];
+					vertex.normal = obj_data.v_p[i_vn - 1];
+					vertex.uv     = obj_data.v_p[i_vt - 1];
+					vertex.col    = glm::vec3(1.f, 1.f, 1.f);
+
+					// Append to vert array
+					obj_data.verts.push_back(std::move(vertex));
+				}
+			}
+			else // Get each face vertex (wo/ texture coords)
+			{
+				for (int i = 0; i < 3; ++i)
+				{
+					// Vert Postion & Normal Indices. 
+					int32_t i_vp, i_vn;
+					char c; // scratch write
+
+					// Face Vertex Data
+					ss >> i_vp; // v_p index
+					ss >> c; // '/'
+					ss >> c; // '/'
+					ss >> i_vn; // 'v_n' index
+
+					// Create Vertex
+					vert vertex;
+					// neg 1 offset for obj indices '1' based. 
+					vertex.pos    = obj_data.v_p[i_vp - 1];
+					vertex.normal = obj_data.v_p[i_vn - 1];
+					vertex.uv     = glm::vec2(0.f, 0.f);
+					vertex.col    = glm::vec3(1.f, 1.f, 1.f);
+
+					// Append to vert array
+					obj_data.verts.push_back(std::move(vertex));
+				}
+			}
 		}
 
-	}
+	} // End file read loop. 
+	// Close 
+	in.close();
+
+	dbg << "Vert Count = " << obj_data.verts.size() << "\n";
+
+	// Pass verts to primitive::mesh_data
+	//set_data_mesh(obj_data.verts);
+
+	#ifdef DEBUG_LOG
+		std::cout << dbg.str();
+	#endif
 }

@@ -253,6 +253,8 @@ So I think removing the shading loading + building from the Ctor, and doing it a
 
 If `glDeleteProgram(ID);` is called within Shaders Dtor I get an OpenGL 1281 error which is invalid value, but the shader execution still seems to work correctly, I'm not sure where this is occurring because the shader should have the same lifetime as the viewer (primitives currently created in viewer for debugging), wonder if its when `Primitive::set_shader()` replaces the default initialized shader with the user defined shader, Implicit copy assignment is done so maybe this causes the shader dealloc before the copy, but still seems to work. For now i've commented out the `glDeleteProgram(ID);`  call within the shader Dtor. 
 
+I Think this may be what causes the error, the default initialized shader then copied via the implicit operator= keeps the same ID, but the shader state is invalid ? So I will do the same for the Texture object and all other classes calling GL related functions within the context, ie separate their operations (creating and destruction of GL resources) as separate member functions to be invoked by user, as oppose to happening within the Ctor on construction. 
+
 ##### Animation State
 
 Because the application is ticking constantly, I don't want to couple the ticking of the viewer to the anim frame of the BVH. So I will have a "global" animation frame set, that either loops continually or is set by user input so a single frame. This will be continually incremented per tick to keep looping or stay static. 

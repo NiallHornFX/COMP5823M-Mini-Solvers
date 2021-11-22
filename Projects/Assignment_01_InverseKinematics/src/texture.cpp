@@ -13,20 +13,30 @@
 #include "ext/stb/stb_image.h"
 
 
-Texture::Texture(const char *tex_path,  const char *name)
+// Creation of texture and loading, now decoupled from Ctor, for completeness of OpenGL state. 
+
+Texture::Texture(const char *Name, const char *tex_path)
+	: name(Name), filePath(tex_path)
+{
+	valid_state = false; 
+	ID = -1; 
+	activeFilter = filter_type::NEAREST;
+}
+
+void Texture::load()
 {
 	// Check File path
-	std::ifstream file(tex_path);
+	std::ifstream file(filePath);
 	if (!file.is_open())
 	{
 		std::cerr << "ERROR::Texture::" << name << ":: file does not exist." << std::endl;
 		return;
 	}
-	file.close(); 
+	file.close();
 
 	// Load via Stb image : 
 	stbi_set_flip_vertically_on_load(true); // Flip Texture Y Axis on Load. 
-	byte *tex_data = stbi_load(tex_path, &width, &height, &nChannels, 0);
+	byte *tex_data = stbi_load(filePath.c_str(), &width, &height, &nChannels, 0);
 
 	// Check for invalid state
 	if (!tex_data)
@@ -46,18 +56,22 @@ Texture::Texture(const char *tex_path,  const char *name)
 
 	switch (nChannels)
 	{
-		case 3:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, reinterpret_cast<void*>(tex_data));
-			break;
-		case 4:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<void*>(tex_data));
+	case 3:
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, reinterpret_cast<void*>(tex_data));
+		break;
+	case 4:
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<void*>(tex_data));
 	}
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
+
+	SetTex_Params(activeFilter);
+	valid_state = true; 
 }
 
 void Texture::SetTex_Params(filter_type filter)
 {
+	glBindTexture(GL_TEXTURE_2D, ID);
 	switch (filter)
 	{
 		case 0 : 
@@ -78,6 +92,7 @@ void Texture::SetTex_Params(filter_type filter)
 	// Enforce mirrored repat. 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT); // X (S)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT); // Y (T)
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Texture::Activate_Tex(std::size_t unit_id)

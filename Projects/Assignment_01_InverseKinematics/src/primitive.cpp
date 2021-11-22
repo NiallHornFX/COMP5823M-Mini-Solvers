@@ -3,6 +3,7 @@
 
 // Std Headers
 #include <iostream>
+#include <cassert>
 
 // Ext Headers 
 // GLEW
@@ -26,6 +27,7 @@ Primitive::Primitive(const char *Name)
 
 Primitive::~Primitive()
 {
+	if (!flags.buffers_set) return; 
 	if (VAO) glDeleteVertexArrays(1, &VAO);
 	if (VBO) glDeleteBuffers(1, &VBO);
 }
@@ -118,7 +120,6 @@ void Primitive::set_data_mesh(const float *data, std::size_t vert_n)
 	create_buffers();
 }
 
-
 void Primitive::create_buffers()
 {
 	// Gen VAO and VBO
@@ -151,7 +152,7 @@ void Primitive::create_buffers()
 	flags.buffers_set = true;
 }
 
-// Only Sets Position of vertices (allows for updating positions per tick)
+// Only sets position of vertices (allows for updating positions per tick)
 void Primitive::update_data_position(const std::vector<glm::vec3> &posData)
 {
 	for (std::size_t v = 0; v < vert_count; ++v)
@@ -160,6 +161,18 @@ void Primitive::update_data_position(const std::vector<glm::vec3> &posData)
 		vert_data[i++] = posData[v].x;
 		vert_data[i++] = posData[v].y;
 		vert_data[i++] = posData[v].z;
+	}
+}
+
+// Only sets colour of vertcies (allows for updating colours per tick)
+void Primitive::update_data_colour(const std::vector<glm::vec3> &colData)
+{
+	for (std::size_t v = 0; v < vert_count; ++v)
+	{
+		std::size_t i = 6 + v * 11; // Vert Index, Position. 
+		vert_data[i++] = colData[v].r;
+		vert_data[i++] = colData[v].g;
+		vert_data[i++] = colData[v].b;
 	}
 }
 
@@ -179,4 +192,22 @@ void Primitive::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &
 	shader.setMat4("view", view);
 	shader.setMat4("proj", persp);
 	flags.camTrs_set = true;
+}
+
+void Primitive::debug() const
+{
+	// Check for correct mesh_data size to vertex count with attributes. (11 * sizeof(float) per vert).
+	assert((vert_data.size() * sizeof(float)) == (vert_count * sizeof(float) * 11));
+
+	std::cout << "======== DEBUG::Camera::Primitive_" << name << "::Vertex_Data::BEGIN ========\n";
+	for (std::size_t v = 0; v < vert_count; ++v)
+	{
+		std::size_t i = v * 11;
+		std::cout << "Vertex_" << v << "\n"
+			<< "Pos =  [" << vert_data[i++] << "," << vert_data[i++] << "," << vert_data[i++] << "]\n"
+			<< "Norm = [" << vert_data[i++] << "," << vert_data[i++] << "," << vert_data[i++] << "]\n"
+			<< "Col =  [" << vert_data[i++] << "," << vert_data[i++] << "," << vert_data[i++] << "]\n"
+			<< "Tex =  [" << vert_data[i++] << "," << vert_data[i++] << "\n";
+	}
+	std::cout << "======== DEBUG::Camera::Primitive_" << name << "::Vertex_Data::END ========\n";
 }

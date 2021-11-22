@@ -1,5 +1,5 @@
 #ifndef PRIMITIVE_H
-#define _PRIMITIVE_H
+#define PRIMITIVE_H
 
 // Std Headers
 #include <string>
@@ -35,6 +35,7 @@ public:
 
 	// Virtual Methods 
 	virtual void render();
+	virtual void debug() const;
 
 	// Core
 	void create_buffers();
@@ -44,6 +45,7 @@ public:
 	void set_data_mesh(const float *data, std::size_t vert_n);
 
 	void update_data_position(const std::vector<glm::vec3> &posData);
+	void update_data_colour(const std::vector<glm::vec3> &colData);
 
 	void set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp);
 
@@ -66,13 +68,13 @@ public:
 
 	// State
 	Render_Mode mode;
-
+	// Required for rendering
 	struct
 	{
-		int32_t data_set : 1;
-		int32_t shader_set : 1;
-		int32_t buffers_set : 1;
-		int32_t camTrs_set : 1;
+		int8_t data_set : 1;
+		int8_t buffers_set : 1;
+		int8_t shader_set : 1;
+		int8_t camTrs_set : 1;
 	} flags;
 };
 
