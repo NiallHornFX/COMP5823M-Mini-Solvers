@@ -22,10 +22,6 @@ Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : 
 	Cam_Basis_Y = glm::normalize(glm::cross(Cam_Dir, Cam_Basis_X));
 	Cam_Basis_Z = glm::normalize(Cam_Dir); // Local Z is just the TargetDirection.
 
-	Cam_Basis_X = glm::vec3(1.f, 0.f, 0.f);
-	Cam_Basis_Y = glm::vec3(0.f, 1.f, 0.f);
-	Cam_Basis_Z = Cam_Dir;
-
 	Sensitvity = 0.75f;
 
 	// Eventually add Constructor Variants, to Support User Defined Values For these - 
@@ -58,43 +54,48 @@ void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt)
 {
 	glfwPollEvents();
 
+	bool update = false; 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // Forwards along cam Z
 	{
 		Cam_Pos -= Cam_Basis_Z * (Camera_Speed * dt);
+		update |= true; 
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) // Backwards along cam Z
 	{
 		Cam_Pos += Cam_Basis_Z * (Camera_Speed * dt);
+		update |= true; 
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) // Left along cam X
 	{
 		Cam_Pos -= Cam_Basis_X * (Camera_Speed * dt);
+		update |= true; 
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) // Right along cam X
 	{
 		Cam_Pos += Cam_Basis_X * (Camera_Speed * dt);
+		update |= true; 
 	}
 
 	// Update Camera Basis Vectors
-	update_basis();
+	if (update) update_basis();
 }
 
 
 void Camera::update_basis()
 {
 	// Clamp Pitch
-	std::min(std::max(Pitch, Pitch_Min), Pitch_Max);
+	std::max(Pitch_Min, std::min(Pitch, Pitch_Max));
 	// Clamp Yaw
-	std::min(std::max(Yaw, Yaw_Min), Yaw_Max);
+	std::max(Yaw_Min, std::min(Yaw, Yaw_Max));
 
 	// Calc Target Position
-	Cam_Target_Pos.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-	Cam_Target_Pos.y = sin(glm::radians(Pitch));
-	Cam_Target_Pos.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-	Cam_Target_Pos = glm::normalize(Cam_Target_Pos);
+	//float d_x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
+	//float d_y = sin(glm::radians(Pitch));
+	//float d_z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
+	//Cam_Target_Pos = glm::normalize(glm::vec3(d_x, d_y, d_z) + glm::vec3(0.f, 0.f, -1.f));
 
 	// Update Basis Vectors 
 	Cam_Dir = glm::normalize(Cam_Pos - Cam_Target_Pos);
@@ -110,6 +111,7 @@ std::ostringstream Camera::debug()
 		<< "X = " << "[" << Cam_Basis_X.x << "," << Cam_Basis_X.y << "," << Cam_Basis_X.z << "]\n"
 		<< "Y = " << "[" << Cam_Basis_Y.x << "," << Cam_Basis_Y.y << "," << Cam_Basis_Y.z << "]\n"
 		<< "Z = " << "[" << Cam_Basis_Z.x << "," << Cam_Basis_Z.y << "," << Cam_Basis_Z.z << "]\n"
+		<< "Yaw = " << Yaw << "  Pitch = " << Pitch << "\n"
 		<< "Pos = " << "[" << Cam_Pos.x << "," << Cam_Pos.y << "," << Cam_Pos.z << "]\n"
 		<< "Target = " << "[" << Cam_Target_Pos.x << "," << Cam_Target_Pos.y << "," << Cam_Target_Pos.z << "]\n";
 	out << "======== DEBUG::Camera::END ========\n";

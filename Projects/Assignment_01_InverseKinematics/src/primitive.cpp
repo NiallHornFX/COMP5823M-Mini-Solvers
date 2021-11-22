@@ -178,6 +178,6 @@ void Primitive::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &
 {
 	if (!flags.shader_set) return; 
 	shader.setMat4("view", view);
-	//shader.setMat4("proj", persp);
+	shader.setMat4("proj", persp);
 	flags.camTrs_set = true;
 }

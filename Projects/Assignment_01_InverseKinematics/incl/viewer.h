@@ -45,6 +45,7 @@ public:
 	// Application 
 	void exec(); // Exec Viewer Application 
 	void tick(); // Single Tick
+	bool esc_pressed(); 
 
 	void update_window();
 
@@ -77,7 +78,8 @@ private:
 	//std::vector<Primitive> prims; 
 
 	// Debugging
-	Primitive *prim_t;
+	//Primitive *prim_t;
+	Primitive prim_t;
 	Shader shader;
 
 	// Animation Controls

@@ -245,7 +245,7 @@ Removed Shader loading in shader ctor. Use separate load() member function to lo
 
 Render doc seems to sometimes report No Resource when using OOP approach, despite the fact there seems to be no issues. 
 
-Could of been the primitive lifetime, and lack of proper copy ctor, from local var to member within viewer class. 
+Could of been the primitive lifetime, and lack of proper copy ctor, from local var to member within viewer class. Ok it doesn't seem to be this. 
 
 Don't terminate on invalid uniform, as may of just been optimized out, alright for debugging though, as this is what led me to realize the shader was not been ran (along with seeing a fixed colour on the triangle when no colour was set, very weird, didn't know OpenGL would still execute without shader guess it reverts to legacy).
 
