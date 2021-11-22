@@ -11,12 +11,14 @@
 Mesh::Mesh(const char *name, const char *filePath)
 	: Primitive(name), file_path(filePath)
 {
-	
+	use_tex = false; 
+	tex = nullptr;
+	has_tex = false;
 }
 
 Mesh::~Mesh()
 {
-
+	if (tex) delete tex; 
 }
 
 // For now mesh is treated as triangle soup. No reuse of shared vertices. 
@@ -94,17 +96,17 @@ void Mesh::load_obj(bool has_tex)
 					ss >> i_vp; // v_p index
 					ss >> c; // '/'
 					ss >> c; // '/'
-					ss >> i_vn; // 'v_n' index
-					ss >> c; // '/'
-					ss >> c; // '/'
 					ss >> i_vt; // 'v_t' index
+					ss >> c; // '/'
+					ss >> c; // '/'
+					ss >> i_vn; // 'v_n' index
 
 					// Create Vertex
 					vert vertex;
 					// neg 1 offset for obj indices '1' based. 
 					vertex.pos    = obj_data.v_p[i_vp - 1];
-					vertex.normal = obj_data.v_p[i_vn - 1];
-					vertex.uv     = obj_data.v_p[i_vt - 1];
+					vertex.normal = obj_data.v_n[i_vn - 1];
+					vertex.uv     = obj_data.v_t[i_vt - 1];
 					vertex.col    = glm::vec3(1.f, 1.f, 1.f);
 
 					// Append to vert array
@@ -129,7 +131,7 @@ void Mesh::load_obj(bool has_tex)
 					vert vertex;
 					// neg 1 offset for obj indices '1' based. 
 					vertex.pos    = obj_data.v_p[i_vp - 1];
-					vertex.normal = obj_data.v_p[i_vn - 1];
+					vertex.normal = obj_data.v_n[i_vn - 1];
 					vertex.uv     = glm::vec2(0.f, 0.f);
 					vertex.col    = glm::vec3(1.f, 1.f, 1.f);
 
@@ -149,12 +151,87 @@ void Mesh::load_obj(bool has_tex)
 	set_data_mesh(obj_data.verts);
 
 	// Check Primitive is correct.
-	//debug();
+	debug();
 
 #ifdef DEBUG_LOG
 		std::cout << dbg.str();
 #endif
+}
 
+void Mesh::load_texture(const char *filepath, uint unit)
+{
+	std::string tex_name = name + " texture";
+	tex = new Texture(tex_name.c_str(), filepath, unit);
+	tex->load();
 
+	if (tex->valid_state) has_tex = true; else return; 
 
+	shader.setInt("tex", unit);
+	use_tex = true; 
+}
+
+// Add Texture requirement to check_state if used. 
+bool Mesh::check_state() const
+{
+	if (use_tex)
+	{
+		return Primitive::check_state() & has_tex;
+	}
+	return Primitive::check_state();
+}
+
+void Mesh::set_colour(const glm::vec3 &col)
+{
+	std::vector<glm::vec3> data(vert_count, col);
+	update_data_colour(data);
+}
+
+// Override Primitive::Render()
+void Mesh::render()
+{
+	// Check for state to render
+	if (!check_state())
+	{
+		std::cerr << "ERROR::Mesh::" << name << "::Render called, with incorrectly set state." << std::endl;
+		std::terminate();
+	}
+
+	// Bind Primitive State
+	shader.use();
+
+	// Activate and Bind Texture
+	if (use_tex)
+	{
+		tex->activate();
+		tex->bind();
+	}
+
+	glBindVertexArray(VAO);
+	switch (mode)
+	{
+		case (RENDER_POINTS):
+		{
+			glPointSize(10.f);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+			glDrawArrays(GL_POINTS, 0, vert_count);
+			break;
+		}
+		case (RENDER_LINES):
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			glDrawArrays(GL_LINES, 0, vert_count);
+			break;
+		}
+		case (RENDER_MESH):
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glDrawArrays(GL_TRIANGLES, 0, vert_count);
+			break;
+		}
+	}
+
+	// Clear State
+	glUseProgram(0);
+	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }

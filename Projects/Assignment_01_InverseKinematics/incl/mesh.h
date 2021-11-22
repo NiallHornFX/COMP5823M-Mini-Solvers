@@ -24,14 +24,16 @@ public:
 	Mesh(const char *name, const char *filePath);
 	~Mesh();
 
-	//virtual void render() override; 
+	virtual void render()            override; 
+	virtual bool check_state() const override;
 
 	void load_obj(bool has_tex = false);
-	//void load_texture(const char *filepath);
+	void load_texture(const char *filepath, uint unit = 0);
+
+	void set_colour(const glm::vec3 &col);
 
 public:
 	std::string file_path; 
-
 	struct
 	{
 		std::vector<glm::vec3> v_p;
@@ -40,7 +42,12 @@ public:
 		std::vector<vert> verts;
 	} obj_data;
 
-	Texture tex; 
+	// State
+	bool has_tex;
+
+	// Texture 
+	bool use_tex;
+	Texture *tex; 
 };
 
 

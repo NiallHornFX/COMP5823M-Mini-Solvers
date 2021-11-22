@@ -245,9 +245,7 @@ Removed Shader loading in shader ctor. Use separate load() member function to lo
 
 Render doc seems to sometimes report No Resource when using OOP approach, despite the fact there seems to be no issues. 
 
-Could of been the primitive lifetime, and lack of proper copy ctor, from local var to member within viewer class. Ok it doesn't seem to be this.  But it does make sense if were not initializing key objects on construction is better just to store ptrs we can allocate later without needing to do default initialization of member and then copy / move (replacement) later on when real allocation is done via separate member functions which can create issues if the default initialization and destruction of the original initialized member data is not handled correctly.  
-
-If Primitive or mesh is not set (and thus default initialization is used (which is not initialized)) the errors occur. So it does make sense to go back to storing them as ptrs, so they can be allocated when needed as oppose to doing default initialization of member then copy / move with assignment in separate call to replace the default initialized members which causes issues. 
+Could of been the primitive lifetime, and lack of proper copy ctor, from local var to member within viewer class. Ok it doesn't seem to be this.  But it does make sense if were not initializing key objects on construction is better just to store ptrs we can allocate later without needing to do default initialization of member and then copy / move (replacement) later on when real allocation is done via separate member functions which can create issues if the default initialization and destruction of the original initialized member data is not handled correctly.  If Primitive or mesh member is stack based and is not set (and thus default initialization is used (which is not initialized)) the errors occur. So it does make sense to go back to storing them as ptrs, so they can be allocated dynamically when needed as oppose to doing default initialization on construction, trying to handle this and then the then copy / move with assignment in separate call to replace the default initialized members which causes issues (not the mention the fact the default initialization of gl related objects causes invalid calls if missed). 
 
 Don't terminate on invalid uniform, as may of just been optimized out, alright for debugging though, as this is what led me to realize the shader was not been ran (along with seeing a fixed colour on the triangle when no colour was set, very weird, didn't know OpenGL would still execute without shader guess it reverts to legacy).
 
@@ -255,9 +253,15 @@ So I think removing the shading loading + building from the Ctor, and doing it a
 
 If `glDeleteProgram(ID);` is called within Shaders Dtor I get an OpenGL 1281 error which is invalid value, but the shader execution still seems to work correctly, I'm not sure where this is occurring because the shader should have the same lifetime as the viewer (primitives currently created in viewer for debugging), wonder if its when `Primitive::set_shader()` replaces the default initialized shader with the user defined shader, Implicit copy assignment is done so maybe this causes the shader dealloc before the copy, but still seems to work. For now i've commented out the `glDeleteProgram(ID);`  call within the shader Dtor. 
 
-I Think this may be what causes the error, the default initialized shader then copied via the implicit operator= keeps the same ID, but the shader state is invalid ? So I will do the same for the Texture object and all other classes calling GL related functions within the context, ie separate their operations (creating and destruction of GL resources) as separate member functions to be invoked by user, as oppose to happening within the Ctor on construction. 
+I Think this may be what causes the error, the default initialized shader then copied via the implicit operator= keeps the same ID, but the shader state is invalid ? So I will do the same for the Texture object and all other classes calling GL related functions within the context, i.e. separate their operations (creating and destruction of GL resources) as separate member functions to be invoked by user, as oppose to happening within the Ctor on construction. 
 
 Another issue, if you try and call any OpenGL code for testing, eg mesh loading, outside of the GLFW context (eg just creating a mesh class instances in main()) you'll get issues because the OpenGL context does not exist within this scope.  So can only test OpenGL related code in viewer class (because GLFW Context is created here).
+
+So issues are a combo of  :
+
+* GL Operations occurring in Ctor of classes (whom may not be in valid context OR not initialized to valid resources )
+
+* Classes doing GL operations / allocations occurring on default initialization of stack based members (and later copy operations onto these members result in invalid state of GL objects/resources and calls). 
 
 ##### Animation State
 
@@ -295,6 +299,8 @@ Primitive Based Classes : (Things needed in app to draw)
 * Ground : Draws ground plane with tiled grid texture - Derived from `Mesh`
 * Gnomon : Draws world and local coord frame of joints axis gnomons - Derived from `Primitive` (Data passed directly).
 * Sphere : End Effector Sphere - Derived from `Mesh` 
+
+Need a better way to allocate texture units per mesh, maybe some sort of mesh manager class to check which texture units are available.  For shaders just rendering a single mesh with single texture, don't need texture units. 
 
 ##### Skeleton Class
 

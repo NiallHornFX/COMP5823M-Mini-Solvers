@@ -47,7 +47,7 @@ public:
 	void exec(); // Exec Viewer Application 
 	void tick(); // Single Tick
 	bool esc_pressed(); 
-
+	void get_dt();
 	void update_window();
 
 

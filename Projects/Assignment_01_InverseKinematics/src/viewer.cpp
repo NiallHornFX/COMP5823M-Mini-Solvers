@@ -126,6 +126,7 @@ void Viewer::tick()
 {
 	// Pefrom tick
 	// App Operations
+	get_dt();
 	update_window();
 	update_camera();
 
@@ -162,9 +163,10 @@ void Viewer::exec()
 
 void Viewer::update_window()
 {
+	if (tick_c % 5 != 0) return;
 	// Update Window Title 
 	std::string title_u; 
-	title_u = title + "  " + std::to_string(tick_c);
+	title_u = title + "      FPS : " + std::to_string( 1.f / dt);
 	glfwSetWindowTitle(window, title_u.c_str());
 }
 
@@ -181,11 +183,22 @@ void Viewer::get_GLError()
 	if (err != GL_NO_ERROR) std::cerr << "ERROR::Viewer::GL_ERROR = " << err << std::endl;
 }
 
+void Viewer::get_dt()
+{
+	prev_t = cur_t; 
+	cur_t = glfwGetTime();
+	dt = cur_t - prev_t; 
+}
 
+bool Viewer::esc_pressed()
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;
+}
+
+// ------------- DEBUG CODE ---------------
 // Temp, testing primtive rendering via Primitive Class
 void Viewer::test_prim()
 {
-	 //prim_t = new Primitive("test");
 	Primitive *prim_t = new Primitive("test");
 	float test_verts[11 * 3] =
 	{
@@ -197,6 +210,7 @@ void Viewer::test_prim()
 	prim_t->set_data_mesh(test_verts, 3);
 	prim_t->set_shader("test.vert", "test.frag");
 	prim_t->mode = Render_Mode::RENDER_MESH;
+	prims.push_back(prim_t);
 }
 
 // Obj Loading Test
@@ -205,14 +219,9 @@ void Viewer::test_mesh()
 	Mesh *mesh_t = new Mesh("Test", "triplane.obj");
 	mesh_t->load_obj(true);
 	mesh_t->set_shader("test_tex.vert", "test_tex.frag");
-	//mesh_t.load_texture
+	//mesh_t->load_texture("check.jpg", 0);
+	mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
 	mesh_t->mode = Render_Mode::RENDER_MESH;
 
 	prims.push_back(mesh_t);
-}
-
-
-bool Viewer::esc_pressed()
-{
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;
 }

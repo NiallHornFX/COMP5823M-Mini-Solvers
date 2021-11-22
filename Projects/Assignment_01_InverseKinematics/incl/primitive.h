@@ -35,10 +35,11 @@ public:
 
 	// Virtual Methods 
 	virtual void render();
-	virtual void debug() const;
-
+	virtual void debug()       const;
+	virtual bool check_state() const;
 	// Core
 	void create_buffers();
+
 
 	// Setters
 	void set_data_mesh(const std::vector<vert> &data);
@@ -50,6 +51,7 @@ public:
 	void set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp);
 
 	void set_shader(const char *vert_path, const char *frag_path);
+
 
 public:
 	// Intrinsics

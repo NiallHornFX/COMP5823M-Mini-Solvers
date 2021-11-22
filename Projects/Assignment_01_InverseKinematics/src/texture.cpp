@@ -15,8 +15,8 @@
 
 // Creation of texture and loading, now decoupled from Ctor, for completeness of OpenGL state. 
 
-Texture::Texture(const char *Name, const char *tex_path)
-	: name(Name), filePath(tex_path)
+Texture::Texture(const char *Name, const char *tex_path, uint Unit)
+	: name(Name), filePath(tex_path), unit(Unit)
 {
 	valid_state = false; 
 	ID = -1; 
@@ -65,11 +65,11 @@ void Texture::load()
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	SetTex_Params(activeFilter);
+	set_params(activeFilter);
 	valid_state = true; 
 }
 
-void Texture::SetTex_Params(filter_type filter)
+void Texture::set_params(filter_type filter)
 {
 	glBindTexture(GL_TEXTURE_2D, ID);
 	switch (filter)
@@ -95,9 +95,9 @@ void Texture::SetTex_Params(filter_type filter)
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Texture::Activate_Tex(std::size_t unit_id)
+void Texture::activate()
 {
-	switch (unit_id)
+	switch (unit)
 	{
 		case 0:	
 			glActiveTexture(GL_TEXTURE0);
@@ -128,7 +128,7 @@ void Texture::Activate_Tex(std::size_t unit_id)
 	}
 }
 
-void Texture::Bind_Tex()
+void Texture::bind()
 {
 	glBindTexture(GL_TEXTURE_2D, ID);
 }

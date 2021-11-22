@@ -7,6 +7,7 @@
 #include <sstream>
 
 using byte = unsigned char;
+using uint = unsigned int;
 
 
 class Texture
@@ -17,17 +18,17 @@ public:
 		NEAREST = 0, LINEAR
 	};
 public:
-	Texture(const char *name, const char *tex_path);
+	Texture(const char *name, const char *tex_path, uint Unit);
 	Texture() {};
 	~Texture() = default; 
 
 	// State Setup
 	void load();
-	void SetTex_Params(filter_type filter);
+	void set_params(filter_type filter);
 
 	// Tick Calls
-	void Activate_Tex(std::size_t unit_id);
-	void Bind_Tex();
+	void activate();
+	void bind();
 
 	std::ostringstream debug();
 
@@ -35,7 +36,7 @@ public:
 	bool valid_state; 
 	int32_t width, height, nChannels; 
 	std::string name, filePath;
-	unsigned int ID;
+	uint ID, unit;
 	filter_type activeFilter; 
 };
 

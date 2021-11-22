@@ -35,16 +35,16 @@ Primitive::~Primitive()
 void Primitive::render()
 {
 	// Check for state to render
-	bool set = (flags.buffers_set & flags.camTrs_set & flags.data_set & flags.shader_set);
-	if (!set)
+	if (!check_state())
 	{
-		std::cerr << "ERROR::Primitive::" << name << " Render called, with incorrectly set state." << std::endl;
+		std::cerr << "ERROR::Primitive::" << name << "::Render called, with incorrectly set state." << std::endl;
 		std::terminate();
-	} 
+	}
 
 	// Bind Primitive State
 	shader.use();
 
+	// Render in set mode
 	glBindVertexArray(VAO);
 	switch (mode)
 	{
@@ -71,7 +71,6 @@ void Primitive::render()
 
 	// Clear State
 	glUseProgram(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 }
 
@@ -163,6 +162,11 @@ void Primitive::update_data_position(const std::vector<glm::vec3> &posData)
 		vert_data[i++] = posData[v].y;
 		vert_data[i++] = posData[v].z;
 	}
+
+	// Refill Buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 // Only sets colour of vertcies (allows for updating colours per tick)
@@ -175,6 +179,11 @@ void Primitive::update_data_colour(const std::vector<glm::vec3> &colData)
 		vert_data[i++] = colData[v].g;
 		vert_data[i++] = colData[v].b;
 	}
+
+	// Refill Buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void Primitive::set_shader(const char *vert_path, const char *frag_path)
@@ -193,6 +202,12 @@ void Primitive::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &
 	shader.setMat4("view", view);
 	shader.setMat4("proj", persp);
 	flags.camTrs_set = true;
+}
+
+// Flags that need to be set for rendering to be valid
+bool Primitive::check_state() const
+{
+	return flags.buffers_set & flags.camTrs_set & flags.data_set & flags.shader_set;
 }
 
 void Primitive::debug() const
