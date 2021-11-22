@@ -7,6 +7,7 @@
 // Project Headers
 #include "camera.h"
 #include "primitive.h"
+#include "mesh.h"
 
 // Ext Headers
 #include "ext/glm/glm.hpp"
@@ -54,6 +55,7 @@ public:
 
 	// Debug
 	void test_prim(); 
+	void test_mesh();
 
 private:
 	void get_GLError();
@@ -75,11 +77,12 @@ private:
 	Camera camera; 
 
 	// Primtivies
-	//std::vector<Primitive> prims; 
+	std::vector<Primitive*> prims; 
 
 	// Debugging
-	Primitive prim_t;
-	Shader shader;
+	//Primitive *prim_t;
+	//Mesh *mesh_t; 
+	//Shader shader;
 
 	// Animation Controls
 	std::size_t anim_frame; 

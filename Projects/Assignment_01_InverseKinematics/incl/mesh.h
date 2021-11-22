@@ -20,13 +20,14 @@
 class Mesh : public Primitive
 {
 public:
+	Mesh() : Primitive("") {}
 	Mesh(const char *name, const char *filePath);
 	~Mesh();
 
 	//virtual void render() override; 
 
 	void load_obj(bool has_tex = false);
-	//void load_tex(const char *filepath);
+	//void load_texture(const char *filepath);
 
 public:
 	std::string file_path; 

@@ -98,7 +98,7 @@ void Shader::setBool(const std::string &name, bool value) const
 {
 	glUseProgram(ID);
 	GLint id = glGetUniformLocation(ID, name.c_str());
-	if (!id){ std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; return;}
+	if (!id){ std::cerr << "ERROR::Shader::" << this->name << ":: invalid uniform " << name << "\n"; return;}
 	glUniform1i(id, (int)value); 
 	glUseProgram(0);
 }
@@ -107,7 +107,7 @@ void Shader::setInt(const std::string &name, int value) const
 {
 	glUseProgram(ID);
 	GLint id = glGetUniformLocation(ID, name.c_str());
-	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; return; }
+	if (id == -1) { std::cerr << "ERROR::Shader::" << this->name << ":: invalid uniform " << name << "\n"; return; }
 	glUniform1i(id, value);
 	glUseProgram(0);
 }
@@ -116,7 +116,7 @@ void Shader::setFloat(const std::string &name, float value) const
 {
 	glUseProgram(ID);
 	GLint id = glGetUniformLocation(ID, name.c_str());
-	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; return; }
+	if (id == -1) { std::cerr << "ERROR::Shader::" << this->name << ":: invalid uniform " << name << "\n"; return; }
 	glUniform1f(id, value);
 	glUseProgram(0);
 }
@@ -125,7 +125,7 @@ void Shader::setVec(const std::string &name, const glm::vec3 value) const
 {
 	glUseProgram(ID);
 	GLint id = glGetUniformLocation(ID, name.c_str());
-	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; return; }
+	if (id == -1) { std::cerr << "ERROR::Shader::" << this->name << ":: invalid uniform " << name << "\n"; return; }
 	glUniform3fv(id, 1, glm::value_ptr(value));
 	glUseProgram(0);
 }
@@ -134,7 +134,7 @@ void Shader::setMat3(const std::string &name, const glm::mat3x3 value) const
 {
 	glUseProgram(ID);
 	GLint id = glGetUniformLocation(ID, name.c_str());
-	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; return; }
+	if (id == -1) { std::cerr << "ERROR::Shader::" << this->name << ":: invalid uniform " << name << "\n"; return; }
 	glUniformMatrix3fv(id, 1, GL_FALSE, glm::value_ptr(value));
 	glUseProgram(0);
 }
@@ -143,7 +143,7 @@ void Shader::setMat4(const std::string &name, const glm::mat4x4 value) const
 {
 	glUseProgram(ID);
 	GLint id = glGetUniformLocation(ID, name.c_str());
-	if (id == -1) { std::cerr << "ERROR::Shader::" << name << ":: invalid uniform " << name << "\n"; return; }
+	if (id == -1) { std::cerr << "ERROR::Shader::" << this->name << ":: invalid uniform " << name << "\n"; return; }
 	glUniformMatrix4fv(id, 1, GL_FALSE, glm::value_ptr(value));
 	glUseProgram(0);
 }

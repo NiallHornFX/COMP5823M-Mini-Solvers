@@ -109,9 +109,12 @@ void Viewer::render()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Test Draw Primtivies
-	prim_t.set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 	get_GLError();
-	prim_t.render();
+	for (Primitive *p : prims)
+	{
+		p->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		p->render();
+	}
 	get_GLError();
 
 	// Swap and Poll
@@ -146,7 +149,8 @@ void Viewer::exec()
 	render_prep();
 
 	// Create Test Primtiive
-	test_prim();
+	//test_prim();
+	test_mesh();
 
 	// ---- App Loop ----
 	while (!glfwWindowShouldClose(window) && !esc_pressed())
@@ -182,7 +186,7 @@ void Viewer::get_GLError()
 void Viewer::test_prim()
 {
 	 //prim_t = new Primitive("test");
-	prim_t = Primitive("test");
+	Primitive *prim_t = new Primitive("test");
 	float test_verts[11 * 3] =
 	{
 		// Face 0
@@ -190,10 +194,23 @@ void Viewer::test_prim()
 		1.0, 0.0, 0.0,  1.0, 1.0, 1.0,	0.0, 1.0, 0.0,	0.1, 0.2,
 		0.5, 1.0, 0.0,  1.0, 1.0, 1.0,	0.0, 0.0, 1.0,	0.1, 0.2
 	};
-	prim_t.set_data_mesh(test_verts, 3);
-	prim_t.set_shader("test.vert", "test.frag");
-	prim_t.mode = Render_Mode::RENDER_MESH;
+	prim_t->set_data_mesh(test_verts, 3);
+	prim_t->set_shader("test.vert", "test.frag");
+	prim_t->mode = Render_Mode::RENDER_MESH;
 }
+
+// Obj Loading Test
+void Viewer::test_mesh()
+{
+	Mesh *mesh_t = new Mesh("Test", "triplane.obj");
+	mesh_t->load_obj(true);
+	mesh_t->set_shader("test_tex.vert", "test_tex.frag");
+	//mesh_t.load_texture
+	mesh_t->mode = Render_Mode::RENDER_MESH;
+
+	prims.push_back(mesh_t);
+}
+
 
 bool Viewer::esc_pressed()
 {

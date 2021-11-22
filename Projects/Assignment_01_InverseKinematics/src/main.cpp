@@ -20,16 +20,11 @@ int main(int argc, char **argv)
 	BVH_Data bvh(argv[1]);
 	*/
 
-	// Obj Loading Test
-	Mesh test_mesh("Test", "triplane.obj");
-	test_mesh.load_obj(true);
-
 
 	// Create Viewer Application
-//	Viewer app(1024, 1024, "Viewer Application");
-
+	Viewer app(1024, 1024, "Viewer Application");
 	// Exec
-//	app.exec();
+	app.exec();
 
 	return 0; 
 }

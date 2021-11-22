@@ -114,6 +114,7 @@ void Primitive::set_data_mesh(const float *data, std::size_t vert_n)
 	vert_data.resize(vert_n * 11);
 	vert_count = vert_n;
 	std::memcpy(vert_data.data(), data, (vert_n * 11 * sizeof(float)));
+
 	flags.data_set = true; 
 
 	// Setup Buffers

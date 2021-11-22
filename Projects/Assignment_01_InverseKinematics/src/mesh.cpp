@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 
-#define DEBUG_LOG
+// #define DEBUG_LOG
 
 
 Mesh::Mesh(const char *name, const char *filePath)
@@ -146,9 +146,15 @@ void Mesh::load_obj(bool has_tex)
 	dbg << "Vert Count = " << obj_data.verts.size() << "\n";
 
 	// Pass verts to primitive::mesh_data
-	//set_data_mesh(obj_data.verts);
+	set_data_mesh(obj_data.verts);
 
-	#ifdef DEBUG_LOG
+	// Check Primitive is correct.
+	//debug();
+
+#ifdef DEBUG_LOG
 		std::cout << dbg.str();
-	#endif
+#endif
+
+
+
 }
