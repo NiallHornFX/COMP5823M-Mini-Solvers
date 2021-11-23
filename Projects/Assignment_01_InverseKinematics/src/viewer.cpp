@@ -48,7 +48,7 @@ void Viewer::exec()
 	render_prep();
 
 	// Create Test Primtiive
-	test_prim();
+	//test_prim();
 	test_mesh();
 
 	// ==== Application Loop ====
@@ -98,7 +98,7 @@ void Viewer::window_context()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, GL_MINOR);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE); // Fixed Window Size. 
-	glfwWindowHint(GLFW_SAMPLES, 2); // MSAA.
+	glfwWindowHint(GLFW_SAMPLES, 4); // MSAA.
 
 	// Create Window
 	window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
@@ -223,13 +223,15 @@ void Viewer::test_prim()
 // Obj Loading Test
 void Viewer::test_mesh()
 {
-	Mesh *mesh_t = new Mesh("Test", "bone.obj");
-	//mesh_t->load_obj(true);
-	//mesh_t->set_shader("test_tex.vert", "test_tex.frag");
-	//mesh_t->set_shader("test_tex.vert", "grid.frag");
-	//mesh_t->load_texture("check.jpg", 0);
-	//mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
-	//mesh_t->mode = Render_Mode::RENDER_MESH;
+	// Textured Mesh Test 
+	Mesh *mesh_t = new Mesh("Test", "grid.obj");
+	mesh_t->load_obj(true);
+	mesh_t->set_shader("test_tex.vert", "test_tex.frag");
+	mesh_t->load_texture("grid2.png", 0);
+	mesh_t->tex->set_params(Texture::filter_type::LINEAR);
+	mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
+	mesh_t->mode = Render_Mode::RENDER_MESH;
+	prims.push_back(mesh_t);
 
 	//mesh_t->load_obj(false);
 	//mesh_t->set_shader("test.vert", "test.frag");
@@ -237,15 +239,20 @@ void Viewer::test_mesh()
 	//mesh_t->scale(glm::vec3(0.1f));
 	//mesh_t->mode = Render_Mode::RENDER_MESH;
 
+	// Pig
+	
 	Mesh *pig = new Mesh("pig", "pighead.obj");
 	pig->load_obj(false);
 	pig->set_shader("test.vert", "test.frag");
 	pig->set_colour(glm::vec3(1.f, 0.f, 0.f));
+	pig->translate(glm::vec3(0.f, 0.f, 0.5f));
 	pig->scale(glm::vec3(1.f));
 	pig->mode = Render_Mode::RENDER_MESH;
 	prims.push_back(pig);
 
 
+	// Bones
+	/*
 	for (std::size_t i = 0; i < 10; ++i)
 	{
 		float norm = float(i) / 9.f; 
@@ -257,5 +264,6 @@ void Viewer::test_mesh()
 		mesh_t->translate(glm::vec3(0.f, norm * 33.f, 0.f));
 		prims.push_back(mesh_t);
 	}
+	*/
 	//prims.push_back(mesh_t);
 }

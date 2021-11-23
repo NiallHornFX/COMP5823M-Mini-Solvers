@@ -30,7 +30,7 @@ void Texture::load()
 	if (!file.is_open())
 	{
 		std::cerr << "ERROR::Texture::" << name << ":: file does not exist." << std::endl;
-		return;
+		std::terminate();
 	}
 	file.close();
 
