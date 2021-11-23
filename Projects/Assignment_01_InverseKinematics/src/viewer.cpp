@@ -98,7 +98,7 @@ void Viewer::window_context()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, GL_MINOR);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE); // Fixed Window Size. 
-	glfwWindowHint(GLFW_SAMPLES, 4); // MSAA.
+	glfwWindowHint(GLFW_SAMPLES, 16); // MSAA.
 
 	// Create Window
 	window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
@@ -140,6 +140,8 @@ void Viewer::extensions_load()
 void Viewer::render_prep()
 {
 	// ==== OpenGL Pre Render State ====
+	// Multisampling 
+	glEnable(GL_MULTISAMPLE);
 	// Blending and Depth. 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
