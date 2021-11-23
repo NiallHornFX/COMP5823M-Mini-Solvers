@@ -92,15 +92,17 @@ void Viewer::extensions_load()
 	std::cout << "======== DEBUG::OPENGL::END ========\n\n";
 }
 
-// Init Render State
+// Initalize Render State
 void Viewer::render_prep()
 {
+	// ==== OpenGL Pre Render State ====
 	// Blending and Depth. 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+// Render Operations
 void Viewer::render()
 {
 	// Step - 
@@ -121,6 +123,7 @@ void Viewer::render()
 	glfwPollEvents();
 }
 
+// Single tick of the viewer application, all runtime operations are called from here. 
 void Viewer::tick()
 {
 	// Pefrom tick
@@ -143,16 +146,17 @@ void Viewer::tick()
 	tick_c++;
 }
 
+// Initalizes viewer state and calls indefinite application execution loop.
 void Viewer::exec()
 {
-	// ----- Init Operations ----
+	// ==== Init Operations ====
 	render_prep();
 
 	// Create Test Primtiive
-	//test_prim();
+	test_prim();
 	test_mesh();
 
-	// ---- App Loop ----
+	// ==== Application Loop ====
 	while (!glfwWindowShouldClose(window) && !esc_pressed())
 	{
 		// Tick viewer application
