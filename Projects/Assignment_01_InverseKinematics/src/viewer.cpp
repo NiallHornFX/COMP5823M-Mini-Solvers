@@ -32,7 +32,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// Load OpenGL Extensions
 	extensions_load();
 	// Create Camera
-	camera = Camera(glm::vec3(0.f, 0.5f, 1.f), -100.f, W, H);
+	camera = Camera(glm::vec3(0.f, 0.2f, 1.f), -100.f, W, H);
 }
 
 Viewer::~Viewer() 
@@ -41,6 +41,49 @@ Viewer::~Viewer()
 	glfwTerminate();
 }
 
+// Initalizes viewer state and calls indefinite application execution loop.
+void Viewer::exec()
+{
+	// ==== Init Operations ====
+	render_prep();
+
+	// Create Test Primtiive
+	test_prim();
+	test_mesh();
+
+	// ==== Application Loop ====
+	while (!glfwWindowShouldClose(window) && !esc_pressed())
+	{
+		// Tick viewer application
+		tick();
+	}
+}
+
+
+// Single tick of the viewer application, all runtime operations are called from here. 
+void Viewer::tick()
+{
+	// Pefrom tick
+	// App Operations
+	get_dt();
+	update_window();
+	update_camera();
+
+	// Debug Camera State
+	//std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	//std::cout << camera.debug().str();
+
+	// Cool operations ...
+	// Get Skeleton Update
+	// IK 
+
+	// Render
+	render();
+
+	tick_c++;
+}
+
+// Create Window via GLFW and Initalize OpenGL Context on current thread. 
 void Viewer::window_context()
 {
 	// GLFW Setup -
@@ -67,10 +110,11 @@ void Viewer::window_context()
 	}
 
 	// Set Context and Viewport 
-	glfwMakeContextCurrent(window); 
+	glfwMakeContextCurrent(window);
 	glViewport(0, 0, width, height);
 }
 
+// Load OpenGL Functions via GLEW and output device info.
 void Viewer::extensions_load()
 {
 	// GLEW Setup
@@ -123,46 +167,6 @@ void Viewer::render()
 	glfwPollEvents();
 }
 
-// Single tick of the viewer application, all runtime operations are called from here. 
-void Viewer::tick()
-{
-	// Pefrom tick
-	// App Operations
-	get_dt();
-	update_window();
-	update_camera();
-
-	// Debug Camera State
-	//std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	//std::cout << camera.debug().str();
-
-	// Cool operations ...
-	// Get Skeleton Update
-	// IK 
-
-	// Render
-	render();
-
-	tick_c++;
-}
-
-// Initalizes viewer state and calls indefinite application execution loop.
-void Viewer::exec()
-{
-	// ==== Init Operations ====
-	render_prep();
-
-	// Create Test Primtiive
-	test_prim();
-	test_mesh();
-
-	// ==== Application Loop ====
-	while (!glfwWindowShouldClose(window) && !esc_pressed())
-	{
-		// Tick viewer application
-		tick();
-	}
-}
 
 void Viewer::update_window()
 {
@@ -175,9 +179,7 @@ void Viewer::update_window()
 
 void Viewer::update_camera()
 {
-	//camera.update_camera(window, 1.f, dt);
-	camera.update_camera(window, 1.f, 0.01f);
-	// Need to pass camera matrices to each primitives shader. 
+	camera.update_camera(window, 1.f, dt);
 }
 
 void Viewer::get_GLError()
@@ -198,20 +200,22 @@ bool Viewer::esc_pressed()
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;
 }
 
-// ------------- DEBUG CODE ---------------
-// Temp, testing primtive rendering via Primitive Class
+// =========================================== DEBUG CODE ===========================================
+
+// Function to test OpenGL within Viewer App via Mesh Class. 
 void Viewer::test_prim()
 {
 	Primitive *prim_t = new Primitive("test");
 	float test_verts[11 * 3] =
 	{
 		// Face 0
-		0.0, 0.0, 0.0,  1.0, 1.0, 1.0,	1.0, 0.0, 0.0,	0.1, 0.2,
-		1.0, 0.0, 0.0,  1.0, 1.0, 1.0,	0.0, 1.0, 0.0,	0.1, 0.2,
-		0.5, 1.0, 0.0,  1.0, 1.0, 1.0,	0.0, 0.0, 1.0,	0.1, 0.2
+		0.0, 0.0, 0.0,  0.0, 1.0, 1.0,	1.0, 0.0, 0.0,	0.1, 0.2,
+		1.0, 0.0, 0.0,  1.0, 0.0, 1.0,	0.0, 1.0, 0.0,	0.1, 0.2,
+		0.5, 1.0, 0.0,  1.0, 1.0, 0.0,	0.0, 0.0, 1.0,	0.1, 0.2
 	};
 	prim_t->set_data_mesh(test_verts, 3);
 	prim_t->set_shader("test.vert", "test.frag");
+	prim_t->scale(glm::vec3(0.2f));
 	prim_t->mode = Render_Mode::RENDER_MESH;
 	prims.push_back(prim_t);
 }
@@ -233,6 +237,15 @@ void Viewer::test_mesh()
 	//mesh_t->scale(glm::vec3(0.1f));
 	//mesh_t->mode = Render_Mode::RENDER_MESH;
 
+	Mesh *pig = new Mesh("pig", "pighead.obj");
+	pig->load_obj(false);
+	pig->set_shader("test.vert", "test.frag");
+	pig->set_colour(glm::vec3(1.f, 0.f, 0.f));
+	pig->scale(glm::vec3(1.f));
+	pig->mode = Render_Mode::RENDER_MESH;
+	prims.push_back(pig);
+
+
 	for (std::size_t i = 0; i < 10; ++i)
 	{
 		float norm = float(i) / 9.f; 
@@ -244,6 +257,5 @@ void Viewer::test_mesh()
 		mesh_t->translate(glm::vec3(0.f, norm * 33.f, 0.f));
 		prims.push_back(mesh_t);
 	}
-
 	//prims.push_back(mesh_t);
 }
