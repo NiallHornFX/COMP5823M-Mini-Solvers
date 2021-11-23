@@ -237,6 +237,5 @@ void Primitive::debug() const
 
 void Primitive::scale(const glm::vec3 &scale)
 {
-	if (!flags.shader_set) return;
 	shader.setMat4("model", glm::scale(model, scale));
 }

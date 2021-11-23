@@ -112,7 +112,6 @@ void Viewer::render()
 	for (Primitive *p : prims)
 	{
 		p->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-		p->scale(glm::vec3(0.1, 0.1, 0.1));
 		p->render();
 	}
 	get_GLError();
@@ -227,7 +226,7 @@ void Viewer::test_mesh()
 	mesh_t->load_obj(false);
 	mesh_t->set_shader("test.vert", "test.frag");
 	mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
-	//mesh_t->model = glm::scale(mesh_t->model, glm::vec3(0.1, 0.1, 0.1));
+	mesh_t->model = glm::scale(mesh_t->model, glm::vec3(0.1, 0.1, 0.1));
 	mesh_t->mode = Render_Mode::RENDER_MESH;
 
 	prims.push_back(mesh_t);

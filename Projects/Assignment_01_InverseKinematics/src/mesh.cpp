@@ -200,7 +200,7 @@ void Mesh::render()
 	shader.use();
 
 	// Reset Uniforms
-	//shader.setMat4("model", model);
+	shader.setMat4("model", model);
 
 	// Activate and Bind Texture
 	if (use_tex)
@@ -209,6 +209,7 @@ void Mesh::render()
 		tex->bind();
 	}
 
+	// Draw 
 	glBindVertexArray(VAO);
 	switch (mode)
 	{

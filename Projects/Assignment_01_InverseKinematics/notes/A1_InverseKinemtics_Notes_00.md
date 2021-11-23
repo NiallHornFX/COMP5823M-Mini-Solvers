@@ -263,13 +263,17 @@ So issues are a combo of  :
 
 * Classes doing GL operations / allocations occurring on default initialization of stack based members (and later copy operations onto these members result in invalid state of GL objects/resources and calls). 
 
+Things like this weren't an issue in SFGL for example, because the render context (GLFW Context) was created in main (via render context instance creation) and window ptr passed to the render object / solver. Thus its always within scope. I could create a similar context class, and init this in main, and pass to GLFW window to viewer app ? 
+
 Texture bug - "Frame not in module", don't reinterpret_cast<void*> the texture_data as it changes the address (in this case) unlike static_cast which guarantees to preserve it. Still seem to be getting this issue now and again even though this initially fixed it. Seems to happen if UVs are out of bounds. Just turn off debugging, its not a bug, just a warning on the texture usage (via sampler in GLSL), signals invalid usage. 
 
 Because verts are not shared we get incorrect UVs, need to watch out for this also. (Not sure if this is the case ...)
 
-Weird issue where if Uniform is set within render loop of primitive/mesh it breaks, but if set from the scope of the viewer it works fine.  (Uniforms need to be reset when changed if uniform was set before operation). It causes the shader to become unbound (same issue that I seemed to solve last night, need to ensure shader is valid, not sure why uniform modification would cause this issue). Seems if uniforms are set from wrong location it invalidates the shader, even if it executes. 
+Weird issue where if Uniform is set within render loop of primitive/mesh it breaks, but if set from the scope of the viewer it works fine.  (Uniforms need to be reset when changed if uniform was set before operation). It causes the shader to become unbound (same issue that I seemed to solve last night, need to ensure shader is valid, not sure why uniform modification would cause this issue). Ok yeah its because I thought it was smart to add glUseProgram(0) to the end of each uniform set function to clear the bound shader, but when this is called after the shader is bound and then renders, the resulting shader is no disabled. 
 
-Could just wrap uniform access in a getter and call from viewer render loop. 
+Could just wrap uniform access in a getter and call from viewer render loop to ensure its called from within the gl context class (of the viewer class). 
+
+Hmm, but it seems to work if its called, before the shader is active. 
 
 ##### Animation State
 
