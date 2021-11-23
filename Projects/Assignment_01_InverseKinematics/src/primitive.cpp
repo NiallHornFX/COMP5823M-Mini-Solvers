@@ -44,8 +44,8 @@ void Primitive::render()
 	// Bind Primitive State
 	shader.use();
 
-	// Reset Uniforms
-	//shader.setMat4("model")
+	// Update Modfied Uniforms
+	shader.setMat4("model", model);
 
 	// Render in set mode
 	glBindVertexArray(VAO);
@@ -217,6 +217,22 @@ bool Primitive::check_state() const
 	return flags.buffers_set & flags.camTrs_set & flags.data_set & flags.shader_set;
 }
 
+
+void Primitive::translate(const glm::vec3 &offs)
+{
+	model = glm::translate(model, offs);
+}
+
+void Primitive::rotate(float d_ang, const glm::vec3 &axis)
+{
+	model = glm::rotate(model, glm::radians(d_ang), axis);
+}
+
+void Primitive::scale(const glm::vec3 &scale)
+{
+	model = glm::scale(model, scale);
+}
+
 void Primitive::debug() const
 {
 	// Check for correct mesh_data size to vertex count with attributes. (11 * sizeof(float) per vert).
@@ -233,9 +249,4 @@ void Primitive::debug() const
 			<< "Tex =  [" << vert_data[i++] << "," << vert_data[i++] << "\n";
 	}
 	std::cout << "======== DEBUG::Camera::Primitive_" << name << "::Vertex_Data::END ========\n";
-}
-
-void Primitive::scale(const glm::vec3 &scale)
-{
-	shader.setMat4("model", glm::scale(model, scale));
 }

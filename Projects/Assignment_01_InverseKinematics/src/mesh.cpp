@@ -15,6 +15,7 @@ Mesh::Mesh(const char *name, const char *filePath)
 	tex = nullptr;
 	has_tex = false;
 	wireframe = false; 
+	mode = Render_Mode::RENDER_MESH;
 }
 
 Mesh::~Mesh()
@@ -152,7 +153,7 @@ void Mesh::load_obj(bool has_tex)
 	set_data_mesh(obj_data.verts);
 
 	// Check Primitive is correct.
-	debug();
+	//debug();
 
 #ifdef DEBUG_LOG
 		std::cout << dbg.str();
@@ -199,7 +200,7 @@ void Mesh::render()
 	// Bind Primitive State
 	shader.use();
 
-	// Reset Uniforms
+	// Update Modfied Uniforms
 	shader.setMat4("model", model);
 
 	// Activate and Bind Texture

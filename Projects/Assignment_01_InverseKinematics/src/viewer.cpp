@@ -223,11 +223,23 @@ void Viewer::test_mesh()
 	//mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
 	//mesh_t->mode = Render_Mode::RENDER_MESH;
 
-	mesh_t->load_obj(false);
-	mesh_t->set_shader("test.vert", "test.frag");
-	mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
-	mesh_t->model = glm::scale(mesh_t->model, glm::vec3(0.1, 0.1, 0.1));
-	mesh_t->mode = Render_Mode::RENDER_MESH;
+	//mesh_t->load_obj(false);
+	//mesh_t->set_shader("test.vert", "test.frag");
+	//mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
+	//mesh_t->scale(glm::vec3(0.1f));
+	//mesh_t->mode = Render_Mode::RENDER_MESH;
 
-	prims.push_back(mesh_t);
+	for (std::size_t i = 0; i < 10; ++i)
+	{
+		float norm = float(i) / 9.f; 
+		Mesh *mesh_t = new Mesh("Test", "bone.obj");
+		mesh_t->load_obj(false);
+		mesh_t->set_shader("test.vert", "test.frag");
+		mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
+		mesh_t->scale(glm::vec3(0.05f));
+		mesh_t->translate(glm::vec3(0.f, norm * 33.f, 0.f));
+		prims.push_back(mesh_t);
+	}
+
+	//prims.push_back(mesh_t);
 }
