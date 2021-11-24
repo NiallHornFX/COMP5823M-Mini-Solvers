@@ -351,6 +351,8 @@ case (RENDER_LINES):
 
 Skeleton Class is not inherited from Primitive, but instead contains the array of all bone mesh primitives, defining the skeleton (fetched from BVH_Data), Skeleton will also apply modifications to joints based on the IK Solve.  Its render call, calls render for each bone applying transformations based on joints + channels. 
 
+It will exist within the animation solver class, (which houses the BVH_Loader instance, and the FK,IK operations, that are then applied to the skeletons bones), Bone class will also have an overriden render method to render as lines, where lines are not wireframe of bones, but infact just piecewise lines for each bone (joint to joint). 
+
 ___
 
 User Interaction with Bones/Joints

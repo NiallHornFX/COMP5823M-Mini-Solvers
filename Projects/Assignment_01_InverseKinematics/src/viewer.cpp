@@ -81,23 +81,19 @@ void Viewer::exec()
 // Single tick of the viewer application, all runtime operations are called from here. 
 void Viewer::tick()
 {
-	// Pefrom tick
-	// App Operations
+	// ======= App Operations =======
 	get_dt();
 	update_window();
 	update_camera();
 
-	// Debug Camera State
-	//std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	//std::cout << camera.debug().str();
-
-	// Cool operations ...
+	// ======= Cool operations =======
 	// Get Skeleton Update
 	// IK 
 
-	// Render
+	// ======= Render =======
 	render();
 
+	// ======= Post Tick =======
 	tick_c++;
 }
 
