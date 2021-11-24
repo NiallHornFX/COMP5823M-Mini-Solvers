@@ -9,6 +9,7 @@
 
 // Class holds array of bones between joints to render ethier as tris or lines using computed transforms from ethier FK or IK joints. 
 
+/*
 class Skeleton
 {
 public:
@@ -20,6 +21,6 @@ public:
 public:
 	std::vector<mesh*> bones; 
 };
-
+*/
 
 #endif

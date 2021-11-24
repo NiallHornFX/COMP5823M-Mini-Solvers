@@ -7,20 +7,23 @@
 // Project Headers
 #include "mesh.h"
 
-// Mesh dervied class for rendering bones ethier as mesh or lines. 
+// Class for rendering bones ethier as mesh or lines (primitives). 
 
-class Bone : public Mesh
+class Bone
 {
 public:
 	Bone(glm::vec3 Start, glm::vec3 End, std::size_t ID); 
 	~Bone() = default; 
 
-	virtual void render()   override;
+	 void render(bool Render_Line = false);
+	 void set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp);
 public:
 	std::size_t bone_id; 
+	glm::vec3 start, end;
 
+private:
+	Mesh *mesh;
 	Primitive *line; 
-	glm::vec3 start, end; 
 };
 
 #endif

@@ -67,7 +67,8 @@ void Viewer::exec()
 
 	// Create Test Primtiive
 	//test_prim();
-	test_mesh();
+	//test_mesh();
+	test_bone();
 
 	// ==== Application Loop ====
 	while (!glfwWindowShouldClose(window) && !esc_pressed())
@@ -212,8 +213,14 @@ void Viewer::render()
 	get_GLError();
 	for (Primitive *p : prims)
 	{
+		// Test Render Primives 
 		p->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 		p->render();
+
+		// Test Render Bones
+		bone_test->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		if (tick_c % 20 != 0) bone_test->render(false); else bone_test->render(true);
+
 	}
 	get_GLError();
 
@@ -297,7 +304,7 @@ void Viewer::test_mesh()
 	pig->mode = Render_Mode::RENDER_MESH;
 	prims.push_back(pig);
 
-	// Bones
+	// Mesh Bones
 	for (std::size_t i = 0; i < 10; ++i)
 	{
 		float norm = float(i) / 9.f; 
@@ -311,6 +318,10 @@ void Viewer::test_mesh()
 	}
 }
 
+void Viewer::test_bone()
+{
+	bone_test = new Bone(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), 0);
+}
 
 // =========================================== GLFW State + Callbacks ===========================================
 

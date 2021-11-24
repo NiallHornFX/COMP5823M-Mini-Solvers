@@ -1,28 +1,30 @@
 // Implements
 #include "bone.h"
 
-// Std Headers
-// Project Headers
-
-// Maybe would of made more sense as seperate class not mesh derived. 
-
 Bone::Bone(glm::vec3 Start, glm::vec3 End, std::size_t ID)
-	: Mesh("Bone", "../../assets/mesh/bone.obj"), start(Start), end(End), bone_id(ID)
+	: start(Start), end(End), bone_id(ID)
 {
 	// Bone Mesh
-	load_obj(false);
-	set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
-	set_colour(glm::vec3(0.1f, 0.1f, 0.6f));
-	mode = Render_Mode::RENDER_MESH;
-	// Translate to offset center
-	glm::vec3 cent = (start + end) * 0.5f;
-	translate(cent);
+	mesh = new Mesh("bone_", "../../assets/mesh/bone_test.obj");
+	mesh->load_obj(false);
+	mesh->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
+	mesh->set_colour(glm::vec3(0.1f, 0.1f, 0.6f));
+	mesh->mode = Render_Mode::RENDER_MESH;
 
-	// Name
-	name += "_" + std::to_string(ID);
+	// Translate none to offset start pos.
+	//glm::vec3 cent = (start + end) * 0.5f;
+	mesh->translate(start);
+	float dist = glm::length(end - start);
+	mesh->scale(glm::vec3(1.f, dist, 1.f));
 
-	// Bone also has 2 point based line primitive for rendering. 
-	std::vector<vert> line_data(2);
+
+	// Update Name
+	std::string tmp_name = mesh->name + std::to_string(ID);
+	mesh->name = tmp_name;
+
+	// Bone Line primtivie
+	line = new Primitive(tmp_name.c_str());
+	std::vector<vert> line_data; line_data.resize(2);
 	line_data[0].pos = start; 
 	line_data[1].pos = end; 
 	line_data[0].col = glm::vec3(0, 0, 1.f);
@@ -32,55 +34,20 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, std::size_t ID)
 	line->mode = Render_Mode::RENDER_LINES;
 }
 
-void Bone::render()
+// Forward to Mesh / Primtivie
+void Bone::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
-	// Check for state to render
-	if (!check_state())
+	mesh->set_cameraTransform(view, persp);
+	line->set_cameraTransform(view, persp);
+}
+
+void Bone::render(bool Render_Line)
+{
+	if (Render_Line)
 	{
-		std::cerr << "ERROR::Mesh::" << name << "::Render called, with incorrectly set state." << std::endl;
-		std::terminate();
+		line->render();
+		return;
 	}
 
-	// Bind Primitive State
-	shader.use();
-
-	// Update Modfied Uniforms
-	shader.setMat4("model", model);
-
-	// Activate and Bind Texture
-	if (use_tex)
-	{
-		tex->activate();
-		tex->bind();
-	}
-
-	// Draw 
-	glBindVertexArray(VAO);
-	switch (mode)
-	{
-		case (RENDER_POINTS):
-		{
-			// Uses Primtive Line Rendering instead
-			line->mode = Render_Mode::RENDER_POINTS;
-			line->render();
-		}
-		case (RENDER_LINES):
-		{
-			// Uses Primtive Line Rendering instead
-			line->mode = Render_Mode::RENDER_LINES;
-			line->render();
-		}
-		case (RENDER_MESH):
-		{
-			// Render bone as mesh
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			glDrawArrays(GL_TRIANGLES, 0, vert_count);
-			break;
-		}
-	}
-
-	// Clear State
-	glUseProgram(0);
-	glBindVertexArray(0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	mesh->render();
 }

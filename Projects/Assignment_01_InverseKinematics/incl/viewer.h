@@ -8,6 +8,7 @@
 #include "camera.h"
 #include "primitive.h"
 #include "mesh.h"
+#include "bone.h"
 
 // Ext Headers
 #include "ext/glm/glm.hpp"
@@ -56,6 +57,7 @@ public:
 	// Debug
 	void test_prim(); 
 	void test_mesh();
+	void test_bone();
 
 private:
 	void get_GLError();
@@ -79,6 +81,7 @@ private:
 
 	// Primtivies
 	std::vector<Primitive*> prims; 
+	Bone *bone_test;
 
 	// Debugging
 	//Primitive *prim_t;
