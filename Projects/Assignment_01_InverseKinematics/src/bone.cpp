@@ -1,8 +1,8 @@
 // Implements
 #include "bone.h"
 
-Bone::Bone(glm::vec3 Start, glm::vec3 End, std::size_t ID)
-	: start(Start), end(End), bone_id(ID)
+Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
+	: start(Start), end(End),  transform(Trs), bone_id(ID)
 {
 	// Bone Mesh
 	mesh = new Mesh("bone_", "../../assets/mesh/bone_test.obj");
@@ -16,7 +16,6 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, std::size_t ID)
 	mesh->translate(start);
 	float dist = glm::length(end - start);
 	mesh->scale(glm::vec3(1.f, dist, 1.f));
-
 
 	// Update Name
 	std::string tmp_name = mesh->name + std::to_string(ID);
@@ -43,11 +42,16 @@ void Bone::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp
 
 void Bone::render(bool Render_Line)
 {
+	// Set Transform
+	mesh->model = transform;
+	line->model = transform;
+
+	// Render as Line
 	if (Render_Line)
 	{
 		line->render();
 		return;
 	}
-
+	// Render as Mesh
 	mesh->render();
 }

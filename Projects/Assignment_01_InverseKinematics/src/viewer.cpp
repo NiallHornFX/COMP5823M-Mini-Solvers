@@ -218,6 +218,7 @@ void Viewer::render()
 		p->render();
 
 		// Test Render Bones
+		bone_test->transform = glm::rotate(bone_test->transform, 0.01f, glm::vec3(0.f, 1.f, 0.f));
 		bone_test->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 		if (tick_c % 20 != 0) bone_test->render(false); else bone_test->render(true);
 
@@ -320,7 +321,7 @@ void Viewer::test_mesh()
 
 void Viewer::test_bone()
 {
-	bone_test = new Bone(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), 0);
+	bone_test = new Bone(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), glm::mat4(1), 0);
 }
 
 // =========================================== GLFW State + Callbacks ===========================================
