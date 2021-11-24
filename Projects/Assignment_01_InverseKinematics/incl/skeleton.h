@@ -5,25 +5,30 @@
 #include <vector>
 
 // Project Headers
-#include "mesh.h"
+#include "bone.h"
 
-// Class holds array of bones between joints to render ethier as tris or lines using computed transforms from ethier FK or IK joints. 
-
+// Info : Container class, holds array of bones between joints to render ethier as mesh or lines using computed transforms,
+// from ethier FK or IK joints. 
 
 class Skeleton
 {
 public:
-	Skeleton(std::size_t n_Joints);
+	Skeleton(const glm::mat4 &TrsRoot);
 	~Skeleton() = default; 
 
-	void add_bone(const glm::vec3 start, const glm::vec3 end);
+	void add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &trs);
 
-	void render();
+	void render(const glm::mat4x4 &view, const glm::mat4x4 &persp);
 
 public:
-	std::vector<Mesh*> bones; 
+
 	bool render_mesh;
-	std::size_t count; 
+	std::size_t bone_count;
+	glm::mat4 root_transform;
+
+private:
+
+	std::vector<Bone> bones;
 };
 
 

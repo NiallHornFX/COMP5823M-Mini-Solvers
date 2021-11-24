@@ -13,9 +13,8 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
 
 	// Translate none to offset start pos.
 	//glm::vec3 cent = (start + end) * 0.5f;
-	mesh->translate(start);
-	float dist = glm::length(end - start);
-	mesh->scale(glm::vec3(1.f, dist, 1.f));
+	//float dist = glm::length(end - start);
+	//mesh->scale(glm::vec3(1.f, dist, 1.f));
 
 	// Update Name
 	std::string tmp_name = mesh->name + std::to_string(ID);
@@ -44,6 +43,9 @@ void Bone::render(bool Render_Line)
 {
 	// Set Transform
 	mesh->model = transform;
+	// For Mesh Set Postion to start.
+	mesh->translate(start); // Do translation After passing bone mat as model matrix. 
+
 	line->model = transform;
 
 	// Render as Line
@@ -54,4 +56,10 @@ void Bone::render(bool Render_Line)
 	}
 	// Render as Mesh
 	mesh->render();
+}
+
+// Set Joint Indices
+void Bone::set_jointIDs(std::size_t joint_a, std::size_t joint_b)
+{
+	joint_ids.first = joint_a, joint_ids.second = joint_b;
 }

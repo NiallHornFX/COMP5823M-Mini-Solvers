@@ -9,6 +9,7 @@
 #include "primitive.h"
 #include "mesh.h"
 #include "bone.h"
+#include "skeleton.h"
 
 // Ext Headers
 #include "ext/glm/glm.hpp"
@@ -82,6 +83,8 @@ private:
 	// Primtivies
 	std::vector<Primitive*> prims; 
 	Bone *bone_test;
+	Skeleton *skel;
+	
 
 	// Debugging
 	//Primitive *prim_t;

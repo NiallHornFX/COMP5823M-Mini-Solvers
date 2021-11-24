@@ -44,6 +44,9 @@
     <ClCompile Include="src\bone.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\skeleton.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="incl\bone.h">

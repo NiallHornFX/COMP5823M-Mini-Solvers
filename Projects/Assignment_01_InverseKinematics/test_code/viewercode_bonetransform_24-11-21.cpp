@@ -50,8 +50,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// Load OpenGL Extensions
 	extensions_load();
 	// Create Camera
-	//camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false); // Fixed
-	camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, true); // Free
+	camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false);
 }
 
 Viewer::~Viewer() 
@@ -179,8 +178,8 @@ void Viewer::render_prep()
 	//==== Create Viewer Primtivies ====
 	// Ground Plane
 	Ground *ground = new Ground;
-	ground->set_size(4.f);
-	ground->set_tile(4.f);
+	ground->set_size(1.f);
+	ground->set_tile(1.5f);
 	prims.push_back(ground);
 	
 	// Gnomon to put into class.
@@ -217,21 +216,16 @@ void Viewer::render()
 		// Test Render Primives 
 		p->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 		p->render();
+
+		// Test Render Bones
+		bone_test->transform = glm::rotate(bone_test->transform, 0.01f, glm::vec3(0.f, 1.f, 0.f));
+		bone_test->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		if (tick_c % 20 != 0) bone_test->render(false); else bone_test->render(true);
+
 	}
-
-	// Test Render Bones
-	//bone_test->transform = glm::rotate(bone_test->transform, 0.01f, glm::vec3(0.f, 1.f, 0.f));
-	//bone_test->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-	//if (tick_c % 20 != 0) bone_test->render(false); else bone_test->render(true);
-
-	// Test Draw Skeleton
 	get_GLError();
-	skel->render_mesh = (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) ? true : false; 
-	skel->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-
 
 	// Swap and Poll
-	get_GLError();
 	glfwSwapBuffers(window);
 	glfwPollEvents();
 }
@@ -327,30 +321,7 @@ void Viewer::test_mesh()
 
 void Viewer::test_bone()
 {
-	//bone_test = new Bone(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), glm::mat4(1), 0);
-
-	skel = new Skeleton(glm::mat4(1.f));
-
-	//static std::size_t count = 1;
-	//if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) count++;
-	//std::cout << count << "\n";
-
-	glm::vec3 last_pos(0.f);
-	for (std::size_t i = 0; i < 10; ++i)
-	{
-		float norm = float(i) / 9.f;
-
-		// Define test transform 
-		glm::vec3 ax = (i % 2 == 0) ? glm::vec3(0.f, 1.f, 0.f) : glm::vec3(1.f, 0.f, 0.f);
-		float angle = glm::sin(norm);
-
-		glm::mat4 trs(1.f);
-		trs = glm::rotate(trs, angle, ax);
-		glm::vec3 end = last_pos + glm::vec3(0.f, 0.5f, 0.f);
-		skel->add_bone(last_pos, end, trs);
-		last_pos = end;
-	}
-
+	bone_test = new Bone(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), glm::mat4(1), 0);
 }
 
 // =========================================== GLFW State + Callbacks ===========================================

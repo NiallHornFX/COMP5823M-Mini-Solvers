@@ -293,6 +293,8 @@ I'm still deciding if the actual Anim Loading + IK calc will be called from with
 
 Could use a separate class that's a member within Viewer (or nested class approach) to keep the Anim logic / state still within the viewer app, but separated, without separating the viewer class into separate app + renderer. This could be how isolate the state of the solver for each project (using the same core viewer app) could define a base class like `Solver_Base` which is then derived into `Animation_Solver` for this project where the BVH + IK Solver is contained within the viewer app. 
 
+For now I won't use polymorphism for the Solver class, just will have separate classes.
+
 ##### Shader Class
 
 Will have a separate shader class that defines both a vertex and fragment shader for each object. This will handle shader loading, compiling and uniform setting (along with texture samplers).
@@ -352,6 +354,16 @@ case (RENDER_LINES):
 Skeleton Class is not inherited from Primitive, but instead contains the array of all bone mesh primitives, defining the skeleton (fetched from BVH_Data), Skeleton will also apply modifications to joints based on the IK Solve.  Its render call, calls render for each bone applying transformations based on joints + channels. 
 
 It will exist within the animation solver class, (which houses the BVH_Loader instance, and the FK,IK operations, that are then applied to the skeletons bones), Bone class will also have an overriden render method to render as lines, where lines are not wireframe of bones, but infact just piecewise lines for each bone (joint to joint). 
+
+Issue is, with having classes of primitive derived instances, is we have to pass the Camera matrices (which then pass to the internal primitive functions), so there is some forwarding needed for this. Eg Skeleton Render takes in cam matrices, which passes them to bone::set_cameraTransform() which itself then calls mesh and primitive cameraTransform() (on the bones mesh and primitive instances, depending which is rendered (lines or mesh)).
+
+___
+
+##### Animation Solver Class
+
+This is the class that contains the BVH Loading, the intermediate operations and the resulting Skeleton/Bones to render, this class is responsible for maintain the animation state. Its embedded within the Viewer Class, and updates when needed (not always per tick). 
+
+
 
 ___
 
