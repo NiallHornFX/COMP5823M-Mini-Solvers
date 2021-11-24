@@ -271,8 +271,6 @@ Texture bug - "Frame not in module", don't reinterpret_cast<void*> the texture_d
 
 Custom per primitive GL State set within passed lambda ? Eg 32 MSAA Multisampling for ground / grid draw call, then revert to 2-4 MSAA via calls to the GLFW Framebuffer.
 
-
-
 Weird issue where if Uniform is set within render loop of primitive/mesh it breaks, but if set from the scope of the viewer it works fine.  (Uniforms need to be reset when changed if uniform was set before operation). It causes the shader to become unbound (same issue that I seemed to solve last night, need to ensure shader is valid, not sure why uniform modification would cause this issue). Ok yeah its because I thought it was smart to add glUseProgram(0) to the end of each uniform set function to clear the bound shader, but when this is called after the shader is bound and then renders, the resulting shader is no disabled. 
 
 Could just wrap uniform access in a getter and call from viewer render loop to ensure its called from within the gl context class (of the viewer class). 
@@ -315,7 +313,7 @@ In terms of rendering I'm not going to be using indexed drawing for now, will ju
 
 Primitive Derived Classes
 
-* `Mesh` derives from `Primitive` and adds obj loading to get the mesh data to set and textures
+* `Mesh` derives from `Primitive` and adds obj loading to get the mesh data to set and textures.
 
 Primitive Based Classes : (Things needed in app to draw)
 
@@ -325,6 +323,29 @@ Primitive Based Classes : (Things needed in app to draw)
 * Sphere : End Effector Sphere - Derived from `Mesh` 
 
 Need a better way to allocate texture units per mesh, maybe some sort of mesh manager class to check which texture units are available.  For shaders just rendering a single mesh with single texture, don't need texture units. 
+
+##### Mesh vs Primitive
+
+Note Primitive Draws line as direct lines : 
+
+```C++
+case (RENDER_LINES) :
+{
+	glDrawArrays(GL_LINES, 0, vert_count);
+	break;
+}
+```
+
+While Mesh Draws Lines as triangles (lines, thus wireframe) :
+
+```
+case (RENDER_LINES):
+{
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glDrawArrays(GL_TRIANGLES, 0, vert_count);
+	break;
+}
+```
 
 ##### Skeleton Class
 

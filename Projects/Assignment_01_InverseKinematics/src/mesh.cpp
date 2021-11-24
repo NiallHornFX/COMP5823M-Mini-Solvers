@@ -216,7 +216,6 @@ void Mesh::render()
 	{
 		case (RENDER_POINTS):
 		{
-			glPointSize(10.f);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 			glDrawArrays(GL_TRIANGLES, 0, vert_count);
 			break;

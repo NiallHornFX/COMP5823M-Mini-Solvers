@@ -8,7 +8,6 @@
 #include <iostream>
 #include <algorithm>
 
-
 Camera::Camera(glm::vec3 pos, float target_offset, float fov, float ar, bool freelook) 
 	: Cam_Pos(pos), FOV(fov), Aspect_Ratio(ar), free_look(freelook), Cam_Up(glm::vec3(0.f, 1.f, 0.f))
 {
@@ -81,18 +80,7 @@ void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt, flo
 	{
 		Cam_Pos -= Cam_Basis_Y * (Camera_Speed * dt);
 	}
-
-	/*
-	if (!glfwGetWindowAttrib(window, GLFW_HOVERED))
-	{
-		// Reset Basis 
-		Cam_Basis_X = glm::vec3(1.f, 0.f, 0.f);
-		Cam_Basis_Y = glm::vec3(0.f, 1.f, 0.f);
-		Cam_Basis_Z = glm::vec3(0.f, 0.f, 1.f);
-		//Cam_Pos = 
-	} */
 }
-
 
 void Camera::calc_basis()
 {

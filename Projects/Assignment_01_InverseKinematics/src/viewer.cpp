@@ -50,7 +50,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// Load OpenGL Extensions
 	extensions_load();
 	// Create Camera
-	camera = Camera(glm::vec3(0.f, 0.2f, 1.f), 1.f, 80.f, width / height, true);
+	camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false);
 }
 
 Viewer::~Viewer() 
@@ -165,12 +165,44 @@ void Viewer::extensions_load()
 void Viewer::render_prep()
 {
 	// ==== OpenGL Pre Render State ====
+
 	// Multisampling 
 	glEnable(GL_MULTISAMPLE);
+
+	// Sizes
+	glPointSize(5.f);
+	glLineWidth(2.5f);
+
 	// Blending and Depth. 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	//==== Create Viewer Primtivies ====
+	// Ground Plane
+	Ground *ground = new Ground;
+	ground->set_size(1.f);
+	ground->set_tile(1.5f);
+	prims.push_back(ground);
+	
+	// Gnomon to put into class.
+	Primitive *gnomon = new Primitive("gnomon");
+	float data[66] =
+	{
+		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
+		1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
+		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+		0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+		0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+	};
+	gnomon->set_data_mesh(data, 6);
+	gnomon->scale(glm::vec3(0.3f));
+	gnomon->translate(glm::vec3(0.f, 0.01f, 0.f));
+	gnomon->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
+	gnomon->mode = Render_Mode::RENDER_LINES;
+	prims.push_back(gnomon);
+	
 }
 
 // Render Operations
@@ -256,22 +288,10 @@ void Viewer::test_mesh()
 	mesh_t->tex->set_params(Texture::filter_type::LINEAR);
 	mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
 	mesh_t->mode = Render_Mode::RENDER_MESH;
-	prims.push_back(mesh_t); */
-
-	// Ground Plane
-	Ground *ground = new Ground;
-	ground->set_size(5.f);
-	ground->set_tile(5.f);
-	prims.push_back(ground);
-
-	//mesh_t->load_obj(false);
-	//mesh_t->set_shader("test.vert", "test.frag");
-	//mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
-	//mesh_t->scale(glm::vec3(0.1f));
-	//mesh_t->mode = Render_Mode::RENDER_MESH;
+	prims.push_back(mesh_t); 
+	*/
 
 	// Pig
-	
 	Mesh *pig = new Mesh("pig", "pighead.obj");
 	pig->load_obj(false);
 	pig->set_shader("test.vert", "test.frag");
@@ -281,9 +301,7 @@ void Viewer::test_mesh()
 	pig->mode = Render_Mode::RENDER_MESH;
 	prims.push_back(pig);
 
-
 	// Bones
-	
 	for (std::size_t i = 0; i < 10; ++i)
 	{
 		float norm = float(i) / 9.f; 
@@ -295,8 +313,6 @@ void Viewer::test_mesh()
 		mesh_t->translate(glm::vec3(0.f, norm * 33.f, 0.f));
 		prims.push_back(mesh_t);
 	}
-	
-	//prims.push_back(mesh_t);
 }
 
 
