@@ -26,6 +26,7 @@ struct
 	double mouse_offset_x  = 0.f, mouse_offset_y  = 0.f;
 	double mousepos_prev_x = 0.f, mousepos_prev_y = 0.f;
 	double scroll_y = 0.f;
+	bool is_init = false; 
 
 }GLFWState;
 
@@ -49,7 +50,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// Load OpenGL Extensions
 	extensions_load();
 	// Create Camera
-	camera = Camera(glm::vec3(0.f, 0.0f, 1.f), 1.f, W, H);
+	camera = Camera(glm::vec3(0.f, 0.2f, 1.f), 1.f, 80.f, width / height, true);
 }
 
 Viewer::~Viewer() 
@@ -316,7 +317,7 @@ void Viewer::update_camera()
 	last_zoom = GLFWState.scroll_y;
 
 	// Update Camera State
-	camera.update_camera(window, 1.f, dt, delta_yaw, delta_pitch, delta_zoom);
+	camera.update_camera(window, 1.f, dt, delta_yaw, delta_pitch);
 
 	// Update Aspect Ratio if changed
 	if (width != 0 && height != 0)
@@ -335,9 +336,15 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
+	if (!GLFWState.is_init)
+	{
+		GLFWState.mousepos_prev_x = xpos;
+		GLFWState.mousepos_prev_y = ypos;
+		GLFWState.is_init = true;
+	}
 	// Mouse Offset
 	GLFWState.mouse_offset_x =  (xpos - GLFWState.mousepos_prev_x);
-	GLFWState.mouse_offset_y = -(ypos - GLFWState.mousepos_prev_y);
+	GLFWState.mouse_offset_y =  (ypos - GLFWState.mousepos_prev_y);
 
 	// Prev Pos
 	GLFWState.mousepos_prev_x = xpos;

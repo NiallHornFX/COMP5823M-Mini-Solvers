@@ -8,31 +8,25 @@
 #include <iostream>
 #include <algorithm>
 
-// Info : Camera Basis follows Right Hand Coord Sys, Camera Z (Forward Vector) faces towards screen. 
 
-Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : Cam_Pos(pos), Cam_Up(glm::vec3(0.f, 1.f, 0.f))
+Camera::Camera(glm::vec3 pos, float target_offset, float fov, float ar, bool freelook) 
+	: Cam_Pos(pos), FOV(fov), Aspect_Ratio(ar), free_look(freelook), Cam_Up(glm::vec3(0.f, 1.f, 0.f))
 {
-	// Set Cam Target and Direction
-	Cam_Target_Pos = Cam_Pos + glm::vec3(0.0f, 0.0f, -target_offset); // RHS CoordSys, Target offser along depth -z. 
-	Cam_Direction = glm::normalize(Cam_Pos - Cam_Target_Pos);
-	std::cout << Cam_Direction.z << "\n";
-
 	// Init Camera Bases
-	Cam_Basis_X = glm::normalize(glm::cross(Cam_Up, Cam_Direction));
-	Cam_Basis_Y = glm::normalize(glm::cross(Cam_Direction, Cam_Basis_X));
-	Cam_Basis_Z = glm::normalize(Cam_Pos - Cam_Target_Pos);
+	Cam_Basis_Z = glm::normalize(glm::vec3(0.f, 0.f, target_offset)); // Faces out screen (not tgt vector).
+	Cam_Basis_X = glm::normalize(glm::cross(Cam_Up, Cam_Basis_Z));
+	Cam_Basis_Y = glm::normalize(glm::cross(Cam_Basis_Z, Cam_Basis_X));
+
+	// Override with input based bases
+	if (freelook) calc_basis();
 
 	// Set Default Yaw/Pitch Angles - 
 	Yaw = 0.0f, Pitch = 0.0f;
 	Yaw_Min = -120.0f, Yaw_Max = 120.0f;
 	Pitch_Min = -89.0f, Pitch_Max = 89.0f;
 	Sensitvity = 0.5f;
-	free_look = true;
 
 	// Set Defualt Perspective Members - 
-	FOV = 80.0f;
-	Zoom = FOV;
-	Aspect_Ratio = width / height;
 	Near_Plane = 0.01f;
 	Far_Plane = 100.0f;
 }
@@ -40,7 +34,7 @@ Camera::Camera(glm::vec3 pos, float target_offset, float width, float height) : 
 glm::mat4 Camera::get_ViewMatrix()
 {
 	// Flip Basis for target direction
-	return glm::lookAt(Cam_Pos, Cam_Pos - Cam_Basis_Z, Cam_Up);
+	return glm::lookAt(Cam_Pos, (Cam_Pos - Cam_Basis_Z), Cam_Up);
 }
 
 glm::mat4 Camera::get_PerspMatrix()
@@ -48,18 +42,15 @@ glm::mat4 Camera::get_PerspMatrix()
 	return glm::perspective(glm::radians(FOV), Aspect_Ratio, Near_Plane, Far_Plane);
 }
 
-void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt, float yaw, float pitch, float zoom)
+void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt, float yaw, float pitch)
 {
-	
-	Zoom += zoom;
 	// ========== Camera Direction Update ==========
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && free_look)
+	if (free_look && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
 	{
 		Yaw   += yaw   * Sensitvity;
 		Pitch += pitch * Sensitvity;
-		update_basis();
+		calc_basis();
 	} 
-	
 
 	// Poll 
 	glfwPollEvents();
@@ -103,10 +94,10 @@ void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt, flo
 }
 
 
-void Camera::update_basis()
+void Camera::calc_basis()
 {
 	// Clamp Pitch
-	//Pitch = std::max(Pitch_Min, std::min(Pitch, Pitch_Max));
+	Pitch = std::max(Pitch_Min, std::min(Pitch, Pitch_Max));
 	// Clamp Yaw
 	//Yaw = std::max(Yaw_Min, std::min(Yaw, Yaw_Max));
 
@@ -114,12 +105,11 @@ void Camera::update_basis()
 	float d_x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
 	float d_y = sin(glm::radians(Pitch));
 	float d_z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-	Cam_Direction = glm::vec3(d_x, d_y, d_z);
 
 	// Update Basis Vectors 
-	Cam_Basis_Z = glm::normalize(Cam_Direction);
-	Cam_Basis_X = glm::normalize(glm::cross(Cam_Up, Cam_Direction));
-	Cam_Basis_Y = glm::normalize(glm::cross(Cam_Direction, Cam_Basis_X));
+	Cam_Basis_Z = glm::normalize(glm::vec3(d_x, d_y, d_z));
+	Cam_Basis_X = glm::normalize(glm::cross(Cam_Up, Cam_Basis_Z));
+	Cam_Basis_Y = glm::normalize(glm::cross(Cam_Basis_Z, Cam_Basis_X));
 }
 
 std::ostringstream Camera::debug()
@@ -130,8 +120,7 @@ std::ostringstream Camera::debug()
 		<< "Y = " << "[" << Cam_Basis_Y.x << "," << Cam_Basis_Y.y << "," << Cam_Basis_Y.z << "]\n"
 		<< "Z = " << "[" << Cam_Basis_Z.x << "," << Cam_Basis_Z.y << "," << Cam_Basis_Z.z << "]\n"
 		<< "Yaw = " << Yaw << "  Pitch = " << Pitch << "\n"
-		<< "Pos = " << "[" << Cam_Pos.x << "," << Cam_Pos.y << "," << Cam_Pos.z << "]\n"
-		<< "Target = " << "[" << Cam_Target_Pos.x << "," << Cam_Target_Pos.y << "," << Cam_Target_Pos.z << "]\n";
+		<< "Pos = " << "[" << Cam_Pos.x << "," << Cam_Pos.y << "," << Cam_Pos.z << "]\n";
 	out << "======== DEBUG::Camera::END ========\n";
 
 	return out; 

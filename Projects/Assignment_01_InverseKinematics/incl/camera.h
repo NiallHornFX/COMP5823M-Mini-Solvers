@@ -17,14 +17,12 @@ struct GLFWwindow;
 class Camera
 {
 public:
-	Camera(glm::vec3 pos, float target_offset, float width, float height);
+	Camera(glm::vec3 pos, float target_offset, float fov, float ar, bool freelook);
 	Camera() {};
 	~Camera() = default; 
 
 	// View Members
 	glm::vec3 Cam_Pos;
-	glm::vec3 Cam_Target_Pos; 
-	glm::vec3 Cam_Direction;
 	glm::vec3 Cam_Up;
 
 	// Camera Basis Members
@@ -32,12 +30,8 @@ public:
 	glm::vec3 Cam_Basis_Y;
 	glm::vec3 Cam_Basis_Z;
 
-	// View/Proj Matrices
-	glm::mat4 lookAt_mat; 
-	glm::mat4 Persp_mat;
-
 	// Mouse Rotation Members - 
-	float Yaw, Pitch, Zoom;
+	float Yaw, Pitch;
 	float Yaw_Min, Pitch_Min;
 	float Yaw_Max, Pitch_Max;
 
@@ -51,13 +45,13 @@ public:
 
 	glm::mat4 get_PerspMatrix();
 
-	void update_camera(GLFWwindow *window, float Camera_Speed, float dt, float yaw, float pitch, float zoom);
+	void update_camera(GLFWwindow *window, float Camera_Speed, float dt, float yaw, float pitch);
 
 
 	std::ostringstream debug();
 
 private:
-	void update_basis();
+	void calc_basis();
 
 };
 
