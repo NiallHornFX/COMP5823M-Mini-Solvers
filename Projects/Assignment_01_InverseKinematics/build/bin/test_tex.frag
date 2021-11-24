@@ -22,11 +22,11 @@ void main()
 	c *= 0.25;
 
 	float a = c;
-	a *= (1.75 - poscol.z);
+	a *= (1.25 - poscol.z);
 	
 
 	
-	frag_colour = vec4(vec3(c * 1.0), a);
+	frag_colour = vec4(vec3(c * 1.5), a);
 	
 	// Render UV Coords 
 	//frag_colour = vec4(uv.x, uv.y, 0.0, 1.0);

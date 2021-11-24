@@ -21,6 +21,7 @@ using byte = unsigned char;
 
 // FD 
 struct GLFWwindow;
+struct GLFWState;
 
 // Viewer application for rendering, GUI and handling user input.
 
@@ -50,7 +51,6 @@ public:
 	void get_dt();
 	void update_window();
 
-
 	//void get_animData(); 
 
 	// Debug
@@ -75,6 +75,7 @@ private:
 
 	// Camera 
 	Camera camera; 
+	float last_yawoffs, last_pitchoffs, last_zoom;
 
 	// Primtivies
 	std::vector<Primitive*> prims; 
@@ -88,9 +89,17 @@ private:
 	std::size_t anim_frame; 
 	bool anim_loop; 
 
+
 	std::size_t tick_c; 
 };
 
+
+// GLFW Input Callbacks 
+void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+
+void mouse_callback(GLFWwindow *window, double xpos, double ypos);
+
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 
 
 #endif

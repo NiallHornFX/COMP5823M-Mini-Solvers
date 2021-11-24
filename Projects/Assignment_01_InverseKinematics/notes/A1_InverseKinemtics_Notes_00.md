@@ -90,6 +90,8 @@ To Render the resulting BVH Data, we just use FK, ie we are apply successive rot
 
 Starting from the root (which should be the first element of the joint array) do stack based depth traversal to render each bone, by applying offset and rotation relative to parents transform matrix (concatenation of all previous joint transforms).
 
+Rotations need to be done locally (at origin, so subtract origin, do rotation then add back).
+
 ___
 
 #### BVH_Data Class :
@@ -267,6 +269,8 @@ Things like this weren't an issue in SFGL for example, because the render contex
 
 Texture bug - "Frame not in module", don't reinterpret_cast<void*> the texture_data as it changes the address (in this case) unlike static_cast which guarantees to preserve it. Still seem to be getting this issue now and again even though this initially fixed it. Seems to happen if UVs are out of bounds. Just turn off debugging, its not a bug, just a warning on the texture usage (via sampler in GLSL), signals invalid usage. Seems to be temperamentally occurring on and off which is annoying as their may be some underlying bug / mistake I cant find. 
 
+Custom per primitive GL State set within passed lambda ? Eg 32 MSAA Multisampling for ground / grid draw call, then revert to 2-4 MSAA via calls to the GLFW Framebuffer.
+
 
 
 Weird issue where if Uniform is set within render loop of primitive/mesh it breaks, but if set from the scope of the viewer it works fine.  (Uniforms need to be reset when changed if uniform was set before operation). It causes the shader to become unbound (same issue that I seemed to solve last night, need to ensure shader is valid, not sure why uniform modification would cause this issue). Ok yeah its because I thought it was smart to add glUseProgram(0) to the end of each uniform set function to clear the bound shader, but when this is called after the shader is bound and then renders, the resulting shader is no disabled. 
@@ -274,6 +278,14 @@ Weird issue where if Uniform is set within render loop of primitive/mesh it brea
 Could just wrap uniform access in a getter and call from viewer render loop to ensure its called from within the gl context class (of the viewer class). 
 
 Hmm, but it seems to work if its called, before the shader is active. 
+
+##### GLFW State Callbacks
+
+To be able to use Scroll and Mouse input along with Window resizing, we need to use GLFW callback free functions, however these have fixed parameters (eg width height, x offset y offset) and as they are defined as free functions they cannot modify member state of the Viewer Class (as I'm not using Viewer as a singleton, with static members to update, (which would solve it also)), so I write the callback data (changed GLFW State) from the callback into a struct defined (only) within viewer.cpp called GLFWState, the Viewer::UpdateCamera() member function which is called per tick, then reads from this struct (in global scope). Not ideal with the GLFWState struct been global but I need it as an in-between write from the call-back's (free functions in global namespace) to then read from within the viewer class implementation. 
+
+Setting the GLFW callback function pointers to member functions (eg defined within Viewer per instance  (or even static)) doesn't work afaik hence the need for global namespace defined free functions. That we then need to pass data into the viewer class to update the internal width,height (for camera aspect ratio) and mouse offset (for camera yaw and pitch). Note Key presses are done internally of the class within the Camera::Update_Camera() member function via Polling the keys for key press state, but for mouse and window resizing polling does not make sense / not possible hence use of callbacks to write updated state. 
+
+Because Mouse offset is then passed to Viewer::Update_Camera() which runs per tick, it will keep the previous state (if mouse is now static) from when the callback was last called and values set in the struct, so to avoid repetitive addition we need to check for per tick delta of the offset positions before adding to the camera pitch and yaw. 
 
 ##### Animation State
 

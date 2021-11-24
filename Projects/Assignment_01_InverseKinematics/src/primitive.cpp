@@ -125,6 +125,10 @@ void Primitive::set_data_mesh(const float *data, std::size_t vert_n)
 
 void Primitive::create_buffers()
 {
+	// Delete previous resources 
+	if (VAO) glDeleteVertexArrays(1, &VAO);
+	if (VBO) glDeleteBuffers(1, &VBO);
+
 	// Gen VAO and VBO
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);

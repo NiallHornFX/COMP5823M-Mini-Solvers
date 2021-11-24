@@ -24,7 +24,7 @@ public:
 	// View Members
 	glm::vec3 Cam_Pos;
 	glm::vec3 Cam_Target_Pos; 
-	glm::vec3 Cam_Dir;
+	glm::vec3 Cam_Direction;
 	glm::vec3 Cam_Up;
 
 	// Camera Basis Members
@@ -44,12 +44,14 @@ public:
 	float Sensitvity;
 	float FOV, Aspect_Ratio, Near_Plane, Far_Plane;
 
+	bool free_look;
+
 public:
 	glm::mat4 get_ViewMatrix();
 
 	glm::mat4 get_PerspMatrix();
 
-	void update_camera(GLFWwindow *window, float Camera_Speed, float dt);
+	void update_camera(GLFWwindow *window, float Camera_Speed, float dt, float yaw, float pitch, float zoom);
 
 
 	std::ostringstream debug();

@@ -90,6 +90,7 @@
     <ClCompile Include="src\bvhdata.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\ext.cpp" />
+    <ClCompile Include="src\ground.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh.cpp" />
     <ClCompile Include="src\primitive.cpp" />
@@ -101,6 +102,7 @@
     <ClInclude Include="incl\bone.h" />
     <ClInclude Include="incl\bvhdata.h" />
     <ClInclude Include="incl\camera.h" />
+    <ClInclude Include="incl\ground.h" />
     <ClInclude Include="incl\mesh.h" />
     <ClInclude Include="incl\primitive.h" />
     <ClInclude Include="incl\shader.h" />
