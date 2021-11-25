@@ -50,8 +50,8 @@ void Bone::render(bool Render_Line)
 	if (Render_Line)
 	{
 		// ======= Line Model Matrix Transform Operations =======
-		line->scale(glm::vec3(0.1f));
-		//line->translate(glm::vec3(0.f, 10.f, 0.f));
+		line->scale(glm::vec3(0.025f));
+		line->translate(glm::vec3(0.f, 15.f, 0.f));
 
 		// ======= Set Line Colour =======
 		// RNG
@@ -70,6 +70,7 @@ void Bone::render(bool Render_Line)
 		line->set_colour(glm::vec3(r, g, b));
 		
 		// ======= Render Bone As Line =======
+		glLineWidth(5.f);
 		line->mode = Render_Mode::RENDER_LINES;
 		line->render();
 

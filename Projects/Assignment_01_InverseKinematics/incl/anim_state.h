@@ -23,6 +23,7 @@ public:
 	void dec_frame();
 
 	// Fetch 
+	void build_bvhSkeleton();
 	void fetch_bvhData();
 
 public:

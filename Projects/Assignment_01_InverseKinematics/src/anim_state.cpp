@@ -14,7 +14,7 @@ Anim_State::Anim_State()
 
 void Anim_State::set_bvhFile(const char *BVHPath)
 {
-	// Clear prev state
+	// Clear prev state (could just bvh::clear())
 	if (bvh) delete bvh;
 	skel.reset();
 
@@ -24,18 +24,18 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 	max_frame = bvh->num_frame;
 	interval  = bvh->interval;
 
-	fetch_bvhData();
+	build_bvhSkeleton();
 }
 
-void Anim_State::fetch_bvhData()
+void Anim_State::build_bvhSkeleton()
 {
-	// Fill out Skeleton from BVH Tree
+	// Fill out Skeleton from BVH Tree using offsets (only need to be done once per BVH file load, then update channels per anim frame)
 	// Start from root. 
 	Joint *root = bvh->joints[0];
 
-	Joint *prev = nullptr; 
-	Joint *cur = root; 
-	glm::vec3 offs = root->offset; 
+	Joint *prev = nullptr;
+	Joint *cur = root;
+	glm::vec3 offs = root->offset;
 	Joint *next = root->children[0];
 	Joint *next_b = root->children[0]->children[0];
 
@@ -49,12 +49,12 @@ void Anim_State::fetch_bvhData()
 		for (std::size_t c = 0; c < cur->children.size(); ++c)
 		{
 			prev = cur;
-			offs = prev->offset; 
+			offs = prev->offset;
 			cur = cur->children[c];
 			//skel.add_bone(prev->offset, cur->offset, glm::mat4(1));
 			skel.add_bone((offs + prev->offset), (offs + prev->offset) + cur->offset, glm::mat4(1));
 		}
-		
+
 	}
 	*/
 
@@ -111,21 +111,18 @@ void Anim_State::fetch_bvhData()
 	}
 
 
-
-
-
-
-
 	// Use Parent oppose to storing prev ...
 
 
 
+}
 
-
+void Anim_State::fetch_bvhData()
+{
 	// Get/Set BVH Data of current frame
-	// WIP
 	//[..]
 }
+
 
 
 

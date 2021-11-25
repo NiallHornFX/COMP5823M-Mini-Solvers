@@ -328,7 +328,7 @@ Primitive Based Classes : (Things needed in app to draw)
 
 Need a better way to allocate texture units per mesh, maybe some sort of mesh manager class to check which texture units are available.  For shaders just rendering a single mesh with single texture, don't need texture units. 
 
-##### Mesh vs Primitive
+##### Mesh vs Primitive Line Rendering
 
 Note Primitive Draws line as direct lines : 
 
@@ -342,7 +342,7 @@ case (RENDER_LINES) :
 
 While Mesh Draws Lines as triangles (lines, thus wireframe) :
 
-```
+```C++
 case (RENDER_LINES):
 {
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -379,7 +379,7 @@ ___
 
 ##### BVH Data --> Skeleton
 
-Theres two parts to this stage, the first is creating a bone for each joint pair in the BVH data, the second is updating the transforms per frame (successively through the tree) from the motion data (essentially Forward Kinematics)
+There's two parts to this stage, the first is creating a bone for each joint pair in the BVH data, the second is updating the transforms per frame (successively through the tree) from the motion data (essentially Forward Kinematics)
 
 Need to get each joint and the next joint to get the current and next offset to define the start and end position (offset) for each bone. Along with concating the rotation from the previous joints concat matrix * the current. 
 
@@ -387,7 +387,40 @@ We need correct traversal from the BVH Root joint to each end site regardless, t
 
 
 
-##### Questions : 
+##### Building Skeleton of bones from BVH Data 
+
+(Starting with just rest pose with offsets, no joint transforms/channels) 
+
+I found this hacky-ish way, where oppose to traversing from root, we get each joint, then get its parent and traverse back to root (going back to root is easier) accumulating the total offsets along the way, this then defines the start position of the bone segment (which is the current joints, parent offset (we accumulated)), the end position is then the current joint's offset + the parents offset : 
+
+```C++
+// anim_state::build_bvhSkeleton
+
+	// Hacky Way to get inital pose 
+	for (Joint *cur : bvh->joints)
+	{
+		glm::vec3 par_offs(0.f);
+		Joint *p = cur;
+		if (p->parent) // Traverse back to root to get total parent offset
+		{
+			while (p->parent)
+			{
+				par_offs += p->parent->offset;
+				p = p->parent;
+			}
+		}
+		// Start is then parent offset, end is the current joint offset +
+        // parent offset (total parent offset along tree).
+        // Append bone to Skeleton
+		skel.add_bone(par_offs, (cur->offset + par_offs), glm::mat4(1));
+	}
+```
+
+Similar approach could be used to apply transformations to each bone containing all previous parent transforms + current.
+
+This is not very efficient as it means doing backwards traversal multiple times over the same branches. But its conceptually quite simple and avoids recursion or lots of for loops. 
+
+##### Questions of current approach : 
 
 Is my offset been added correctly to the bone (its added to the bones transform matrix (which becomes the model matrix)) via translation, does this correctly offset to next start, and not centre ? 
 
@@ -404,6 +437,8 @@ ___
 Eigen time
 
 Pseudo inverse ... 
+
+User interaction to move joints ...
 
 
 

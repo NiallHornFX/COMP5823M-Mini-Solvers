@@ -74,7 +74,7 @@ private:
 	GLFWwindow *window; 
 	std::size_t width, height;
 	std::string title; 
-	bool draw_grid, draw_gnomon;
+	bool draw_grid, draw_axis;
 
 	const byte *render_device;
 	const byte *version;
@@ -89,7 +89,7 @@ private:
 	// Primtivies
 	std::vector<Primitive*> prims;
 	Ground *ground;
-	Primitive *gnomon;
+	Primitive *axis;
 
 	// Debugging
 	Bone *bone_test;

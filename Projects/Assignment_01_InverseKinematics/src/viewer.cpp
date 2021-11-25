@@ -41,7 +41,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	last_pitchoffs = 0.f;
 	last_zoom = 0.f;
 	draw_grid = true;
-	draw_gnomon = true;
+	draw_axis = true;
 
 	// ==== OpenGL Setup ==== 
 	// Setup OpenGL Context and Window
@@ -190,7 +190,7 @@ void Viewer::render_prep()
 	ground->set_tile(4.f);
 
 	// Gnomon to put into class.
-	gnomon = new Primitive("gnomon");
+	axis = new Primitive("axis");
 	float data[66] =
 	{
 		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
@@ -200,11 +200,11 @@ void Viewer::render_prep()
 		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
 		0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
 	};
-	gnomon->set_data_mesh(data, 6);
-	gnomon->scale(glm::vec3(0.3f));
-	gnomon->translate(glm::vec3(0.f, 0.01f, 0.f));
-	gnomon->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
-	gnomon->mode = Render_Mode::RENDER_LINES;
+	axis->set_data_mesh(data, 6);
+	axis->scale(glm::vec3(0.3f));
+	axis->translate(glm::vec3(0.f, 0.01f, 0.f));
+	axis->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
+	axis->mode = Render_Mode::RENDER_LINES;
 }
 
 // Render Operations
@@ -223,11 +223,12 @@ void Viewer::render()
 		ground->render();
 	}
 
-	// Draw Gnomon
-	if (draw_gnomon)
+	// Draw Axis
+	if (draw_axis)
 	{
-		gnomon->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-		gnomon->render();
+		axis->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		glLineWidth(2.5f); // Reset for axis width.
+		axis->render();
 	}
 
 	// Draw Primtivies
@@ -271,7 +272,7 @@ void Viewer::query_drawState()
 	}
 	if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS)
 	{
-		draw_gnomon = !draw_gnomon;
+		draw_axis = !draw_axis;
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 }
