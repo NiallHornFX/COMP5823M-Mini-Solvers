@@ -33,7 +33,35 @@ void Anim_State::fetch_bvhData()
 	// Start from root. 
 	Joint *root = bvh->joints[0];
 
-	std::cout << "TEST ROOT = " << root->offset.x << " " << root->offset.y << " " << root->offset.z << "\n";
+	Joint *prev = nullptr; 
+	Joint *cur = root; 
+	glm::vec3 offs = root->offset; 
+	Joint *next = root->children[0];
+	Joint *next_b = root->children[0]->children[0];
+
+	skel.add_bone(glm::vec3(0.f, 0.f, 0.f), root->offset + next->offset, glm::mat4(1));
+	skel.add_bone(root->offset + next->offset, next->offset + next_b->offset, glm::mat4(1));
+	/*
+	while (cur->children.size())
+	{
+
+		// Breadth First ...
+		for (std::size_t c = 0; c < cur->children.size(); ++c)
+		{
+			prev = cur;
+			offs = prev->offset; 
+			cur = cur->children[c];
+			//skel.add_bone(prev->offset, cur->offset, glm::mat4(1));
+			skel.add_bone((offs + prev->offset), (offs + prev->offset) + cur->offset, glm::mat4(1));
+		}
+		
+	}
+	*/
+
+
+	// Prev
+	// Cur
+	// Matrix Stack
 
 
 	//skel.add_bone()

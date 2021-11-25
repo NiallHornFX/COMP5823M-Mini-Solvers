@@ -47,7 +47,12 @@ void Bone::render(bool Render_Line)
 	// Render as Line
 	if (Render_Line)
 	{
+		line->mode = Render_Mode::RENDER_LINES;
 		line->render();
+
+		// Also Render Points
+		//line->mode = Render_Mode::RENDER_POINTS;
+		//line->render();
 		return;
 	}
 	// Render as Mesh

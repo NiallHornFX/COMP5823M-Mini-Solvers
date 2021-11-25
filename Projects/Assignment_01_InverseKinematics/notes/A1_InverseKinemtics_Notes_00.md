@@ -379,6 +379,8 @@ Need to get each joint and the next joint to get the current and next offset to 
 
 
 
+Is my offset been added correctly to the bone (its added to the bones transform matrix (which becomes the model matrix)) via translation, does this correctly offset to next start, and not centre ? 
+
 
 
 ##### User Interaction with Bones/Joints

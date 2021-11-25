@@ -2,8 +2,7 @@
 #include "viewer.h"
 
 // Project Headers
-#include "shader.h"
-#include "ground.h"
+//
 
 // Ext Headers
 // GLEW
@@ -41,6 +40,8 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	last_yawoffs = 0.f;
 	last_pitchoffs = 0.f;
 	last_zoom = 0.f;
+	draw_grid = true;
+	draw_gnomon = true;
 
 	// ==== OpenGL Setup ==== 
 	// Setup OpenGL Context and Window
@@ -50,7 +51,8 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ==== Anim State ====
 	// Init with some BVH File (can be changed later via GUI)
-	anim.set_bvhFile("../../assets/bvh/testA.bvh");
+	//anim.set_bvhFile("../../assets/bvh/testA.bvh");
+	anim.set_bvhFile("../../assets/bvh/rest.bvh");
 
 	// ==== Create Camera ====
 	//camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false); // Fixed
@@ -88,6 +90,7 @@ void Viewer::tick()
 {
 	// ======= App Operations =======
 	get_dt();
+	query_drawState();
 	update_window();
 	update_camera();
 
@@ -182,13 +185,12 @@ void Viewer::render_prep()
 	// ======== Create Viewer Primtivies ========
 
 	// Ground Plane
-	Ground *ground = new Ground;
+	ground = new Ground;
 	ground->set_size(4.f);
 	ground->set_tile(4.f);
-	prims.push_back(ground);
-	
+
 	// Gnomon to put into class.
-	Primitive *gnomon = new Primitive("gnomon");
+	gnomon = new Primitive("gnomon");
 	float data[66] =
 	{
 		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
@@ -203,24 +205,46 @@ void Viewer::render_prep()
 	gnomon->translate(glm::vec3(0.f, 0.01f, 0.f));
 	gnomon->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
 	gnomon->mode = Render_Mode::RENDER_LINES;
-	prims.push_back(gnomon);
-	
 }
 
 // Render Operations
 void Viewer::render()
 {
 	// Step - 
-	glClearColor(0.2f, 0.2f, 0.2f, 1.0);
+	glClearColor(0.15f, 0.15f, 0.15f, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Test Draw Primtivies
+	// Draw Viewer Primtivies
 	get_GLError();
-	for (Primitive *p : prims)
+	// Draw Grid 
+	if (draw_grid)
 	{
-		p->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-		p->render();
+		ground->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		ground->render();
 	}
+
+	// Draw Gnomon
+	if (draw_gnomon)
+	{
+		gnomon->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		gnomon->render();
+	}
+
+	// Draw Primtivies
+	get_GLError();
+	if (prims.size())
+	{
+		for (Primitive *p : prims)
+		{
+			p->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+			p->render();
+		}
+	}
+
+
+	// Render Bones
+	//anim.skel.render_mesh = true;
+	anim.skel.render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 	// Test Render Bones
 	//bone_test->transform = glm::rotate(bone_test->transform, 0.01f, glm::vec3(0.f, 1.f, 0.f));
@@ -236,6 +260,18 @@ void Viewer::render()
 	get_GLError();
 	glfwSwapBuffers(window);
 	glfwPollEvents();
+}
+
+void Viewer::query_drawState()
+{
+	if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS)
+	{
+		draw_grid = !draw_grid;
+	}
+	if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS)
+	{
+		draw_gnomon = !draw_gnomon;
+	}
 }
 
 void Viewer::update_window()

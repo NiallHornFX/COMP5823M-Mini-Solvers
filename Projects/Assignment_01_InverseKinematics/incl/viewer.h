@@ -7,6 +7,7 @@
 // Project Headers
 #include "camera.h"
 #include "primitive.h"
+#include "ground.h"
 #include "mesh.h"
 #include "anim_state.h"
 
@@ -43,6 +44,7 @@ public:
 
 	// GUI
 	//
+	void query_drawState();
 
 	// Application 
 	void exec(); // Exec Viewer Application 
@@ -72,6 +74,7 @@ private:
 	GLFWwindow *window; 
 	std::size_t width, height;
 	std::string title; 
+	bool draw_grid, draw_gnomon;
 
 	const byte *render_device;
 	const byte *version;
@@ -85,6 +88,8 @@ private:
 
 	// Primtivies
 	std::vector<Primitive*> prims;
+	Ground *ground;
+	Primitive *gnomon;
 
 	// Debugging
 	Bone *bone_test;
