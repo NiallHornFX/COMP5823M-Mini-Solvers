@@ -5,17 +5,20 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <tuple>
 
 // Ext Headers
-#include "ext/Eigen/Core" // Eigen
+#include "ext/glm/glm.hpp"
 
 // Type Def
 using real = double; 
 
+using DOF6 = std::tuple<real, real, real, real, real, real>;
+using DOF3 = std::tuple<real, real, real>;
+
 // FDs
 struct Joint;
 struct Channel;
-
 
 // Info : BVHData Class, responsible for loading, parsing BVH Animation file to Joints and Channel Data. 
 
@@ -33,15 +36,25 @@ public:
 	// Dump State
 	void Debug(bool to_file = false); 
 
-private:
-	std::string filename;
-	std::vector<Joint*>   joints; 
-	std::vector<Channel*> channels; 
+	// Joint Channel Access
+	DOF6 get_root_DOF6(std::size_t frame)                         const;
+	DOF3 get_joint_DOF3(std::size_t joint_idx, std::size_t frame) const;
+	glm::vec3 get_joint_offset(std::size_t joint_idx)             const;
 
+public:
+
+	std::string filename;
 	std::size_t num_channel;
 	std::size_t num_frame;
 	real interval;
+
+private:
+
+	std::vector<Joint*>   joints; 
+	std::vector<Channel*> channels; 
 	real *motion; 
+
+	friend class Anim_State;
 };
 
 
@@ -66,7 +79,7 @@ struct Joint
 
 	bool is_root, is_end;
 
-	Eigen::Vector3d offset;
+	glm::vec3 offset;
 	Joint *parent;
 	std::vector<Joint*> children;
 

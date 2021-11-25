@@ -21,7 +21,7 @@ void main()
 	
 	// Alpha by depth
 	float a = c;
-	a *= (1.25 - poscol.z);
+	a *= (1.5 - poscol.z);
 	
 	// Render Texture Grid 
 	frag_colour = vec4(vec3(c), a);

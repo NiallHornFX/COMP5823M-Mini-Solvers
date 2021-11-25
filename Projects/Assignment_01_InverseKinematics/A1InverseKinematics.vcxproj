@@ -87,6 +87,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\anim_state.cpp" />
     <ClCompile Include="src\bone.cpp" />
     <ClCompile Include="src\bvhdata.cpp" />
     <ClCompile Include="src\camera.cpp" />
@@ -101,6 +102,7 @@
     <ClCompile Include="src\viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="incl\anim_state.h" />
     <ClInclude Include="incl\bone.h" />
     <ClInclude Include="incl\bvhdata.h" />
     <ClInclude Include="incl\camera.h" />

@@ -37,8 +37,6 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	: width(W), height(H), title(Title)
 {
 	// ==== Init ====
-	anim_loop = true; 
-	anim_frame = 0; 
 	tick_c = 0;
 	last_yawoffs = 0.f;
 	last_pitchoffs = 0.f;
@@ -49,7 +47,12 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	window_context(); 
 	// Load OpenGL Extensions
 	extensions_load();
-	// Create Camera
+
+	// ==== Anim State ====
+	// Init with some BVH File (can be changed later via GUI)
+	anim.set_bvhFile("../../assets/bvh/testA.bvh");
+
+	// ==== Create Camera ====
 	//camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false); // Fixed
 	camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, true); // Free
 }
@@ -69,7 +72,7 @@ void Viewer::exec()
 	// Create Test Primtiive
 	//test_prim();
 	//test_mesh();
-	test_bone();
+	//test_bone();
 
 	// ==== Application Loop ====
 	while (!glfwWindowShouldClose(window) && !esc_pressed())
@@ -162,7 +165,7 @@ void Viewer::extensions_load()
 // Initalize Render State
 void Viewer::render_prep()
 {
-	// ==== OpenGL Pre Render State ====
+	// ======== OpenGL Pre Render State ========
 
 	// Multisampling 
 	glEnable(GL_MULTISAMPLE);
@@ -176,7 +179,8 @@ void Viewer::render_prep()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	//==== Create Viewer Primtivies ====
+	// ======== Create Viewer Primtivies ========
+
 	// Ground Plane
 	Ground *ground = new Ground;
 	ground->set_size(4.f);
@@ -214,7 +218,6 @@ void Viewer::render()
 	get_GLError();
 	for (Primitive *p : prims)
 	{
-		// Test Render Primives 
 		p->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 		p->render();
 	}
@@ -225,10 +228,9 @@ void Viewer::render()
 	//if (tick_c % 20 != 0) bone_test->render(false); else bone_test->render(true);
 
 	// Test Draw Skeleton
-	get_GLError();
-	skel->render_mesh = (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) ? true : false; 
-	skel->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-
+	//get_GLError();
+	//skel->render_mesh = (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) ? true : false; 
+	//skel->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 	// Swap and Poll
 	get_GLError();
@@ -310,19 +312,6 @@ void Viewer::test_mesh()
 	pig->scale(glm::vec3(1.f));
 	pig->mode = Render_Mode::RENDER_MESH;
 	prims.push_back(pig);
-
-	// Mesh Bones
-	for (std::size_t i = 0; i < 10; ++i)
-	{
-		float norm = float(i) / 9.f; 
-		Mesh *mesh_t = new Mesh("Test", "bone.obj");
-		mesh_t->load_obj(false);
-		mesh_t->set_shader("test.vert", "test.frag");
-		mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
-		mesh_t->scale(glm::vec3(0.05f));
-		mesh_t->translate(glm::vec3(0.f, norm * 33.f, 0.f));
-		prims.push_back(mesh_t);
-	}
 }
 
 void Viewer::test_bone()
@@ -331,10 +320,6 @@ void Viewer::test_bone()
 
 	skel = new Skeleton(glm::mat4(1.f));
 
-	//static std::size_t count = 1;
-	//if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) count++;
-	//std::cout << count << "\n";
-
 	glm::vec3 last_pos(0.f);
 	for (std::size_t i = 0; i < 10; ++i)
 	{
@@ -342,7 +327,7 @@ void Viewer::test_bone()
 
 		// Define test transform 
 		glm::vec3 ax = (i % 2 == 0) ? glm::vec3(0.f, 1.f, 0.f) : glm::vec3(1.f, 0.f, 0.f);
-		float angle = glm::sin(norm);
+		float angle = glm::sin(norm * 5);
 
 		glm::mat4 trs(1.f);
 		trs = glm::rotate(trs, angle, ax);

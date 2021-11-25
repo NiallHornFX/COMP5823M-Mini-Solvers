@@ -11,11 +11,6 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
 	mesh->set_colour(glm::vec3(0.1f, 0.1f, 0.6f));
 	mesh->mode = Render_Mode::RENDER_MESH;
 
-	// Translate none to offset start pos.
-	//glm::vec3 cent = (start + end) * 0.5f;
-	//float dist = glm::length(end - start);
-	//mesh->scale(glm::vec3(1.f, dist, 1.f));
-
 	// Update Name
 	std::string tmp_name = mesh->name + std::to_string(ID);
 	mesh->name = tmp_name;
@@ -41,9 +36,10 @@ void Bone::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp
 
 void Bone::render(bool Render_Line)
 {
-	// Set Transform
+	// Set Transform --> model matrix
 	mesh->model = transform;
 	// For Mesh Set Postion to start.
+	//mesh->scale(glm::vec3(1.f, glm::length(end-start), 1.f));
 	mesh->translate(start); // Do translation After passing bone mat as model matrix. 
 
 	line->model = transform;

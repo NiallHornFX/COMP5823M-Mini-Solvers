@@ -129,9 +129,9 @@ void BVH_Data::Load()
 			joint->is_end = is_site;
 
 			// Use offset to store end site data also
-			joint->offset[0] = x;
-			joint->offset[1] = y;
-			joint->offset[2] = z;
+			joint->offset.x = x;
+			joint->offset.y = y;
+			joint->offset.z = z;
 
 			continue;
 		}
@@ -246,6 +246,62 @@ void BVH_Data::Clear()
 	num_channel = 0;
 	num_frame = 0; 
 	interval = 0.;
+}
+
+DOF6 BVH_Data::get_root_DOF6(std::size_t frame) const
+{
+	Joint *root = joints[0];
+	// Root should be the first joint. 
+	if (!root->is_root) std::terminate(); // terminate is tmp, for debug sake. 
+
+	// Translation Channel Indices
+	std::size_t x_trs_idx = root->channels[0]->index;
+	std::size_t y_trs_idx = root->channels[1]->index;
+	std::size_t z_trs_idx = root->channels[2]->index;
+
+	// Rotation Channel Indices
+	std::size_t z_rot_idx = root->channels[3]->index;
+	std::size_t y_rot_idx = root->channels[4]->index;
+	std::size_t x_rot_idx = root->channels[5]->index;
+
+	// Return 6DOF Channels of Root Joint : 
+	real x_trs = motion[frame * num_channel + x_trs_idx];
+	real y_trs = motion[frame * num_channel + y_trs_idx];
+	real z_trs = motion[frame * num_channel + z_trs_idx];
+
+	real z_rot = motion[frame * num_channel + z_rot_idx];
+	real y_rot = motion[frame * num_channel + y_rot_idx];
+	real x_rot = motion[frame * num_channel + x_rot_idx];
+
+	// Remember that DOF6 order is (X_trs, Y_trs, Z_trs, Z_rot, Y_rot, X_rot)
+	return DOF6(x_trs, y_trs, z_trs, z_rot, y_rot, x_rot);
+}
+
+DOF3 BVH_Data::get_joint_DOF3(std::size_t joint_idx, std::size_t frame) const
+{
+	Joint *joint = joints[joint_idx];
+
+	// Don't call this function on root. (Has 6 DOF)
+	if (joint->is_root) std::terminate();
+	
+	// Channel count is 3 (ZRot, YRot, XRot) (3DOF) unless root (6 DOF) 
+	// Should be ordered (Z,Y,X)
+	std::size_t z_rot_idx = joint->channels[0]->index;
+	std::size_t y_rot_idx = joint->channels[1]->index;
+	std::size_t x_rot_idx = joint->channels[2]->index;
+
+	// Get Channel, frame, from motion data.
+	real z_rot = motion[frame * num_channel + z_rot_idx];
+	real y_rot = motion[frame * num_channel + y_rot_idx];
+	real x_rot = motion[frame * num_channel + x_rot_idx];
+
+	// Return Tuple. 
+	return DOF3(z_rot, y_rot, x_rot);
+}
+
+glm::vec3 BVH_Data::get_joint_offset(std::size_t joint_idx) const
+{
+	return joints[joint_idx]->offset;
 }
 
 void BVH_Data::Debug(bool to_file)

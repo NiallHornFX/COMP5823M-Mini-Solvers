@@ -269,7 +269,7 @@ Things like this weren't an issue in SFGL for example, because the render contex
 
 Texture bug - "Frame not in module", don't reinterpret_cast<void*> the texture_data as it changes the address (in this case) unlike static_cast which guarantees to preserve it. Still seem to be getting this issue now and again even though this initially fixed it. Seems to happen if UVs are out of bounds. Just turn off debugging, its not a bug, just a warning on the texture usage (via sampler in GLSL), signals invalid usage. Seems to be temperamentally occurring on and off which is annoying as their may be some underlying bug / mistake I cant find. 
 
-Custom per primitive GL State set within passed lambda ? Eg 32 MSAA Multisampling for ground / grid draw call, then revert to 2-4 MSAA via calls to the GLFW Framebuffer.
+Custom per primitive GL State set within passed lambda eg custom state set callback (to customize per primitive render state calls) ? Eg 32 MSAA Multisampling for ground / grid draw call, then revert to 2-4 MSAA via calls to the GLFW Framebuffer.
 
 Weird issue where if Uniform is set within render loop of primitive/mesh it breaks, but if set from the scope of the viewer it works fine.  (Uniforms need to be reset when changed if uniform was set before operation). It causes the shader to become unbound (same issue that I seemed to solve last night, need to ensure shader is valid, not sure why uniform modification would cause this issue). Ok yeah its because I thought it was smart to add glUseProgram(0) to the end of each uniform set function to clear the bound shader, but when this is called after the shader is bound and then renders, the resulting shader is no disabled. 
 
@@ -357,16 +357,34 @@ It will exist within the animation solver class, (which houses the BVH_Loader in
 
 Issue is, with having classes of primitive derived instances, is we have to pass the Camera matrices (which then pass to the internal primitive functions), so there is some forwarding needed for this. Eg Skeleton Render takes in cam matrices, which passes them to bone::set_cameraTransform() which itself then calls mesh and primitive cameraTransform() (on the bones mesh and primitive instances, depending which is rendered (lines or mesh)).
 
-___
+The Skeleton will contain the root bone transform (which has 6DOFs, the other bones should only have 3 DOFs ie Joint angles, with their start defined by offset vector rel to parent).
 
-##### Animation Solver Class
-
-This is the class that contains the BVH Loading, the intermediate operations and the resulting Skeleton/Bones to render, this class is responsible for maintain the animation state. Its embedded within the Viewer Class, and updates when needed (not always per tick). 
-
-
+The Bones Transformation is then passed to its model matrix for resulting line / mesh rendering. One thing thats key is the length of the segments by the start/end offset of the current and previous joint (or current and next depending on how bones are created along tree).
 
 ___
 
-User Interaction with Bones/Joints
+##### Animation State Class
+
+This is the class that contains the BVH Loading, the intermediate operations, FK and IK calculation and the resulting Skeleton/Bones to render, this class is responsible for maintain the animation state. 
+
+Its embedded within the Viewer Class, and updates when needed (not always per tick). (Eg in Cloth Simulation project this class will be replaced with an equivalent "Cloth_State" class embedded within viewer app class) this then handles render state to call from viewer as well as forwarding inputs and GUI Controls --> Anim state actions (eg arrow keys to move anim state), meaning the Viewer class can still handle the GUI and Control side, and just forward to anim_state class as needed. 
+
+
+
+IK types will be defined as Solvers, we need conversion to and from glm representations of transformations along with the BVH motion data.
+
+##### BVH Data --> Skeleton
+
+Need to get each joint and the next joint to get the current and next offset to define the start and end position (offset) for each bone. Along with concating the rotation from the previous joints concat matrix * the current. 
+
+
+
+
+
+##### User Interaction with Bones/Joints
+
+Get inputs from viewer class (Could just pass window to anim state class directly to query)
 
 Ray casting from mouse ? Selection from list of joints via GUI ? 
+
+Input like frame stepping will be done within viewer, (inc/decrementing anim frame eg.).

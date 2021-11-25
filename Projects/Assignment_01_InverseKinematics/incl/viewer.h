@@ -8,8 +8,7 @@
 #include "camera.h"
 #include "primitive.h"
 #include "mesh.h"
-#include "bone.h"
-#include "skeleton.h"
+#include "anim_state.h"
 
 // Ext Headers
 #include "ext/glm/glm.hpp"
@@ -38,20 +37,24 @@ public:
 	void window_context();
 	void extensions_load();
 
-	// OpenGL 
+	// Rendering
 	void render_prep();
 	void render();
-	void update_camera();
 
-	// Imgui Setup
+	// GUI
 	//
 
 	// Application 
 	void exec(); // Exec Viewer Application 
 	void tick(); // Single Tick
-	bool esc_pressed(); 
-	void get_dt();
+
+	// Per Tick Operations
 	void update_window();
+	void update_camera();
+
+	// State Query
+	bool esc_pressed();
+	void get_dt();
 
 	//void get_animData(); 
 
@@ -73,30 +76,24 @@ private:
 	const byte *render_device;
 	const byte *version;
 
-	float dt; 
-	float cur_t, prev_t; 
+	// Animation State (Handles all animation realted tasks)
+	Anim_State anim;
 
 	// Camera 
 	Camera camera; 
 	float last_yawoffs, last_pitchoffs, last_zoom;
 
 	// Primtivies
-	std::vector<Primitive*> prims; 
-	Bone *bone_test;
-	Skeleton *skel;
-	
+	std::vector<Primitive*> prims;
 
 	// Debugging
-	//Primitive *prim_t;
-	//Mesh *mesh_t; 
-	//Shader shader;
+	Bone *bone_test;
+	Skeleton *skel;
 
-	// Animation Controls
-	std::size_t anim_frame; 
-	bool anim_loop; 
-
-
+	// Viewer Intrinsics
 	std::size_t tick_c; 
+	float dt;
+	float cur_t, prev_t;
 };
 
 
@@ -106,6 +103,5 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
-
 
 #endif

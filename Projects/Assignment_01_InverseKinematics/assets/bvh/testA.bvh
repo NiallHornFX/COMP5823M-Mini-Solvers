@@ -1,11 +1,11 @@
 HIERARCHY
 ROOT Hips
 {
-	OFFSET 0.000000 0.000000 0.000000
+	OFFSET 0.000000 0.010000 0.010000
 	CHANNELS 6 Xposition Yposition Zposition Zrotation Yrotation Xrotation 
 	JOINT LHipJoint
 	{
-		OFFSET 0.000000 0.000000 0.000000
+		OFFSET 0.000000 0.100000 0.000000
 		CHANNELS 3 Zrotation Yrotation Xrotation
 		JOINT LeftUpLeg
 		{

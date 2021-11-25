@@ -1,1 +1,0 @@
-// Class where animation processing is based (BVH, FK, IK). Exists within app as Tick Stage. 
