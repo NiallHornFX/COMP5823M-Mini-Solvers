@@ -48,6 +48,8 @@ public:
 	void update_data_position(const std::vector<glm::vec3> &posData);
 	void update_data_colour(const std::vector<glm::vec3> &colData);
 
+	void set_colour(const glm::vec3 &col);
+
 	void set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp);
 
 	void set_shader(const char *vert_path, const char *frag_path);

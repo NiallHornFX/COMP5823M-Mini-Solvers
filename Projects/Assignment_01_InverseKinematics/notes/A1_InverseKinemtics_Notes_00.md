@@ -221,6 +221,16 @@ For the BVH Loading, there is an array of joints, whose first joint should be ro
 
 Ideally I'd take the resulting BVH Joints + Channels and put it into a nicer tree structure that makes it easier to apply per joint transforms (rotations) atop of the existing BVH anim data per frame to add the modifications from the IK solve, however for now this might just be done, before drawing, based on a separate array of stored IK offsets for each joint. 
 
+##### Animation State
+
+Because the application is ticking constantly, I don't want to couple the ticking of the viewer to the anim frame of the BVH. So I will have a "global" animation frame set, that either loops continually or is set by user input so a single frame. This will be continually incremented per tick to keep looping or stay static. 
+
+I'm still deciding if the actual Anim Loading + IK calc will be called from within Viewer or do I do this is some other more abstract application_class. Ideally i'd decouple the viewer from this stuff, have the application do the tick itself (which calls render of viewer) with updated skeleton data based on current ticks modified (or not) BVH data, from IK solve. OR I just integrate all this into viewer class as a single application class that handles both the anim state and the viewer related tasks. 
+
+Could use a separate class that's a member within Viewer (or nested class approach) to keep the Anim logic / state still within the viewer app, but separated, without separating the viewer class into separate app + renderer. This could be how isolate the state of the solver for each project (using the same core viewer app) could define a base class like `Solver_Base` which is then derived into `Animation_Solver` for this project where the BVH + IK Solver is contained within the viewer app. 
+
+For now I won't use polymorphism for the Solver class, just will have separate classes.
+
 ___
 
 #### Viewer / Application Class
@@ -235,7 +245,9 @@ Ideally i'd have a core viewer app I could then link to, but I don't, so will ju
 
 Rendering won't be done within BVH_Data as I want to separate it out, Bone class will render single bone, based on data, (either as line or geo), skeleton class will whole skeleton (of bones). These render methods will then be called within OpenGL Context. This also makes sense as channel data may be modified from Inverse Kinematics of bones. 
 
-##### OpenGL Issues
+___
+
+##### OpenGL Issues /  Debugging
 
 I had some crazy OpenGL issues, I think its because of lifetime / scope / context issues because of  the separation (object wrapping) of OpenGL constructs, more so that any previous program i've written. 
 
@@ -284,16 +296,6 @@ To be able to use Scroll and Mouse input along with Window resizing, we need to 
 Setting the GLFW callback function pointers to member functions (eg defined within Viewer per instance  (or even static)) doesn't work afaik hence the need for global namespace defined free functions. That we then need to pass data into the viewer class to update the internal width,height (for camera aspect ratio) and mouse offset (for camera yaw and pitch). Note Key presses are done internally of the class within the Camera::Update_Camera() member function via Polling the keys for key press state, but for mouse and window resizing polling does not make sense / not possible hence use of callbacks to write updated state. 
 
 Because Mouse offset is then passed to Viewer::Update_Camera() which runs per tick, it will keep the previous state (if mouse is now static) from when the callback was last called and values set in the struct, so to avoid repetitive addition we need to check for per tick delta of the offset positions before adding to the camera pitch and yaw. 
-
-##### Animation State
-
-Because the application is ticking constantly, I don't want to couple the ticking of the viewer to the anim frame of the BVH. So I will have a "global" animation frame set, that either loops continually or is set by user input so a single frame. This will be continually incremented per tick to keep looping or stay static. 
-
-I'm still deciding if the actual Anim Loading + IK calc will be called from within Viewer or do I do this is some other more abstract application_class. Ideally i'd decouple the viewer from this stuff, have the application do the tick itself (which calls render of viewer) with updated skeleton data based on current ticks modified (or not) BVH data, from IK solve. OR I just integrate all this into viewer class as a single application class that handles both the anim state and the viewer related tasks. 
-
-Could use a separate class that's a member within Viewer (or nested class approach) to keep the Anim logic / state still within the viewer app, but separated, without separating the viewer class into separate app + renderer. This could be how isolate the state of the solver for each project (using the same core viewer app) could define a base class like `Solver_Base` which is then derived into `Animation_Solver` for this project where the BVH + IK Solver is contained within the viewer app. 
-
-For now I won't use polymorphism for the Solver class, just will have separate classes.
 
 ##### Shader Class
 
@@ -369,17 +371,43 @@ This is the class that contains the BVH Loading, the intermediate operations, FK
 
 Its embedded within the Viewer Class, and updates when needed (not always per tick). (Eg in Cloth Simulation project this class will be replaced with an equivalent "Cloth_State" class embedded within viewer app class) this then handles render state to call from viewer as well as forwarding inputs and GUI Controls --> Anim state actions (eg arrow keys to move anim state), meaning the Viewer class can still handle the GUI and Control side, and just forward to anim_state class as needed. 
 
-
-
 IK types will be defined as Solvers, we need conversion to and from glm representations of transformations along with the BVH motion data.
+
+___
+
+#### Forward Kinematics (of BVH Data)
 
 ##### BVH Data --> Skeleton
 
+Theres two parts to this stage, the first is creating a bone for each joint pair in the BVH data, the second is updating the transforms per frame (successively through the tree) from the motion data (essentially Forward Kinematics)
+
 Need to get each joint and the next joint to get the current and next offset to define the start and end position (offset) for each bone. Along with concating the rotation from the previous joints concat matrix * the current. 
 
+We need correct traversal from the BVH Root joint to each end site regardless, this is done via depth first traversal (so all parent nodes along each branch can concatenate to the final transformation applied to each rendered bone of both offset and rotation (defined by BVH Motion/Channels data)).
 
+
+
+##### Questions : 
 
 Is my offset been added correctly to the bone (its added to the bones transform matrix (which becomes the model matrix)) via translation, does this correctly offset to next start, and not centre ? 
+
+I need a better way to scale my bone mesh to match the offset distance between joints, but bigger prio for now is just getting a line rendered version working. 
+
+I define a bone start and end, and use the previous and current joint to define this, but I need to make sure the offsets are correct on both.
+
+
+
+___
+
+#### Inverse Kinematics
+
+Eigen time
+
+Pseudo inverse ... 
+
+
+
+
 
 
 

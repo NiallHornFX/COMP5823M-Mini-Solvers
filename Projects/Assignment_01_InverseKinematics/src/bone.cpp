@@ -1,6 +1,9 @@
 // Implements
 #include "bone.h"
 
+// Std Headers
+#include <random>
+
 Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
 	: start(Start), end(End),  transform(Trs), bone_id(ID)
 {
@@ -36,27 +39,55 @@ void Bone::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp
 
 void Bone::render(bool Render_Line)
 {
+	// Pass Bone Transform Matrix as primitive's Model Matrix. 
+	// Do post transform operations on resulting model matrix of primtive. 
+
 	// Set Transform --> model matrix
 	mesh->model = transform;
-	// For Mesh Set Postion to start.
-	//mesh->scale(glm::vec3(1.f, glm::length(end-start), 1.f));
-	mesh->translate(start); // Do translation After passing bone mat as model matrix. 
-
 	line->model = transform;
 
 	// Render as Line
 	if (Render_Line)
 	{
+		// ======= Line Model Matrix Transform Operations =======
+		line->scale(glm::vec3(0.1f));
+		//line->translate(glm::vec3(0.f, 10.f, 0.f));
+
+		// ======= Set Line Colour =======
+		// RNG
+		std::mt19937_64 rng; 
+		std::uniform_real_distribution<float> dist(0.0, 1.0);
+
+		// Colour per bone ID
+		rng.seed(bone_id);
+		float r = dist(rng);
+		rng.seed(bone_id + 124);
+		float g = dist(rng);
+		rng.seed(bone_id + 321);
+		float b = dist(rng);
+
+		// Set prim colour
+		line->set_colour(glm::vec3(r, g, b));
+		
+		// ======= Render Bone As Line =======
 		line->mode = Render_Mode::RENDER_LINES;
 		line->render();
 
-		// Also Render Points
+		// ======= Also Render Bone As Points =======
 		//line->mode = Render_Mode::RENDER_POINTS;
 		//line->render();
-		return;
 	}
-	// Render as Mesh
-	mesh->render();
+	else
+	{
+		// ======= Mesh Model Matrix Transform Operations =======
+		// For Mesh Set Postion to start.
+		//mesh->translate(start); // Do translation After passing bone mat as model matrix. 
+		// Stretch Scale Test
+		//mesh->scale(glm::vec3(1.f, glm::length(end - start), 1.f));
+
+		// Render Bone as mesh
+		mesh->render();
+	}
 }
 
 // Set Joint Indices

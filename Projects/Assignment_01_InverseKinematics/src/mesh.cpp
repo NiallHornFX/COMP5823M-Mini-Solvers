@@ -181,12 +181,6 @@ bool Mesh::check_state() const
 	return Primitive::check_state();
 }
 
-void Mesh::set_colour(const glm::vec3 &col)
-{
-	std::vector<glm::vec3> data(vert_count, col);
-	update_data_colour(data);
-}
-
 // Override Primitive::Render()
 void Mesh::render()
 {

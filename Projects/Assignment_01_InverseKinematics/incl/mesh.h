@@ -29,8 +29,6 @@ public:
 	void load_obj(bool has_tex = false);
 	void load_texture(const char *filepath, uint unit = 0);
 
-	void set_colour(const glm::vec3 &col);
-
 public:
 	std::string file_path; 
 	struct

@@ -267,10 +267,12 @@ void Viewer::query_drawState()
 	if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS)
 	{
 		draw_grid = !draw_grid;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 	if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS)
 	{
 		draw_gnomon = !draw_gnomon;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 }
 

@@ -191,6 +191,12 @@ void Primitive::update_data_colour(const std::vector<glm::vec3> &colData)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+void Primitive::set_colour(const glm::vec3 &col)
+{
+	std::vector<glm::vec3> data(vert_count, col);
+	update_data_colour(data);
+}
+
 void Primitive::set_shader(const char *vert_path, const char *frag_path)
 {
 	// Create Shader

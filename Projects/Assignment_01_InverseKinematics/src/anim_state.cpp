@@ -39,8 +39,8 @@ void Anim_State::fetch_bvhData()
 	Joint *next = root->children[0];
 	Joint *next_b = root->children[0]->children[0];
 
-	skel.add_bone(glm::vec3(0.f, 0.f, 0.f), root->offset + next->offset, glm::mat4(1));
-	skel.add_bone(root->offset + next->offset, next->offset + next_b->offset, glm::mat4(1));
+	//skel.add_bone(glm::vec3(0.f, 0.f, 0.f), root->offset + next->offset, glm::mat4(1));
+	//skel.add_bone(root->offset + next->offset, next->offset + next_b->offset, glm::mat4(1));
 	/*
 	while (cur->children.size())
 	{
@@ -58,13 +58,69 @@ void Anim_State::fetch_bvhData()
 	}
 	*/
 
+	/*
+	glm::vec3 par_offs(0.f);
+	for (std::size_t c = 0; c < root->children.size(); ++c)
+	{
+		cur = root->children[c];
+		while (cur->children.size())
+		{
+			//std::cout << "Joint = " << cur->name << "   Children = " << cur->children.size() << "\n";
+			if (cur->children.size() > 1)
+			{
+				Joint *tmp = cur;
+				// Handle depth (Spine or hands most likely)
+				for (std::size_t ci = 0; ci < cur->children.size(); ++ci)
+				{
+					prev = cur; // Parent
+					cur = cur->children[ci];
 
-	// Prev
-	// Cur
-	// Matrix Stack
+					skel.add_bone(prev->offset, cur->offset + prev->offset, glm::mat4(1));
+
+				}
+			}
+			else
+			{
+				// Single Child [0]
+				prev = cur; // Parent
+				cur = cur->children[0];
+				skel.add_bone(prev->offset, cur->offset + prev->offset, glm::mat4(1));
+			}
+
+			// Resume
+			//cur = tmp;
+		}
+	}
+	*/
+
+	// Hacky Way to get inital pose 
+	for (Joint *cur : bvh->joints)
+	{
+		glm::vec3 par_offs(0.f);
+		Joint *p = cur;
+		if (p->parent) // Traverse back to root to get total parent offset
+		{
+			while (p->parent)
+			{
+				par_offs += p->parent->offset;
+				p = p->parent;
+			}
+		}
+		// Start is then parent offset, end is the current joint offset + parent offset (total parent offset along tree).
+		skel.add_bone(par_offs, (cur->offset + par_offs), glm::mat4(1));
+	}
 
 
-	//skel.add_bone()
+
+
+
+
+
+	// Use Parent oppose to storing prev ...
+
+
+
+
 
 	// Get/Set BVH Data of current frame
 	// WIP
