@@ -24,7 +24,14 @@ public:
 
 	// Fetch 
 	void build_bvhSkeleton();
-	void fetch_bvhData();
+
+	// Get Joint motion
+	void tick();
+
+	void build_per_tick(); // testing only...
+
+	// Debug
+	void debug() const;
 
 public:
 

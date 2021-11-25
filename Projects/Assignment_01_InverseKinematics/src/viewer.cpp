@@ -52,11 +52,12 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// ==== Anim State ====
 	// Init with some BVH File (can be changed later via GUI)
 	//anim.set_bvhFile("../../assets/bvh/testA.bvh");
-	anim.set_bvhFile("../../assets/bvh/rest.bvh");
+	//anim.set_bvhFile("../../assets/bvh/rest.bvh");
+	anim.set_bvhFile("../../assets/bvh/02_01.bvh");
 
 	// ==== Create Camera ====
-	//camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false); // Fixed
-	camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, true); // Free
+	camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false); // Fixed
+	//camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, true); // Free
 }
 
 Viewer::~Viewer() 
@@ -210,11 +211,11 @@ void Viewer::render_prep()
 // Render Operations
 void Viewer::render()
 {
-	// Step - 
+	// ==================== Render State ====================
 	glClearColor(0.15f, 0.15f, 0.15f, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Draw Viewer Primtivies
+	// ==================== Render Viewer Primtivies ====================
 	get_GLError();
 	// Draw Grid 
 	if (draw_grid)
@@ -242,11 +243,22 @@ void Viewer::render()
 		}
 	}
 
+	// ==================== Render Bones ====================
+	// Tick Anim
+	anim.inc_frame();
+	//anim.tick();
 
-	// Render Bones
+	// Testing Only.
 	//anim.skel.render_mesh = true;
+	//anim.anim_loop = false;
+	//anim.set_frame(0);
+	anim.build_per_tick(); 
+	//anim.debug();
+
+	// Render Skeleton
 	anim.skel.render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
+	// ==================== Render Debug ====================
 	// Test Render Bones
 	//bone_test->transform = glm::rotate(bone_test->transform, 0.01f, glm::vec3(0.f, 1.f, 0.f));
 	//bone_test->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
@@ -257,7 +269,7 @@ void Viewer::render()
 	//skel->render_mesh = (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) ? true : false; 
 	//skel->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
-	// Swap and Poll
+	// ====================  Swap and Poll ====================
 	get_GLError();
 	glfwSwapBuffers(window);
 	glfwPollEvents();

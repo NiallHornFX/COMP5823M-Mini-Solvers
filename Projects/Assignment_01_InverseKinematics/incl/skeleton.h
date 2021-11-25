@@ -18,6 +18,7 @@ public:
 	~Skeleton() = default; 
 
 	void add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &trs);
+	void add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &trs, std::size_t joint_a, std::size_t joint_b);
 
 	void add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &parent, float rot_z, float rot_y, float rot_x);
 
@@ -33,6 +34,8 @@ public:
 
 private:
 	std::vector<Bone> bones;
+
+	friend class Anim_State; 
 };
 
 

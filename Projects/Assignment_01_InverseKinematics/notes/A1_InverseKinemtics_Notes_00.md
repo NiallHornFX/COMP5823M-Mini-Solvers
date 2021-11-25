@@ -396,39 +396,92 @@ I found this hacky-ish way, where oppose to traversing from root, we get each jo
 ```C++
 // anim_state::build_bvhSkeleton
 
-	// Hacky Way to get inital pose 
-	for (Joint *cur : bvh->joints)
+// Hacky Way to get inital pose 
+for (Joint *cur : bvh->joints)
+{
+	glm::vec3 par_offs(0.f);
+	Joint *p = cur;
+	while (p->parent) // Traverse back to root to get total parent offset
 	{
-		glm::vec3 par_offs(0.f);
-		Joint *p = cur;
-		if (p->parent) // Traverse back to root to get total parent offset
-		{
-			while (p->parent)
-			{
-				par_offs += p->parent->offset;
-				p = p->parent;
-			}
-		}
-		// Start is then parent offset, end is the current joint offset +
-        // parent offset (total parent offset along tree).
-        // Append bone to Skeleton
-		skel.add_bone(par_offs, (cur->offset + par_offs), glm::mat4(1));
+		par_offs += p->parent->offset;
+		p = p->parent;
 	}
+	// Start is then parent offset, end is the current joint offset +
+	// parent offset (total parent offset along tree).
+	// Append bone to Skeleton
+	skel.add_bone(par_offs, (cur->offset + par_offs), glm::mat4(1));
+}
 ```
-
-Similar approach could be used to apply transformations to each bone containing all previous parent transforms + current.
 
 This is not very efficient as it means doing backwards traversal multiple times over the same branches. But its conceptually quite simple and avoids recursion or lots of for loops. 
 
-##### Questions of current approach : 
+Similar approach could be used to apply transformations to each bone containing all previous parent transforms + current. However it would mean rotation matrix is concatenated in reverse which is not correct as matrix multipcation is not commutative unlike translation (for offsets) which works fine as addition is of course commutative. 
 
-Is my offset been added correctly to the bone (its added to the bones transform matrix (which becomes the model matrix)) via translation, does this correctly offset to next start, and not centre ? 
+For reference approach could looks like this (it doesn't work though as per above) :
+
+```c++
+// Is it easier to rebuild the Skeleton per tick ? (with the current set anim 
+// frame motion/channel angles retrived).
+
+// Oppose to building skeleton and updating bone transform joints later 
+// in seperate per tick step.
+
+void Anim_State::build_per_tick()
+{
+	skel.reset(); // Testing calling this per tick, so reset...
+
+	for (Joint *cur : bvh->joints)
+	{
+		// Get Parent Offset
+		glm::vec3 par_offs(0.f);
+		// Get Parent Transform
+		glm::mat4 rot(1.f);
+
+		Joint *p = cur;
+		while (p->parent)
+		{
+			// Accumulate offset
+			par_offs += p->parent->offset;
+
+			// Accumulate Channel Transform
+			// Non root joints (3DOF, joint angles only).
+			// Get Angles from motion data of current frame
+			DOF3 angs = bvh->get_joint_DOF3(p->parent->idx, anim_frame);
+			// Build Local Matrix to multiply accumlated with 
+			glm::mat4 tmp(1.f);
+			// Z Rotation 
+			tmp = glm::rotate(tmp, float(std::get<0>(angs)), glm::vec3(0.f, 0.f, 1.f));
+			// Y Rotation 
+			tmp = glm::rotate(tmp, float(std::get<1>(angs)), glm::vec3(0.f, 1.f, 0.f));
+			// X Rotation 
+			tmp = glm::rotate(tmp, float(std::get<2>(angs)), glm::vec3(1.f, 0.f, 0.f));
+			// Accumlate Rotation 
+			rot *= tmp;
+
+			// Traverse up to parent 
+			p = p->parent;
+		}
+// Start is then parent offset, end is the current joint offset + parent offset 
+// (total parent offset along tree).
+		skel.add_bone(par_offs, (cur->offset + par_offs), rot);
+	}
+}
+
+```
+
+##### Updating transforms
+
+Bones are not mapped to joints, so updating transforms from joints to resulting bones is not ideal, we could rebuild the tree with offsets and transforms per tick (so joint transform is passed directly on bone construction, no need to then map joint transforms to bones per anim frame), but this is very inefficient, we should only build skeleton once and then update bone transforms per tick needing to define a mapping from joints to bones, to then update their transforms. 
+
+So need a robust way to handle updating bone transforms from BVH Joints, the joint is what defines the start of the bone ie in the above example, the parent of the current iterated joint. 
+
+The Scaling + Translation only happens in the Bone Rendering calls (ie to Primitive Model matrix) so this should not affect the transforms of the bone itself, as they are applied after the bone transform matrix is passed to the primitive as its model matrix. 
+
+##### 
+
+
 
 I need a better way to scale my bone mesh to match the offset distance between joints, but bigger prio for now is just getting a line rendered version working. 
-
-I define a bone start and end, and use the previous and current joint to define this, but I need to make sure the offsets are correct on both.
-
-
 
 ___
 

@@ -20,13 +20,16 @@ using DOF3 = std::tuple<real, real, real>;
 struct Joint;
 struct Channel;
 
-// Info : BVHData Class, responsible for loading, parsing BVH Animation file to Joints and Channel Data. 
+// ==============================================================================
+// Info : BVHData Class, responsible for loading, parsing BVH Animation file
+//        to Joints and Channel Data. 
+// ==============================================================================
 
 class BVH_Data
 {
 public:
 	BVH_Data() = delete;
-	BVH_Data(std::string fileName);
+	BVH_Data(std::string FileName);
 	~BVH_Data();
 
 	// Load and Parse BVH File into Joints and Channels
@@ -48,6 +51,8 @@ public:
 	std::size_t num_frame;
 	real interval;
 
+	bool write_log; 
+
 private:
 
 	std::vector<Joint*>   joints; 
@@ -57,8 +62,10 @@ private:
 	friend class Anim_State;
 };
 
-
+// ==============================================================================
 // Info : Structs for Joint and Channel Objects 
+// ==============================================================================
+
 enum ChannelEnum
 {
 	X_ROTATION = 0, Y_ROTATION, Z_ROTATION,
@@ -85,7 +92,5 @@ struct Joint
 
 	std::vector<Channel*> channels;
 };
-
-
 
 #endif

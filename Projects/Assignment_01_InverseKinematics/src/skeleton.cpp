@@ -25,6 +25,15 @@ void Skeleton::add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm:
 	bone_count++;
 }
 
+// With joint indices
+void Skeleton::add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &trs, std::size_t joint_a, std::size_t joint_b)
+{
+	Bone b(start, end, trs, bone_count + 1);
+	b.set_jointIDs(joint_a, joint_b);
+	bones.push_back(b);
+	bone_count++;
+}
+
 // Transformation done within body (need to pass parent matrix + joint angles.
 void Skeleton::add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &parent, float rot_z, float rot_y, float rot_x)
 {

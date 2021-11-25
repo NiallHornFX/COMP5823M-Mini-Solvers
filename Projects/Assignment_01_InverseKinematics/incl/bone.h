@@ -25,11 +25,13 @@ public:
 	std::size_t bone_id; 
 	glm::vec3 start, end;
 	glm::mat4 transform; 
+	std::pair<std::size_t, std::size_t> joint_ids;
 
 private:
-	std::pair<std::size_t, std::size_t> joint_ids;
+
 	Mesh *mesh;
 	Primitive *line; 
+
 };
 
 #endif
