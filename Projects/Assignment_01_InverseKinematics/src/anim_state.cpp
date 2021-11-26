@@ -78,18 +78,21 @@ void Anim_State::build_per_tick()
 
 			// Accumulate Channel Transform
 			// Non root joints (3DOF, joint angles only).
-			// Get Angles from motion data of current frame
-			DOF3 angs = bvh->get_joint_DOF3(p->parent->idx, anim_frame);
-			// Build Local Matrix to multiply accumlated with 
-			glm::mat4 tmp(1.f);
-			// Z Rotation 
-			tmp = glm::rotate(tmp, float(std::get<0>(angs)), glm::vec3(0.f, 0.f, 1.f));
-			// Y Rotation 
-			tmp = glm::rotate(tmp, float(std::get<1>(angs)), glm::vec3(0.f, 1.f, 0.f));
-			// X Rotation 
-			tmp = glm::rotate(tmp, float(std::get<2>(angs)), glm::vec3(1.f, 0.f, 0.f));
-			// Accumlate Rotation 
-			rot *= tmp;
+			if (!p->parent->is_root)
+			{
+				// Get Angles from motion data of current frame
+				DOF3 angs = bvh->get_joint_DOF3(p->parent->idx, anim_frame);
+				// Build Local Matrix to multiply accumlated with 
+				glm::mat4 tmp(1.f);
+				// Z Rotation 
+				tmp = glm::rotate(tmp, float(std::get<0>(angs)), glm::vec3(0.f, 0.f, 1.f));
+				// Y Rotation 
+				tmp = glm::rotate(tmp, float(std::get<1>(angs)), glm::vec3(0.f, 1.f, 0.f));
+				// X Rotation 
+				tmp = glm::rotate(tmp, float(std::get<2>(angs)), glm::vec3(1.f, 0.f, 0.f));
+				// Accumlate Rotation 
+				rot *= tmp;
+			}
 
 			// Traverse up to parent 
 			p = p->parent;
@@ -97,6 +100,7 @@ void Anim_State::build_per_tick()
 		// Start is then parent offset, end is the current joint offset + parent offset (total parent offset along tree).
 		skel.add_bone(par_offs, (cur->offset + par_offs), rot);
 	}
+
 }
 
 // Sets Joint Angles for current frame 
