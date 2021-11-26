@@ -248,7 +248,7 @@ void Viewer::render()
 	anim.inc_frame();
 	//anim.tick();
 
-	// Testing Only.
+	// Testing Only (Build per tick).
 	//anim.skel.render_mesh = true;
 	//anim.anim_loop = false;
 	//anim.set_frame(0);

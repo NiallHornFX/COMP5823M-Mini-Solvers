@@ -425,7 +425,6 @@ For reference approach could looks like this (it doesn't work though as per abov
 
 // Oppose to building skeleton and updating bone transform joints later 
 // in seperate per tick step.
-
 void Anim_State::build_per_tick()
 {
 	skel.reset(); // Testing calling this per tick, so reset...
@@ -440,11 +439,11 @@ void Anim_State::build_per_tick()
 		Joint *p = cur;
 		while (p->parent)
 		{
-			// Accumulate offset
-			par_offs += p->parent->offset;
-
-			// Accumulate Channel Transform
+				// Accumulate Channel Transform
 			// Non root joints (3DOF, joint angles only).
+			if (!p->parent->is_root)
+            // Else just dont accumulate rotation for parent = root 
+			{
 			// Get Angles from motion data of current frame
 			DOF3 angs = bvh->get_joint_DOF3(p->parent->idx, anim_frame);
 			// Build Local Matrix to multiply accumlated with 
@@ -457,7 +456,8 @@ void Anim_State::build_per_tick()
 			tmp = glm::rotate(tmp, float(std::get<2>(angs)), glm::vec3(1.f, 0.f, 0.f));
 			// Accumlate Rotation 
 			rot *= tmp;
-
+			}
+            
 			// Traverse up to parent 
 			p = p->parent;
 		}
@@ -466,12 +466,13 @@ void Anim_State::build_per_tick()
 		skel.add_bone(par_offs, (cur->offset + par_offs), rot);
 	}
 }
-
 ```
 
 ##### Updating transforms
 
 Bones are not mapped to joints, so updating transforms from joints to resulting bones is not ideal, we could rebuild the tree with offsets and transforms per tick (so joint transform is passed directly on bone construction, no need to then map joint transforms to bones per anim frame), but this is very inefficient, we should only build skeleton once and then update bone transforms per tick needing to define a mapping from joints to bones, to then update their transforms. 
+
+The sample code kinda does this (it doesnt maintain a skeleton state, it re calcs per call to render directly using legacy GL.  It uses recursion approach for this starting from root). I could do a similar approach, where skel is rebuilt per call so transforms can be applied directly, but as above its not very effcient because reconstructing the same skeleton tree with changed rotations is a waste of time if we can find a way just to update joint rotations on pre-built skeleton. 
 
 So need a robust way to handle updating bone transforms from BVH Joints, the joint is what defines the start of the bone ie in the above example, the parent of the current iterated joint. 
 
@@ -493,7 +494,7 @@ Pseudo inverse ...
 
 User interaction to move joints ...
 
-
+Getting this working with the BVH Motion is going to be challenging
 
 
 

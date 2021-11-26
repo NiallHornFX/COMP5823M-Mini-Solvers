@@ -29,6 +29,7 @@ public:
 	void tick();
 
 	void build_per_tick(); // testing only...
+	void build_test(Joint *joint); 
 
 	// Debug
 	void debug() const;
