@@ -385,7 +385,13 @@ Need to get each joint and the next joint to get the current and next offset to 
 
 We need correct traversal from the BVH Root joint to each end site regardless, this is done via depth first traversal (so all parent nodes along each branch can concatenate to the final transformation applied to each rendered bone of both offset and rotation (defined by BVH Motion/Channels data)).
 
+Bone end should be the current joint offset, bone start should be the parent joint offset. So End would be current joint offset + parent offset, parent offset is the total accumulated offsets since root. 
 
+
+
+In the sample code they define a bone as a single mesh object (which my bone class can render as also) so they concat the translation (offset) to define the centre between two joints along with the rotation to define the bone transform. For my sake for now rendering as lines, the offsets define the line segments start and end and the rotation is applied atop of this via the transform matrix (which becomes the primitives model matrix), I'm thinking its correct that eg for a line ((0,0,0), (0,1,0)) the rotation origin should be at the centre of origin so maybe before the rotation is applied in the shader we should be inverting line verts to origin...
+
+Or just create line procedurally based on distance of offsets, put offsets into matrix form internally with rotation matrix passed ? The rot transformation should be computed on the CPU side really, because otherwise the model matrix is applying just the rotation component, to the off-setted lines in the shader. This is why offset alone works fine (as it defines the line positions in WS relative to parent offsets) but not the rotations...
 
 ##### Building Skeleton of bones from BVH Data 
 

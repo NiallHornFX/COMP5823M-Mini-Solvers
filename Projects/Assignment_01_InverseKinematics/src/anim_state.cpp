@@ -10,6 +10,10 @@ Anim_State::Anim_State()
 	max_frame = 0;
 
 	bvh = nullptr;
+
+	// Test global rotation matrix
+	//global = glm::mat4(1);
+	//global_offs = glm::vec3(0.f);
 }
 
 void Anim_State::set_bvhFile(const char *BVHPath)
@@ -24,7 +28,8 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 	max_frame = bvh->num_frame;
 	interval  = bvh->interval;
 
-	build_bvhSkeleton();
+//	build_bvhSkeleton();
+	test();
 }
 
 void Anim_State::build_bvhSkeleton()
@@ -102,17 +107,80 @@ void Anim_State::build_per_tick()
 	}
 }
 
+void Anim_State::test()
+{
+	build_test(bvh->joints[0], glm::vec3(0.f), glm::mat4(1.f));
+}
 
 // Following BVH Sample file style recursion
-void Anim_State::build_test(Joint *joint)
+void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 rot)
 {
+	static std::size_t call = 0;
+	// 
+	if (!joint->parent)
+	{
+		skel.add_bone(glm::vec3(0.f), joint->offset, glm::mat4(1));
+		poffs += glm::vec3(0.f);
+	}
 	
+	if (joint->parent)
+	{
+		glm::mat4 tmp_x(1);
+		glm::mat4 tmp_y(1);
+		glm::mat4 tmp_z(1);
+
+		// Get Joint Channels, Accumulate to parent matrix
+		for (const Channel *c : joint->channels)
+		{
+			switch (c->type) 
+			{
+				case ChannelEnum::Z_ROTATION : 
+				{
+					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					//rot = glm::rotate(rot, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
+
+					tmp_z = glm::rotate(glm::mat4(1), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
+				}
+				case ChannelEnum::Y_ROTATION:
+				{
+					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					tmp_y = glm::rotate(glm::mat4(1), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
+				}
+				case ChannelEnum::X_ROTATION:
+				{
+					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					tmp_x = glm::rotate(glm::mat4(1), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
+				}
+			}
+		}
+
+		// Accumulate Rotations
+		rot *= (tmp_y * tmp_x * tmp_z);
+
+		// Accumulate Offset to parent matrix
+		poffs += joint->parent->offset;
+
+
+		skel.add_bone(poffs, poffs + joint->offset, rot);
+	}
+
+	// Pass each recurrsive call its own copy of the current accumulated offset and rot, to then apply to children.
+	// don't reference a global one as it will transform by their non parents. 
+
+	// Recurse for all joint children
+	for (std::size_t c = 0; c < joint->children.size(); ++c)
+	{
+		build_test(joint->children[c], poffs, rot);
+	}
+
+	std::cout << "Call Count = " << call << "\n";
+	call++;
 }
 
 // Sets Joint Angles for current frame 
 void Anim_State::tick()
 {
-	build_test(bvh->joints[0]);
+	//build_test(bvh->joints[0]);
 }
 
 // Set Animation Frame Member Functions

@@ -29,7 +29,8 @@ public:
 	void tick();
 
 	void build_per_tick(); // testing only...
-	void build_test(Joint *joint); 
+	void build_test(Joint *joint, glm::vec3 poffs, glm::mat4 rot); 
+	void test();
 
 	// Debug
 	void debug() const;
@@ -49,6 +50,10 @@ public:
 	std::size_t anim_frame, max_frame; 
 	float interval; 
 	bool anim_loop;
+
+	// Testing
+	//glm::mat4 global; 
+	//glm::vec3 global_offs;
 };
 
 

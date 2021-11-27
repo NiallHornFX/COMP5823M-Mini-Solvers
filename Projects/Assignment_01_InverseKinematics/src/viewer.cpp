@@ -252,8 +252,12 @@ void Viewer::render()
 	//anim.skel.render_mesh = true;
 	//anim.anim_loop = false;
 	//anim.set_frame(0);
-	anim.build_per_tick(); 
+	//anim.build_per_tick(); 
+
+	//anim.test();
+
 	//anim.debug();
+
 
 	// Render Skeleton
 	anim.skel.render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
