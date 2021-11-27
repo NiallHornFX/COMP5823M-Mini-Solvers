@@ -53,8 +53,9 @@ void Primitive::render()
 	{
 		case (RENDER_POINTS) :
 		{
-			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-			glDrawArrays(GL_TRIANGLES, 0, vert_count);
+			//glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+			//glDrawArrays(GL_TRIANGLES, 0, vert_count);
+			glDrawArrays(GL_POINTS, 0, vert_count);
 			break;
 		}
 		case (RENDER_LINES) :

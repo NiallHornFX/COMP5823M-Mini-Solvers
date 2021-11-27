@@ -399,6 +399,18 @@ old approach of start + end pos defined by offsets, and then passing rot matrix 
 
 If inversed for rotation needs to be rel to parent offset
 
+inverse rel to parent rotation not just trans (offset...)
+
+need to translate root joint  segment using its channel (6DOF, using its translation components as it has 0 offset)
+
+
+
+Just use 0 start, offset end for line start end, then put concat offset in matrix to translate rel to?
+
+
+
+So kinda like, do we contiune with approach of prebuilding rest pose with offsets then per frame / tick, correctly inverse do the local rotation rel to parent (to move bones via joints), or do we just reconstruct the bones per tick, with the transforms precomputed and passed directly as resulting start and end postions of the bone lines. 
+
 
 
 In the sample code they define a bone as a single mesh object (which my bone class can render as also) so they concat the translation (offset) to define the centre between two joints along with the rotation to define the bone transform. For my sake for now rendering as lines, the offsets define the line segments start and end and the rotation is applied atop of this via the transform matrix (which becomes the primitives model matrix), I'm thinking its correct that eg for a line ((0,0,0), (0,1,0)) the rotation origin should be at the centre of origin so maybe before the rotation is applied in the shader we should be inverting line verts to origin...

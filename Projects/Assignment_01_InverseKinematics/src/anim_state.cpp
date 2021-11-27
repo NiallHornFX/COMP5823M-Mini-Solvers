@@ -31,6 +31,7 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 //	build_bvhSkeleton();
 	test();
 	//chan_check();
+	//build_per_tick();
 }
 
 void Anim_State::build_bvhSkeleton()
@@ -119,60 +120,100 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 rot)
 {
 	static std::size_t call = 0;
 	// 
-	if (!joint->parent)
+	if (!joint->parent) // Must be root (6DOF Channels)
 	{
-		skel.add_bone(glm::vec3(0.f), joint->offset, glm::mat4(1));
-		poffs += glm::vec3(0.f);
-	}
-	
-	if (joint->parent)
-	{
-		// Get Joint Channels, Accumulate to parent matrix
-		glm::mat4 xx(1.f), yy(1.f), zz(1.f); 
 		for (const Channel *c : joint->channels)
 		{
-			switch (c->type) 
+			switch (c->type)
 			{
-				case ChannelEnum::Z_ROTATION : 
+				// Translation
+				case ChannelEnum::X_POSITION:
+				{
+					float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					rot = glm::translate(rot, glm::vec3(x_p, 0.f, 0.f));
+					poffs.x += x_p;
+					break;
+				}
+				case ChannelEnum::Y_POSITION:
+				{
+					float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					rot = glm::translate(rot, glm::vec3(0.f, y_p, 0.f));
+					poffs.y += y_p;
+					break;
+				}
+				case ChannelEnum::Z_POSITION:
+				{
+					float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					rot = glm::translate(rot, glm::vec3(0.f, 0.f, z_p));
+					poffs.z += z_p;
+					break;
+				}
+				// Rotation
+				case ChannelEnum::Z_ROTATION:
 				{
 					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					zz = glm::rotate(glm::mat4(1.f), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
-					//rot = glm::rotate(rot, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
+					rot = glm::rotate(rot, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
+					break;
 				}
 				case ChannelEnum::Y_ROTATION:
 				{
 					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					yy = rot = glm::rotate(glm::mat4(1.f), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
-					//rot = glm::rotate(rot, glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
+					rot = glm::rotate(rot, glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
+					break;
 				}
 				case ChannelEnum::X_ROTATION:
 				{
 					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					zz = glm::rotate(glm::mat4(1.f), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
-					//rot = glm::rotate(rot, glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
+					rot = glm::rotate(rot, glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
+					break;
+				}
+			}
+		}
+		
+		// Root has 0 offset has offset is obtained from channels.
+		// Add Bone
+		//skel.add_bone(glm::vec3(0.f), joint->offset, rot);
+		skel.add_bone(poffs, poffs + joint->offset, rot);
+		//skel.add_bone(glm::vec3(0.f), poffs, rot);
+	}
+	else if (joint->parent) // Non root joints, 3DOF
+	{
+		// Get Joint Channels, Accumulate to parent matrix
+		glm::mat4 xx(1.f), yy(1.f), zz(1.f);
+		for (const Channel *c : joint->channels)
+		{
+			switch (c->type)
+			{
+				case ChannelEnum::Z_ROTATION:
+				{
+					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					rot = glm::rotate(rot, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
+					break;
+				}
+				case ChannelEnum::Y_ROTATION:
+				{
+					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					rot = glm::rotate(rot, glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
+					break;
+				}
+				case ChannelEnum::X_ROTATION:
+				{
+					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					rot = glm::rotate(rot, glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
+					break;
 				}
 			}
 		}
 
-		// Concat Channels Rotations (y,x,z order) and right mult parent rotation.
-		rot = (yy * xx * zz) * rot;
-
 		// Accumulate Offset to parent matrix
 		poffs += joint->parent->offset;
 
+		// Add Bone
 		skel.add_bone(poffs, poffs + joint->offset, rot);
-
-	   /* // Debug Matrix
-		std::cout << "Rot Matrix Joint : " << joint->idx << " Frame : " << anim_frame << "\n"
-		<< rot[0][0] << " " << rot[0][1] << " " << rot[0][2] << " " << rot[0][3] << "\n"
-		<< rot[1][0] << " " << rot[1][1] << " " << rot[1][2] << " " << rot[1][3] << "\n"
-		<< rot[2][0] << " " << rot[2][1] << " " << rot[2][2] << " " << rot[2][3] << "\n"
-		<< rot[3][0] << " " << rot[3][1] << " " << rot[3][2] << " " << rot[3][3] << "\n\n"; */
 	}
 
 	// Pass each recurrsive call its own copy of the current accumulated offset and rot, to then apply to children.
 	// don't reference a global one as it will transform by their non parents. 
-
 	// Recurse for all joint children
 	for (std::size_t c = 0; c < joint->children.size(); ++c)
 	{

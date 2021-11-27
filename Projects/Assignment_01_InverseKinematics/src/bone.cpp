@@ -21,61 +21,12 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
 	// Bone Line primtivie
 	line = new Primitive(tmp_name.c_str());
 	std::vector<vert> line_data; line_data.resize(2);
-
-	//line_data[0].pos = start; 
-	//line_data[1].pos = end; 
-
-	// Compute Distance 
-	//float len = glm::length(end - start);
-	
-	//glm::vec4 v_0(0.f, 0.f, 0.f, 1.f);
-	//glm::vec4 v_1(0.f, len, 0.f, 1.f);
-
-	// Centre 
-	//glm::vec4 cent = glm::vec4(((start + end) / 2.f), 1.f);
-	//v_0 -= start; 
-	//v_1 -= end; 
-	//v_0 = Trs * v_0;
-	//v_1 = Trs * v_1;
-	//v_0 += cent;
-	//v_1 += cent;
-
-	// Invert to LS 
-	glm::vec4 cent = glm::vec4(((start + end) / 2.f), 1.f);
-	cent = glm::vec4(start, 1.f); 
-
-	glm::vec4 v_0(start, 1.f);
-	glm::vec4 v_1(end, 1.f); 
-
-	v_0 -= cent;
-	v_1 -= cent;
-
-	// Do local anim transform
-	v_0 = Trs * v_0;
-	v_1 = Trs * v_1;
-
-	/*
-	// Check Matrix
-	std::cout << "Rot Matrix Bone : " << ID << "\n" 
-		<< Trs[0][0] << " " << Trs[0][1] << " " << Trs[0][2] << " " << Trs[0][3] << "\n"
-		<< Trs[1][0] << " " << Trs[1][1] << " " << Trs[1][2] << " " << Trs[1][3] << "\n"
-		<< Trs[2][0] << " " << Trs[2][1] << " " << Trs[2][2] << " " << Trs[2][3] << "\n"
-		<< Trs[3][0] << " " << Trs[3][1] << " " << Trs[3][2] << " " << Trs[3][3] << "\n\n";
-	*/
-
-	// Back to WS
-	line_data[0].pos = glm::vec3(v_0 + cent);
-	line_data[1].pos = glm::vec3(v_1 + cent);
-
-	// Compute Distance 
-	//glm::vec4 v_0(start, 1.f);
-	//glm::vec4 v_0(end, 1.f);
-	// Add Offsets to WS
-	//line_data[0].pos = glm::vec3(v_0) + start;
-	//line_data[1].pos = glm::vec3(v_1) + end;
-
 	line_data[0].col = glm::vec3(0, 0, 1.f);
-	line_data[1].col = glm::vec3(0, 0, 1.f);
+
+
+	line_data[0].pos = glm::vec3(start);
+	line_data[1].pos = glm::vec3(end);
+
 	line->set_data_mesh(line_data);
 	line->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
 	line->mode = Render_Mode::RENDER_LINES;
@@ -134,8 +85,10 @@ void Bone::render(bool Render_Line)
 		line->render();
 
 		// ======= Also Render Bone As Points =======
-		//line->mode = Render_Mode::RENDER_POINTS;
-		//line->render();
+		glPointSize(5.f);
+		line->set_colour(glm::vec3(1.f, 0.f, 0.f));
+		line->mode = Render_Mode::RENDER_POINTS;
+		line->render();
 	}
 	else
 	{
