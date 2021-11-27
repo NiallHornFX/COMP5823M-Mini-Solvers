@@ -26,22 +26,46 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
 	//line_data[1].pos = end; 
 
 	// Compute Distance 
-	float len = glm::length(end - start);
+	//float len = glm::length(end - start);
 	
-	glm::vec4 v_0(0.f, 0.f, 0.f, 1.f);
-	glm::vec4 v_1(0.f, len, 0.f, 1.f);
+	//glm::vec4 v_0(0.f, 0.f, 0.f, 1.f);
+	//glm::vec4 v_1(0.f, len, 0.f, 1.f);
 
 	// Centre 
+	//glm::vec4 cent = glm::vec4(((start + end) / 2.f), 1.f);
+	//v_0 -= start; 
+	//v_1 -= end; 
+	//v_0 = Trs * v_0;
+	//v_1 = Trs * v_1;
+	//v_0 += cent;
+	//v_1 += cent;
+
+	// Invert to LS 
 	glm::vec4 cent = glm::vec4(((start + end) / 2.f), 1.f);
-	v_0 -= cent; 
-	v_1 -= cent; 
+	cent = glm::vec4(start, 1.f); 
+
+	glm::vec4 v_0(start, 1.f);
+	glm::vec4 v_1(end, 1.f); 
+
+	v_0 -= cent;
+	v_1 -= cent;
+
+	// Do local anim transform
 	v_0 = Trs * v_0;
 	v_1 = Trs * v_1;
-	v_0 += cent;
-	v_1 += cent;
 
-	line_data[0].pos = v_0; 
-	line_data[1].pos = v_1; 
+	/*
+	// Check Matrix
+	std::cout << "Rot Matrix Bone : " << ID << "\n" 
+		<< Trs[0][0] << " " << Trs[0][1] << " " << Trs[0][2] << " " << Trs[0][3] << "\n"
+		<< Trs[1][0] << " " << Trs[1][1] << " " << Trs[1][2] << " " << Trs[1][3] << "\n"
+		<< Trs[2][0] << " " << Trs[2][1] << " " << Trs[2][2] << " " << Trs[2][3] << "\n"
+		<< Trs[3][0] << " " << Trs[3][1] << " " << Trs[3][2] << " " << Trs[3][3] << "\n\n";
+	*/
+
+	// Back to WS
+	line_data[0].pos = glm::vec3(v_0 + cent);
+	line_data[1].pos = glm::vec3(v_1 + cent);
 
 	// Compute Distance 
 	//glm::vec4 v_0(start, 1.f);
@@ -86,7 +110,7 @@ void Bone::render(bool Render_Line)
 	{
 		// ======= Line Model Matrix Transform Operations =======
 		line->scale(glm::vec3(0.025f));
-		line->translate(glm::vec3(0.f, 15.f, 0.f));
+		//line->translate(glm::vec3(0.f, 15.f, 0.f));
 
 		// ======= Set Line Colour =======
 		// RNG

@@ -246,6 +246,9 @@ void Viewer::render()
 	// ==================== Render Bones ====================
 	// Tick Anim
 	anim.inc_frame();
+	anim.test();
+	//anim.debug();
+
 	//anim.tick();
 
 	// Testing Only (Build per tick).
@@ -254,9 +257,9 @@ void Viewer::render()
 	//anim.set_frame(0);
 	//anim.build_per_tick(); 
 
-	//anim.test();
 
-	//anim.debug();
+
+
 
 
 	// Render Skeleton

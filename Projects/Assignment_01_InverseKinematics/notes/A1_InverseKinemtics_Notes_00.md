@@ -391,7 +391,11 @@ Bone end should be the current joint offset, bone start should be the parent joi
 
 ...
 
-Recursion approach each recursive call gets copy of previous (parent call) offset translation and rotation matrix which it then accumulates itself to before creating a bone.
+Recursion approach each recursive call gets copy of previous (parent call) offset translation and rotation matrix which it then accumulates itself to before creating a bone. Replicates OpenGL Matrix Stack state they are using
+
+Do start end calc inline, create bone from start end only (so dont need to do rotation internally of bone class?)
+
+old approach of start + end pos defined by offsets, and then passing rot matrix to be applied atop as model matrix was not a good idea. precompute the final bone postion with both offset and rotation applied based on current state of transforms. 
 
 
 
@@ -406,6 +410,8 @@ Or we could pack centre into matrix and do this on gpu side, but then we wouldnt
 But its not local space to bone its local space to rel parent, so make sure offset is used for ....
 
 Sample code operates on drawing (from current joint (parent to child), my code gets current joint (from parent) so while there end segment is the child joint, in my loop, the end pos is the current joint offset + parent offset and start pos is the parent offset. 
+
+They define offset and transform together so there origin vertex per bone is always (0,0,0)
 
 ##### Building Skeleton of bones from BVH Data 
 

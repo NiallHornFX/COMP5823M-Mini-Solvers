@@ -30,6 +30,7 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 
 //	build_bvhSkeleton();
 	test();
+	//chan_check();
 }
 
 void Anim_State::build_bvhSkeleton()
@@ -109,6 +110,7 @@ void Anim_State::build_per_tick()
 
 void Anim_State::test()
 {
+	skel.reset();
 	build_test(bvh->joints[0], glm::vec3(0.f), glm::mat4(1.f));
 }
 
@@ -125,10 +127,6 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 rot)
 	
 	if (joint->parent)
 	{
-		glm::mat4 tmp_x(1);
-		glm::mat4 tmp_y(1);
-		glm::mat4 tmp_z(1);
-
 		// Get Joint Channels, Accumulate to parent matrix
 		for (const Channel *c : joint->channels)
 		{
@@ -137,29 +135,32 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 rot)
 				case ChannelEnum::Z_ROTATION : 
 				{
 					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					//rot = glm::rotate(rot, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
-
-					tmp_z = glm::rotate(glm::mat4(1), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
+					rot = glm::rotate(rot, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
 				}
 				case ChannelEnum::Y_ROTATION:
 				{
 					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					tmp_y = glm::rotate(glm::mat4(1), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
+					rot = glm::rotate(rot, glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
 				}
 				case ChannelEnum::X_ROTATION:
 				{
 					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					tmp_x = glm::rotate(glm::mat4(1), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
+					rot = glm::rotate(rot, glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
 				}
 			}
 		}
 
-		// Accumulate Rotations
-		rot *= (tmp_y * tmp_x * tmp_z);
+			/*
+			// Check Matrix
+			std::cout << "Rot Matrix Joint : " << joint->idx << " Frame : " << anim_frame << "\n"
+				<< rot[0][0] << " " << rot[0][1] << " " << rot[0][2] << " " << rot[0][3] << "\n"
+				<< rot[1][0] << " " << rot[1][1] << " " << rot[1][2] << " " << rot[1][3] << "\n"
+				<< rot[2][0] << " " << rot[2][1] << " " << rot[2][2] << " " << rot[2][3] << "\n"
+				<< rot[3][0] << " " << rot[3][1] << " " << rot[3][2] << " " << rot[3][3] << "\n\n";
+			*/
 
 		// Accumulate Offset to parent matrix
 		poffs += joint->parent->offset;
-
 
 		skel.add_bone(poffs, poffs + joint->offset, rot);
 	}
@@ -173,7 +174,7 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 rot)
 		build_test(joint->children[c], poffs, rot);
 	}
 
-	std::cout << "Call Count = " << call << "\n";
+	//std::cout << "Call Count = " << call << "\n";
 	call++;
 }
 
@@ -207,4 +208,17 @@ void Anim_State::set_frame(std::size_t Frame)
 void Anim_State::debug() const
 {
 	std::cout << "Anim::" << bvh->filename << " ::Frame = " << anim_frame << "\n";
+}
+
+void Anim_State::chan_check(std::size_t f) const
+{
+	// Get random joint
+	Joint *joint = bvh->joints[3];
+
+	// Check anim_data over all frames.
+	for (std::size_t f = 0; f < bvh->num_frame; ++f)
+	{
+		std::cout << "Frame " << f << " Data " << bvh->motion[f * bvh->num_channel + joint->channels[0]->index] << "\n";
+	}
+	
 }
