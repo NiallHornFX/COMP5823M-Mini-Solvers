@@ -23,9 +23,18 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
 	std::vector<vert> line_data; line_data.resize(2);
 	line_data[0].col = glm::vec3(0, 0, 1.f);
 
+	glm::vec4 v0(start, 1.f);
+	glm::vec4 v1(end, 1.f);
 
-	line_data[0].pos = glm::vec3(start);
-	line_data[1].pos = glm::vec3(end);
+	// Mult by matrix
+	v0 = Trs * v0;
+	v1 = Trs * v1;
+
+	line_data[0].pos = glm::vec3(v0);
+	line_data[1].pos = glm::vec3(v1);
+
+	//line_data[0].pos = glm::vec3(start);
+	//line_data[1].pos = glm::vec3(end);
 
 	line->set_data_mesh(line_data);
 	line->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
@@ -60,7 +69,7 @@ void Bone::render(bool Render_Line)
 	if (Render_Line)
 	{
 		// ======= Line Model Matrix Transform Operations =======
-		line->scale(glm::vec3(0.025f));
+		//line->scale(glm::vec3(0.025f));
 		//line->translate(glm::vec3(0.f, 15.f, 0.f));
 
 		// ======= Set Line Colour =======

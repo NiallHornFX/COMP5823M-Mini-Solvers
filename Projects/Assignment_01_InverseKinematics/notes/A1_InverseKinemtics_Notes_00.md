@@ -403,9 +403,13 @@ inverse rel to parent rotation not just trans (offset...)
 
 need to translate root joint  segment using its channel (6DOF, using its translation components as it has 0 offset)
 
-
+glm axis angle rot creates scaling be from accumulation need to fix this. 
 
 Just use 0 start, offset end for line start end, then put concat offset in matrix to translate rel to?
+
+So when transform is applied we have parent offset + 0 for the start pos , and parent offset + child offset for end (with rotations included).
+
+Inverts trans + rot of parent, apply my joint transform, then univernse. 
 
 
 

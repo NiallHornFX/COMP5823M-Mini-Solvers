@@ -53,7 +53,8 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// Init with some BVH File (can be changed later via GUI)
 	//anim.set_bvhFile("../../assets/bvh/testA.bvh");
 	//anim.set_bvhFile("../../assets/bvh/rest.bvh");
-	anim.set_bvhFile("../../assets/bvh/02_01.bvh");
+	//anim.set_bvhFile("../../assets/bvh/02_01.bvh");
+	anim.set_bvhFile("../../assets/bvh/3test.bvh");
 
 	// ==== Create Camera ====
 	//camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false); // Fixed

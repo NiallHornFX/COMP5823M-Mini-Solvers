@@ -29,7 +29,7 @@ public:
 	void tick();
 
 	void build_per_tick(); // testing only...
-	void build_test(Joint *joint, glm::vec3 poffs, glm::mat4 rot); 
+	void build_test(Joint *joint, glm::vec3 poffs, glm::mat4 trs);
 	void test();
 
 	// Debug
