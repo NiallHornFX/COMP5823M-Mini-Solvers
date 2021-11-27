@@ -397,6 +397,8 @@ Do start end calc inline, create bone from start end only (so dont need to do ro
 
 old approach of start + end pos defined by offsets, and then passing rot matrix to be applied atop as model matrix was not a good idea. precompute the final bone postion with both offset and rotation applied based on current state of transforms. 
 
+If inversed for rotation needs to be rel to parent offset
+
 
 
 In the sample code they define a bone as a single mesh object (which my bone class can render as also) so they concat the translation (offset) to define the centre between two joints along with the rotation to define the bone transform. For my sake for now rendering as lines, the offsets define the line segments start and end and the rotation is applied atop of this via the transform matrix (which becomes the primitives model matrix), I'm thinking its correct that eg for a line ((0,0,0), (0,1,0)) the rotation origin should be at the centre of origin so maybe before the rotation is applied in the shader we should be inverting line verts to origin...

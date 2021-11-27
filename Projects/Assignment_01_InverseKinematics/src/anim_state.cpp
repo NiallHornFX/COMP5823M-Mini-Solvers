@@ -128,6 +128,7 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 rot)
 	if (joint->parent)
 	{
 		// Get Joint Channels, Accumulate to parent matrix
+		glm::mat4 xx(1.f), yy(1.f), zz(1.f); 
 		for (const Channel *c : joint->channels)
 		{
 			switch (c->type) 
@@ -135,34 +136,38 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 rot)
 				case ChannelEnum::Z_ROTATION : 
 				{
 					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					rot = glm::rotate(rot, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
+					zz = glm::rotate(glm::mat4(1.f), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
+					//rot = glm::rotate(rot, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
 				}
 				case ChannelEnum::Y_ROTATION:
 				{
 					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					rot = glm::rotate(rot, glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
+					yy = rot = glm::rotate(glm::mat4(1.f), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
+					//rot = glm::rotate(rot, glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
 				}
 				case ChannelEnum::X_ROTATION:
 				{
 					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					rot = glm::rotate(rot, glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
+					zz = glm::rotate(glm::mat4(1.f), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
+					//rot = glm::rotate(rot, glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
 				}
 			}
 		}
 
-			/*
-			// Check Matrix
-			std::cout << "Rot Matrix Joint : " << joint->idx << " Frame : " << anim_frame << "\n"
-				<< rot[0][0] << " " << rot[0][1] << " " << rot[0][2] << " " << rot[0][3] << "\n"
-				<< rot[1][0] << " " << rot[1][1] << " " << rot[1][2] << " " << rot[1][3] << "\n"
-				<< rot[2][0] << " " << rot[2][1] << " " << rot[2][2] << " " << rot[2][3] << "\n"
-				<< rot[3][0] << " " << rot[3][1] << " " << rot[3][2] << " " << rot[3][3] << "\n\n";
-			*/
+		// Concat Channels Rotations (y,x,z order) and right mult parent rotation.
+		rot = (yy * xx * zz) * rot;
 
 		// Accumulate Offset to parent matrix
 		poffs += joint->parent->offset;
 
 		skel.add_bone(poffs, poffs + joint->offset, rot);
+
+	   /* // Debug Matrix
+		std::cout << "Rot Matrix Joint : " << joint->idx << " Frame : " << anim_frame << "\n"
+		<< rot[0][0] << " " << rot[0][1] << " " << rot[0][2] << " " << rot[0][3] << "\n"
+		<< rot[1][0] << " " << rot[1][1] << " " << rot[1][2] << " " << rot[1][3] << "\n"
+		<< rot[2][0] << " " << rot[2][1] << " " << rot[2][2] << " " << rot[2][3] << "\n"
+		<< rot[3][0] << " " << rot[3][1] << " " << rot[3][2] << " " << rot[3][3] << "\n\n"; */
 	}
 
 	// Pass each recurrsive call its own copy of the current accumulated offset and rot, to then apply to children.
