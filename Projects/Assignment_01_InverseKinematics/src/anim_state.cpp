@@ -213,19 +213,13 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 trs)
 		// =========== Rotation --> trs Matrix ===========
 		// DEBUG : This breaks, root transform is fine ...
 		// Accumulate Rotation in YXZ Order 
-	//	trs = (yy * xx * zz) * trs; 
-
-		// This is adding the accumulated offset each time, which is not correct ... Now using delta offset. 
-		// Accumulate Offset of parent. 
-		//glm::vec3 poffs_old = poffs; 
-		//poffs += joint->parent->offset;
-		//glm::vec3 delta = poffs - poffs_old;
+		trs = (yy * xx * zz) * trs; 
 
 		// =========== Translation / Offset --> trs Matrix ===========
 		// Add Joint parent offset to matrix as translation
 		trs = glm::translate(trs, joint->parent->offset);
 
-		// Rel Offset
+		// Start+end at Rel Offset
 		skel.add_bone(glm::vec3(0.f), joint->offset, trs);
 	}
 
