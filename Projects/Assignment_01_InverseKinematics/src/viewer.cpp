@@ -57,10 +57,10 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	//anim.set_bvhFile("../../assets/bvh/rest.bvh");
 
 	// Walk
-	anim.set_bvhFile("../../assets/bvh/02_01.bvh");
+	//anim.set_bvhFile("../../assets/bvh/02_01.bvh");
 
 	// Custom Debug
-	//anim.set_bvhFile("../../assets/bvh/single.bvh");
+	anim.set_bvhFile("../../assets/bvh/6test_noroot.bvh");
 	//anim.set_bvhFile("../../assets/bvh/two.bvh");
 
 	// ==== Create Camera ====

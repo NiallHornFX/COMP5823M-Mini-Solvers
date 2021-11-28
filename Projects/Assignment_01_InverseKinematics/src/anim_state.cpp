@@ -308,14 +308,25 @@ void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
 	}
 
 
-	// Viz Joints as Bones ... 
+	// Viz Joints as Points (using Lines (same pos)) ... 
 	glm::vec4 v0 = trs * glm::vec4(0.f, 0.f, 0.f, 1.f);
+	glm::vec4 v1 = trs * glm::vec4(joint->offset, 1.f);
+
+	// Point (as line)
 	skel.add_bone(glm::vec3(v0), glm::vec3(v0), glm::mat4(1.f));
+
+	// Line
+	//skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
 
 	if (joint->is_end)
 	{
-		glm::vec4 v1 = trs * glm::vec4(joint->end, 1.f);
-		skel.add_bone(glm::vec3(v1), glm::vec3(v1), glm::mat4(1.f));
+		glm::vec4 v2 = trs * glm::vec4(joint->end, 1.f);
+
+		// Point (as line)
+		skel.add_bone(glm::vec3(v2), glm::vec3(v2), glm::mat4(1.f));
+
+		// Line 
+		skel.add_bone(glm::vec3(v0), glm::vec3(v2), glm::mat4(1.f));
 	}
 
 	
