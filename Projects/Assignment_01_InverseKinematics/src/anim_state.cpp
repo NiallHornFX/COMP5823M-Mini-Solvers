@@ -289,19 +289,19 @@ void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
 		case ChannelEnum::Z_ROTATION:
 		{
 			float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-			trs = glm::rotate(trs, glm::radians(z_r), glm::vec3(0., 0., 1.));
+		//	trs = glm::rotate(trs, glm::radians(z_r), glm::vec3(0., 0., 1.));
 			break;
 		}
 		case ChannelEnum::Y_ROTATION:
 		{
 			float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-			trs = glm::rotate(trs, glm::radians(y_r), glm::vec3(0., 1., 0.));
+		//	trs = glm::rotate(trs, glm::radians(y_r), glm::vec3(0., 1., 0.));
 			break;
 		}
 		case ChannelEnum::X_ROTATION:
 		{
 			float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-			trs = glm::rotate(trs, glm::radians(x_r), glm::vec3(1., 0., 0.));
+		//	trs = glm::rotate(trs, glm::radians(x_r), glm::vec3(1., 0., 0.));
 			break;
 		}
 		}
@@ -316,17 +316,17 @@ void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
 	skel.add_bone(glm::vec3(v0), glm::vec3(v0), glm::mat4(1.f));
 
 	// Line
-	//skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
+	skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
 
 	if (joint->is_end)
 	{
 		glm::vec4 v2 = trs * glm::vec4(joint->end, 1.f);
 
 		// Point (as line)
-		skel.add_bone(glm::vec3(v2), glm::vec3(v2), glm::mat4(1.f));
+		//skel.add_bone(glm::vec3(v2), glm::vec3(v2), glm::mat4(1.f));
 
 		// Line 
-		skel.add_bone(glm::vec3(v0), glm::vec3(v2), glm::mat4(1.f));
+		skel.add_bone(glm::vec3(v1), glm::vec3(v2), glm::mat4(1.f));
 	}
 
 	
