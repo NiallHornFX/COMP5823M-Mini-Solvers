@@ -129,12 +129,19 @@ void BVH_Data::Load()
 			z = token ? atof(token) : 0.0;
 
 			joint->is_end = is_site;
-
-			// Use offset to store end site data also
-			joint->offset.x = x;
-			joint->offset.y = y;
-			joint->offset.z = z;
-
+			if (is_site)
+			{
+				joint->end.x = x;
+				joint->end.y = y;
+				joint->end.z = z;
+			}
+			else
+			{
+				joint->offset.x = x;
+				joint->offset.y = y;
+				joint->offset.z = z;
+			}
+		
 			continue;
 		}
 

@@ -87,6 +87,7 @@ struct Joint
 	bool is_root, is_end;
 
 	glm::vec3 offset;
+	glm::vec3 end;
 	Joint *parent;
 	std::vector<Joint*> children;
 
