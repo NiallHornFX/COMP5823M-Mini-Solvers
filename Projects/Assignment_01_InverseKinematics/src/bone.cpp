@@ -26,9 +26,24 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
 	glm::vec4 v0(start, 1.f);
 	glm::vec4 v1(end, 1.f);
 
+	//glm::mat3 rot_e(Trs);
+	//glm::mat4 rot_o(rot_e);
+
+	glm::mat4 t_o(1.f);
+	t_o[3] = Trs[3];
+
+	v0 = t_o * v0;
+	v1 = t_o * v1;
+
+	//v0 += Trs[3];
+	//v1 += Trs[3];
+
+	//v0 = rot_o * v0;
+	//v1 = rot_o * v1;
+
 	// Mult by matrix
-	v0 = Trs * v0;
-	v1 = Trs * v1;
+	//v0 = Trs * v0;
+	//v1 = Trs * v1;
 
 	line_data[0].pos = glm::vec3(v0);
 	line_data[1].pos = glm::vec3(v1);
