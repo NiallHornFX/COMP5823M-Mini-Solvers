@@ -241,8 +241,8 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 trs)
 
 void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
 {
-	//  ========== Get Translation  ==========
-	if (!joint->parent) 
+	//  =========== Get Translation  ===========
+	if (!joint->parent) // Root joint, translation from channels. 
 	{
 		glm::vec4 root_offs(0., 0., 0., 1.);
 
@@ -275,12 +275,12 @@ void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
 		trs = glm::translate(trs, glm::vec3(root_offs));
 
 	}
-	else if (joint->parent) // Non root joints, 3DOF
+	else if (joint->parent) // Non root joints, Translation is offset. 
 	{
 		trs = glm::translate(trs, joint->offset);
 	}
 
-	// ========== Get Rotation ==========
+	// =========== Get Rotation ===========
 	glm::mat4 xx(1.), yy(1.), zz(1.);
 	for (const Channel *c : joint->channels)
 	{
@@ -289,50 +289,50 @@ void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
 		case ChannelEnum::Z_ROTATION:
 		{
 			float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-		//	trs = glm::rotate(trs, glm::radians(z_r), glm::vec3(0., 0., 1.));
+			trs = glm::rotate(trs, glm::radians(z_r), glm::vec3(0., 0., 1.));
 			break;
 		}
 		case ChannelEnum::Y_ROTATION:
 		{
 			float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-		//	trs = glm::rotate(trs, glm::radians(y_r), glm::vec3(0., 1., 0.));
+			trs = glm::rotate(trs, glm::radians(y_r), glm::vec3(0., 1., 0.));
 			break;
 		}
 		case ChannelEnum::X_ROTATION:
 		{
 			float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-		//	trs = glm::rotate(trs, glm::radians(x_r), glm::vec3(1., 0., 0.));
+			trs = glm::rotate(trs, glm::radians(x_r), glm::vec3(1., 0., 0.));
 			break;
 		}
 		}
 	}
 
-
+	// =========== Viz Joints as Points ===========
 	// Viz Joints as Points (using Lines (same pos)) ... 
 	glm::vec4 v0 = trs * glm::vec4(0.f, 0.f, 0.f, 1.f);
-	glm::vec4 v1 = trs * glm::vec4(joint->offset, 1.f);
-
-	// Point (as line)
+	// Joint point (as line)
 	skel.add_bone(glm::vec3(v0), glm::vec3(v0), glm::mat4(1.f));
 
-	// Line
-	skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
-
+	// =========== End Point ===========
 	if (joint->is_end)
 	{
-		glm::vec4 v2 = trs * glm::vec4(joint->end, 1.f);
-
-		// Point (as line)
-		//skel.add_bone(glm::vec3(v2), glm::vec3(v2), glm::mat4(1.f));
-
-		// Line 
-		skel.add_bone(glm::vec3(v1), glm::vec3(v2), glm::mat4(1.f));
+		glm::vec4 v1 = trs * glm::vec4(joint->offset, 1.f);
+		// Joint point (as line)
+		skel.add_bone(glm::vec3(v1), glm::vec3(v1), glm::mat4(1.f));
+		// Bone Line 
+		//skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
 	}
-
 	
-	// Pass each recurrsive call its own copy of the current accumulated offset and rot, to then apply to children.
-	for (std::size_t c = 0; c < joint->children.size(); ++c) // Recurse for all joint children
+	// Pass each recurrsive call its own copy of the current (parent) transformations to then apply to children.
+	for (std::size_t c = 0; c < joint->children.size(); ++c) 
 	{
+		// =========== Add Bone for each child offset, rel to parent transform ===========
+		Joint *child = joint->children[c];
+		glm::vec4 v2 = trs * glm::vec4(child->offset, 1.f);
+		// Bone Line
+		skel.add_bone(glm::vec3(v0), glm::vec3(v2), glm::mat4(1.f));
+		
+		// =========== Recurse for all joint children ===========
 		build_test_b(joint->children[c], trs);
 	}
 
