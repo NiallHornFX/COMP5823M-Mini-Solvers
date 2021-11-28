@@ -40,7 +40,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	last_yawoffs = 0.f;
 	last_pitchoffs = 0.f;
 	last_zoom = 0.f;
-	draw_grid = true;
+	draw_grid = false;
 	draw_axis = true;
 
 	// ==== OpenGL Setup ==== 
@@ -60,7 +60,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	//anim.set_bvhFile("../../assets/bvh/02_01.bvh");
 
 	// Custom Debug
-	anim.set_bvhFile("../../assets/bvh/testb.bvh");
+	anim.set_bvhFile("../../assets/bvh/single.bvh");
 	//anim.set_bvhFile("../../assets/bvh/6test_noroot.bvh");
 
 	// ==== Create Camera ====
@@ -258,7 +258,7 @@ void Viewer::render()
 	//anim.test();
 	//anim.debug();
 
-	anim.test();
+	//anim.test();
 
 	//anim.tick();
 

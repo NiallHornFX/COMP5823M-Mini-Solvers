@@ -423,6 +423,10 @@ So kinda like, do we contiune with approach of prebuilding rest pose with offset
 
 
 
+transform to parent rotation + trans first
+
+
+
 In the sample code they define a bone as a single mesh object (which my bone class can render as also) so they concat the translation (offset) to define the centre between two joints along with the rotation to define the bone transform. For my sake for now rendering as lines, the offsets define the line segments start and end and the rotation is applied atop of this via the transform matrix (which becomes the primitives model matrix), I'm thinking its correct that eg for a line ((0,0,0), (0,1,0)) the rotation origin should be at the centre of origin so maybe before the rotation is applied in the shader we should be inverting line verts to origin...
 
 Or just create line procedurally based on distance of offsets, put offsets into matrix form internally with rotation matrix passed ? The rot transformation should be computed on the CPU side really, because otherwise the model matrix is applying just the rotation component, to the off-setted lines in the shader. This is why offset alone works fine (as it defines the line positions in WS relative to parent offsets) but not the rotations... Can still use model matrix to do the post transform scaling and translation (to scale resulting skeleton)
