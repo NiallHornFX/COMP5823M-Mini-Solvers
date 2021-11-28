@@ -255,8 +255,10 @@ void Viewer::render()
 	// Tick Anim
 	anim.inc_frame();
 	//anim.build_per_tick();
-	anim.test();
+	//anim.test();
 	//anim.debug();
+
+	anim.test();
 
 	//anim.tick();
 
