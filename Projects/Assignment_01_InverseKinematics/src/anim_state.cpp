@@ -290,7 +290,7 @@ void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
 		}
 
 		// =========== Rotation + Offset (Translation) --> trs Matrix ===========
-	//	trs = (yy * xx * zz) * glm::mat4(1.f); // Accumulate Rotation in YXZ Order (no parent rotation)
+		//trs = (yy * xx * zz) * glm::mat4(1.f); // Accumulate Rotation in YXZ Order (no parent rotation)
 		trs[3] = root_offs; // Translation by joint offset. 
 
 		// Add Bone, Use Rel offsets for start end only.

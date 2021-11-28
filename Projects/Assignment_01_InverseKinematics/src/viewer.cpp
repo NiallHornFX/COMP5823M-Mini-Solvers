@@ -60,8 +60,8 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	//anim.set_bvhFile("../../assets/bvh/02_01.bvh");
 
 	// Custom Debug
-	anim.set_bvhFile("../../assets/bvh/single.bvh");
-	//anim.set_bvhFile("../../assets/bvh/6test_noroot.bvh");
+	//anim.set_bvhFile("../../assets/bvh/single.bvh");
+	anim.set_bvhFile("../../assets/bvh/6test_noroot.bvh");
 
 	// ==== Create Camera ====
 	//camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false); // Fixed
@@ -254,8 +254,7 @@ void Viewer::render()
 	// ==================== Render Bones ====================
 	// Tick Anim
 	anim.inc_frame();
-	//anim.build_per_tick();
-	//anim.test();
+	anim.test();
 	//anim.debug();
 
 	//anim.test();
