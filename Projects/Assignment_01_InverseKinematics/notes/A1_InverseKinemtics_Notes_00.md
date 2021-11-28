@@ -409,7 +409,13 @@ Just use 0 start, offset end for line start end, then put concat offset in matri
 
 So when transform is applied we have parent offset + 0 for the start pos , and parent offset + child offset for end (with rotations included).
 
-Inverts trans + rot of parent, apply my joint transform, then univernse. 
+Inverts trans + rot of parent, apply my joint transform, then un inverse
+
+think my issues might be due to root transform... Or something to do with branching children as single bone strip seems to work, is my recurrsive approach not correct for child rotations ? 
+
+
+
+Need to WUP recurrsive approach, ie each call gets copy of parent transform (doesnt require stack approach or reverse traversal back to root). Also rather than creating bone at resulting offset start and end, their created in realtive local space, and then transformed. (Model matrix is then just used for post transformation scaling atop of this)
 
 
 

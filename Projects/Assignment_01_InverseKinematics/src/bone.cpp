@@ -69,7 +69,7 @@ void Bone::render(bool Render_Line)
 	if (Render_Line)
 	{
 		// ======= Line Model Matrix Transform Operations =======
-		//line->scale(glm::vec3(0.025f));
+		line->scale(glm::vec3(0.1f));
 		//line->translate(glm::vec3(0.f, 15.f, 0.f));
 
 		// ======= Set Line Colour =======
@@ -94,8 +94,8 @@ void Bone::render(bool Render_Line)
 		line->render();
 
 		// ======= Also Render Bone As Points =======
-		glPointSize(5.f);
-		line->set_colour(glm::vec3(1.f, 0.f, 0.f));
+		glPointSize(10.f);
+		line->set_colour(glm::vec3(0.f, 0.f, 0.f));
 		line->mode = Render_Mode::RENDER_POINTS;
 		line->render();
 	}
