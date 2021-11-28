@@ -51,11 +51,16 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ==== Anim State ====
 	// Init with some BVH File (can be changed later via GUI)
+
+	// Static
 	//anim.set_bvhFile("../../assets/bvh/testA.bvh");
 	//anim.set_bvhFile("../../assets/bvh/rest.bvh");
-	//anim.set_bvhFile("../../assets/bvh/02_01.bvh");
 
-	anim.set_bvhFile("../../assets/bvh/testb.bvh");
+	// Walk
+	anim.set_bvhFile("../../assets/bvh/02_01.bvh");
+
+	// Custom Debug
+	//anim.set_bvhFile("../../assets/bvh/testb.bvh");
 	//anim.set_bvhFile("../../assets/bvh/6test_noroot.bvh");
 
 	// ==== Create Camera ====

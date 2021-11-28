@@ -66,6 +66,8 @@ void Anim_State::build_bvhSkeleton()
 // Is it easier to rebuild the Skeleton per tick, (with the current set anim frame motion/channel angles retrived)
 // Oppose to building skeleton and updating bone transform joints later in seperate per tick step.
 // Just for debugging sake. 
+
+// Abanonded this approach for now. Ignore...
 void Anim_State::build_per_tick()
 {
 	skel.reset(); // Testing calling this per tick, so reset...
@@ -211,7 +213,7 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 trs)
 		// =========== Rotation --> trs Matrix ===========
 		// DEBUG : This breaks, root transform is fine ...
 		// Accumulate Rotation in YXZ Order 
-		trs = (yy * xx * zz) * trs; 
+	//	trs = (yy * xx * zz) * trs; 
 
 		// This is adding the accumulated offset each time, which is not correct ... Now using delta offset. 
 		// Accumulate Offset of parent. 
