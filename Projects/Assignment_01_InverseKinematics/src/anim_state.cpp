@@ -78,34 +78,34 @@ void Anim_State::build_per_tick()
 		glm::mat4 rot(1.f);
 
 		Joint *p = cur;
+		if (p->is_root) continue;
 		while (p->parent)
 		{
-			// Accumulate offset
-			par_offs += p->parent->offset;
+			// Get Angles from motion data of current frame
+			DOF3 angs = bvh->get_joint_DOF3(p->parent->idx, anim_frame);
+			// Build Local Matrix to multiply accumlated with 
+			glm::mat4 tmp(1.f);
+			// Z Rotation 
+			tmp = glm::rotate(tmp, glm::radians(float(std::get<0>(angs))), glm::vec3(0.f, 0.f, 1.f));
+			// Y Rotation 
+			tmp = glm::rotate(tmp, glm::radians(float(std::get<1>(angs))), glm::vec3(0.f, 1.f, 0.f));
+			// X Rotation 
+			tmp = glm::rotate(tmp, glm::radians(float(std::get<2>(angs))), glm::vec3(1.f, 0.f, 0.f));
+			// Accumlate Rotation 
+			rot *= tmp;
 
-			// Accumulate Channel Transform
-			// Non root joints (3DOF, joint angles only).
-			if (!p->parent->is_root) // Else just dont accumulate rotation for parent = root 
-			{
-				// Get Angles from motion data of current frame
-				DOF3 angs = bvh->get_joint_DOF3(p->parent->idx, anim_frame);
-				// Build Local Matrix to multiply accumlated with 
-				glm::mat4 tmp(1.f);
-				// Z Rotation 
-				tmp = glm::rotate(tmp, float(std::get<0>(angs)), glm::vec3(0.f, 0.f, 1.f));
-				// Y Rotation 
-				tmp = glm::rotate(tmp, float(std::get<1>(angs)), glm::vec3(0.f, 1.f, 0.f));
-				// X Rotation 
-				tmp = glm::rotate(tmp, float(std::get<2>(angs)), glm::vec3(1.f, 0.f, 0.f));
-				// Accumlate Rotation 
-				rot *= tmp;
-			}
+			// Accumulate offset
+			//par_offs += p->parent->offset;
 
 			// Traverse up to parent 
 			p = p->parent;
+
+			// Start is then parent offset, end is the current joint offset + parent offset (total parent offset along tree).
+			//skel.add_bone(par_offs, (cur->offset + par_offs), rot);
+			rot = glm::translate(rot, par_offs);
+			skel.add_bone(glm::vec3(0.f), cur->offset, rot);
 		}
-		// Start is then parent offset, end is the current joint offset + parent offset (total parent offset along tree).
-		skel.add_bone(par_offs, (cur->offset + par_offs), rot);
+
 	}
 }
 
@@ -131,21 +131,18 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 trs)
 				case ChannelEnum::X_POSITION:
 				{
 					float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					//trs = glm::translate(trs, glm::vec3(x_p, 0.f, 0.f));
 					poffs.x += x_p;
 					break;
 				}
 				case ChannelEnum::Y_POSITION:
 				{
 					float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					//trs = glm::translate(trs, glm::vec3(0.f, y_p, 0.f));
 					poffs.y += y_p;
 					break;
 				}
 				case ChannelEnum::Z_POSITION:
 				{
 					float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					//trs = glm::translate(trs, glm::vec3(0.f, 0.f, z_p));
 					poffs.z += z_p;
 					break;
 				}
@@ -154,33 +151,32 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 trs)
 				{
 					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
 					zz = glm::rotate(glm::mat4(1.f), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
-					//trs = glm::rotate(trs, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
 					break;
 				}
 				case ChannelEnum::Y_ROTATION:
 				{
 					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
 					yy = glm::rotate(glm::mat4(1.f), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
-					//trs = glm::rotate(trs, glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
 					break;
 				}
 				case ChannelEnum::X_ROTATION:
 				{
 					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
 					xx = glm::rotate(glm::mat4(1.f), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
-					//trs = glm::rotate(trs, glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
 					break;
 				}
 			}
 		}
 		
+		// =========== Rotation --> trs Matrix ===========
 		// Accumulate Rotation in YXZ Order 
 		trs = (yy * xx * zz) * trs; 
 
+		// =========== Translation / Offset --> trs Matrix ===========
 		// Root has 0 offset has offset is obtained from channels.
-		// Add Bone
-		// Use Rel offsets for start end only. (Then apply parent offset + rot via matrix)
 		trs = glm::translate(trs, poffs);
+
+		// Add Bone, Use Rel offsets for start end only.
 		skel.add_bone(glm::vec3(0.f), poffs, trs);
 	}
 	else if (joint->parent) // Non root joints, 3DOF
@@ -194,36 +190,38 @@ void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 trs)
 				case ChannelEnum::Z_ROTATION:
 				{
 					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					//trs = glm::rotate(trs, glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
 					zz = glm::rotate(glm::mat4(1.f), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
 					break;
 				}
 				case ChannelEnum::Y_ROTATION:
 				{
 					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					//trs = glm::rotate(trs, glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
 					yy = glm::rotate(glm::mat4(1.f), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
 					break;
 				}
 				case ChannelEnum::X_ROTATION:
 				{
 					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					//trs = glm::rotate(trs, glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
 					xx = glm::rotate(glm::mat4(1.f), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
 					break;
 				}
 			}
 		}
 
+		// =========== Rotation --> trs Matrix ===========
 		// DEBUG : This breaks, root transform is fine ...
 		// Accumulate Rotation in YXZ Order 
-	//	trs = (yy * xx * zz) * trs; 
+		trs = (yy * xx * zz) * trs; 
 
+		// This is adding the accumulated offset each time, which is not correct ... Now using delta offset. 
 		// Accumulate Offset of parent. 
-		poffs += joint->parent->offset;
+		//glm::vec3 poffs_old = poffs; 
+		//poffs += joint->parent->offset;
+		//glm::vec3 delta = poffs - poffs_old;
 
-		// Poffs to matrix as translation
-		trs = glm::translate(trs, poffs);
+		// =========== Translation / Offset --> trs Matrix ===========
+		// Add Joint parent offset to matrix as translation
+		trs = glm::translate(trs, joint->parent->offset);
 
 		// Rel Offset
 		skel.add_bone(glm::vec3(0.f), joint->offset, trs);

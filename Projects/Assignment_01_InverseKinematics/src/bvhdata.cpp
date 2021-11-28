@@ -259,7 +259,8 @@ DOF3 BVH_Data::get_joint_DOF3(std::size_t joint_idx, std::size_t frame) const
 	Joint *joint = joints[joint_idx];
 
 	// Don't call this function on root. (Has 6 DOF)
-	if (joint->is_root) std::terminate();
+	//if (joint->is_root) std::terminate();
+	if (joint->is_root) return DOF3(0.f, 0.f, 0.f);
 	
 	// Channel count is 3 for 3DOF (ZRot, YRot, XRot) (3DOF) unless root 6DOF (XPos, YPos, ZPos, ZRot, YRot, XRot).
 	// DEBUG CODE (Remove me !) Check Channel Ordering is correct as per above
