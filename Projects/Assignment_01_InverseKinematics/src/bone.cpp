@@ -24,16 +24,7 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
 	line_data[0].pos = Start;
 	line_data[1].pos = End;
 	line_data[0].col = glm::vec3(0, 0, 1.f);
-
-	//glm::vec4 v0(start, 1.f);
-	//glm::vec4 v1(end, 1.f);
-
-	// Mult by matrix
-	//v0 = Trs * v0;
-	//v1 = Trs * v1;
-
-	//line_data[0].pos = v0;
-	//line_data[1].pos = v1;
+	line_data[1].col = glm::vec3(0, 0, 1.f);
 
 
 	line->set_data_mesh(line_data);
