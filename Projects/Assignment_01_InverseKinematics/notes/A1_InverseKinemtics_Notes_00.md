@@ -419,11 +419,7 @@ Need to WUP recurrsive approach, ie each call gets copy of parent transform (doe
 
 
 
-So kinda like, do we contiune with approach of prebuilding rest pose with offsets then per frame / tick, correctly inverse do the local rotation rel to parent (to move bones via joints), or do we just reconstruct the bones per tick, with the transforms precomputed and passed directly as resulting start and end postions of the bone lines. 
-
-
-
-transform to parent rotation + trans first
+Do we contiune with approach of prebuilding rest pose with offsets then per frame / tick, correctly inverse do the local rotation rel to parent (to move bones via joints), or do we just reconstruct the bones per tick, with the transforms precomputed and passed directly as resulting start and end postions of the bone lines.The bones would be inverted to their parent joints (first point) transform to then apply their transform.
 
 
 
@@ -532,11 +528,103 @@ So need a robust way to handle updating bone transforms from BVH Joints, the joi
 
 The Scaling + Translation only happens in the Bone Rendering calls (ie to Primitive Model matrix) so this should not affect the transforms of the bone itself, as they are applied after the bone transform matrix is passed to the primitive as its model matrix. 
 
-##### 
+
+
+____
+
+*Above notes are before I implemented this approach (and then went back to trying to inverse and do per tick transform updates only). This approach is better for just drawing the bones as is from the BVH data, as oppose to trying to modify them also (using IK).*
+
+##### Alternate Approach 
+
+In hindsight I should of implemented this approach first, as it what all the BVH Loaders / Projects i've seen do to render the joints as bones, typically using Immediate Mode (Legacy) OpenGL. The sample code also follows this approach as follows : 
+
+Starting from the root joint and an identity matrix we get the joints translation and apply it to the matrix, we get the joints rotation and apply it to the matrix, then for each of the joints children, we do a recursive call to this function passing the current matrix (cumulative transforms). We need to check if we have the root joint passed if so the translation comes from the channel / motion data, else the translation comes from the joint offset. The rotation data comes from the joint channel data regardless of course. 
+
+```C++
+// Pesudo C++ Code 
+void build_from_root()
+{
+	Joint *root = joints[0];
+	build(root, glm::mat4(1.f))
+}
+
+// Function to accumulate transform from root
+void build(Joint *joint, glm::mat4 trs)
+{
+	if joint == root // trans from channel data
+	   for (c in joint->channels) ... get transformation channel data -> glm::vec4(trans)
+	      trs = glm::translate(trs, trans);
+	
+	else // (non root) trans from offset
+	   trs = glm::translate(trs, joint->offset);
+	   
+	 for (c in joint->channels) ... get rotation channel data
+	    trs = glm::rotate(trs, glm::radians(x), glm::vec3(1, 0, 0))
+	    trs = glm::rotate(trs, glm::radians(y), glm::vec3(0, 1, 0))
+	    trs = glm::rotate(trs, glm::radians(z), glm::vec3(0, 0, 1))
+	
+	for child in joints->children // Recurse
+	   build(joint->child, trs)
+}
+```
+
+Then if we want to draw a line for each joint, within this function we create two points one is at `(0, 0, 0)` which is transformed using the current accumulated transformation matrix to place it to the joint start position in WS relative to parent. The second point is from each of the current joints, children offset positions, these are then also transformed by the matrix, fed to some line primitive to render the bone.
+
+```C++
+// Pesudo C++ Code 
+void build_from_root()
+{
+	Joint *root = joints[0];
+	build(root, glm::mat4(1.f))
+}
+
+// Function to accumulate transform from root
+void build(Joint *joint, glm::mat4 trs)
+{
+	if joint == root // trans from channel data
+	   for (c in joint->channels) ... get transformation channel data -> glm::vec4(trans)
+	      trs = glm::translate(trs, trans);
+	
+	else // (non root) trans from offset
+	   trs = glm::translate(trs, joint->offset);
+	   
+     // Rotation Data for all joints comes from channels 
+	 for (c in joint->channels) ... get rotation channel data
+	    trs = glm::rotate(trs, glm::radians(x), glm::vec3(1, 0, 0))
+	    trs = glm::rotate(trs, glm::radians(y), glm::vec3(0, 1, 0))
+	    trs = glm::rotate(trs, glm::radians(z), glm::vec3(0, 0, 1))
+         
+   // Start vert of bone. Transformed via joint matrix. 
+   glm::vec4 vert_0 = trs * (0,0,0,1); 
+    
+    // Check is joint end
+    if joint == end
+        glm::vec4 vert_end = trs * glm::vec4(joint->end_site, 1.0);
+        draw_bone_line(vert_0, vert_end) // Draw as line
+    
+	for child in joints->children // Recurse
+       // Create vertex at each child offset from parent, transformed. 
+       glm::vec4 vert_child = trs * glm::vec4(child->offset, 1.0);
+       draw_bone_line(vert_0, vert_child); // Draw as Line. 
+	   build(joint->child, trs)
+}
+```
+
+So this approach works and is a good way to directly draw the bones as lines one by one, however it has to be done per frame, as the transform data of course changes.  We see that the starting vertex is at world origin and then is transformed by the current matrix, the second vertex is then the child offset transformed by the current matrix. 
+
+The recursive call for each child joint, then takes the current matrix as a copy (this is vital, do not reference it) so it can add its transformation for its children to it, this enables us to accumulate the joint transformation without using a stack (as we don't need to pop back to the parent matrix after each branch, we just end the recursion), each child call carries forward only its parent transforms, if it itself has no more children, the recursion ends and we don't need to recover the parent matrix to then traverse the other children branches, as they have already been evaluated in their own recursive calls (without recursion would need a stack approach, to recover parent transform before traversing next child branch (for joints with multiple children)). 
+
+However Ideally I would like to go back to my initial approach of pre-building the skeleton tree using the offsets in the rest pose, and then per tick only update the transforms. Because otherwise its going to be difficult just using this approach where transforms are been pulled directly from the BVH Data each frame, to add in the  IK Functionality. 
+
+However I will branch this code off, remove some of the skeleton code (as its not needed just to render FK might as well make it faster by removing this, and just directly render line primitives without using the skeleton concept, as their is no bone transforms passed (as transforms are set directly to vertices to define the bone line start/end  verts), then I can add a GUI to this code, and use it as backup FK / BVH Only code. In case IK is not done in time. I will branch this as a separate project stored locally for now. 
 
 
 
-I need a better way to scale my bone mesh to match the offset distance between joints, but bigger prio for now is just getting a line rendered version working. 
+
+
+
+
+
 
 ___
 

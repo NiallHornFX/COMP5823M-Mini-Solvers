@@ -48,10 +48,6 @@ void Bone::render(bool Render_Line)
 	//mesh->model = transform;
 	//line->model = transform;
 
-	
-
-
-
 	// Bone vert pos precomputed, model just used for post transform scaling
 	mesh->model = glm::mat4(1);
 	line->model = glm::mat4(1);
