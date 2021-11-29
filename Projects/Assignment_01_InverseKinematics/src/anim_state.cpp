@@ -307,22 +307,25 @@ void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
 		}
 	}
 
-	// =========== Viz Joints as Points ===========
-	// Viz Joints as Points (using Lines (same pos)) ... 
+	// Transformations Applied to vertices using current concatenated matrix.
+
+	// ==================== Viz Joints as Points ====================
+	// Viz Joints as Points 
 	glm::vec4 v0 = trs * glm::vec4(0.f, 0.f, 0.f, 1.f);
 	// Joint point (as line)
 	skel.add_bone(glm::vec3(v0), glm::vec3(v0), glm::mat4(1.f));
 
-	// =========== End Point ===========
+	// ==================== End Point ====================
 	if (joint->is_end)
 	{
-		glm::vec4 v1 = trs * glm::vec4(joint->offset, 1.f);
+		glm::vec4 v1 = trs * glm::vec4(joint->end, 1.f);
 		// Joint point (as line)
-		skel.add_bone(glm::vec3(v1), glm::vec3(v1), glm::mat4(1.f));
+		//skel.add_bone(glm::vec3(v1), glm::vec3(v1), glm::mat4(1.f));
 		// Bone Line 
-		//skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
+		skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
 	}
 	
+	// ==================== Children ====================
 	// Pass each recurrsive call its own copy of the current (parent) transformations to then apply to children.
 	for (std::size_t c = 0; c < joint->children.size(); ++c) 
 	{

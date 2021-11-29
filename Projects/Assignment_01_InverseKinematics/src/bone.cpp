@@ -60,7 +60,7 @@ void Bone::render(bool Render_Line)
 	if (Render_Line)
 	{
 		// ======= Line Model Matrix Transform Operations =======
-		line->scale(glm::vec3(0.1f));
+		line->scale(glm::vec3(0.01f));
 		//line->translate(glm::vec3(0.f, 15.f, 0.f));
 
 		// ======= Set Line Colour =======
