@@ -385,11 +385,13 @@ Need to get each joint and the next joint to get the current and next offset to 
 
 We need correct traversal from the BVH Root joint to each end site regardless, this is done via depth first traversal (so all parent nodes along each branch can concatenate to the final transformation applied to each rendered bone of both offset and rotation (defined by BVH Motion/Channels data)).
 
+
+
+____
+
+***Ugly Notes as I figured out how to accumulate transform and draw bones***
+
 Bone end should be the current joint offset, bone start should be the parent joint offset. So End would be current joint offset + parent offset, parent offset is the total accumulated offsets since root. 
-
-
-
-...
 
 Recursion approach each recursive call gets copy of previous (parent call) offset translation and rotation matrix which it then accumulates itself to before creating a bone. Replicates OpenGL Matrix Stack state they are using
 
@@ -411,31 +413,13 @@ So when transform is applied we have parent offset + 0 for the start pos , and p
 
 Inverts trans + rot of parent, apply my joint transform, then un inverse
 
-think my issues might be due to root transform... Or something to do with branching children as single bone strip seems to work, is my recurrsive approach not correct for child rotations ? 
+think my issues might be due to root transform... Or something to do with branching children as single bone strip seems to work, is my recursive approach not correct for child rotations ? 
 
-
-
-Need to WUP recurrsive approach, ie each call gets copy of parent transform (doesnt require stack approach or reverse traversal back to root). Also rather than creating bone at resulting offset start and end, their created in realtive local space, and then transformed. (Model matrix is then just used for post transformation scaling atop of this)
-
-
-
-Do we contiune with approach of prebuilding rest pose with offsets then per frame / tick, correctly inverse do the local rotation rel to parent (to move bones via joints), or do we just reconstruct the bones per tick, with the transforms precomputed and passed directly as resulting start and end postions of the bone lines.The bones would be inverted to their parent joints (first point) transform to then apply their transform.
-
-
+Do we continue with approach of prebuilding rest pose with offsets then per frame / tick, correctly inverse do the local rotation rel to parent (to move bones via joints), or do we just reconstruct the bones per tick, with the transforms precomputed and passed directly as resulting start and end postions of the bone lines. The bones would be inverted to their parent joints (first point) transform to then apply their transform.
 
 In the sample code they define a bone as a single mesh object (which my bone class can render as also) so they concat the translation (offset) to define the centre between two joints along with the rotation to define the bone transform. For my sake for now rendering as lines, the offsets define the line segments start and end and the rotation is applied atop of this via the transform matrix (which becomes the primitives model matrix), I'm thinking its correct that eg for a line ((0,0,0), (0,1,0)) the rotation origin should be at the centre of origin so maybe before the rotation is applied in the shader we should be inverting line verts to origin...
 
 Or just create line procedurally based on distance of offsets, put offsets into matrix form internally with rotation matrix passed ? The rot transformation should be computed on the CPU side really, because otherwise the model matrix is applying just the rotation component, to the off-setted lines in the shader. This is why offset alone works fine (as it defines the line positions in WS relative to parent offsets) but not the rotations... Can still use model matrix to do the post transform scaling and translation (to scale resulting skeleton)
-
-And thus pre computing it, we have access to the offset (translation data for line verts) we need to invert to LS for rotation and then uninvert. 
-
-Or we could pack centre into matrix and do this on gpu side, but then we wouldnt be able to do post transform operations on the skel. 
-
-But its not local space to bone its local space to rel parent, so make sure offset is used for ....
-
-Sample code operates on drawing (from current joint (parent to child), my code gets current joint (from parent) so while there end segment is the child joint, in my loop, the end pos is the current joint offset + parent offset and start pos is the parent offset. 
-
-They define offset and transform together so there origin vertex per bone is always (0,0,0)
 
 ##### Building Skeleton of bones from BVH Data 
 
@@ -534,9 +518,9 @@ ____
 
 *Above notes are before I implemented this approach (and then went back to trying to inverse and do per tick transform updates only). This approach is better for just drawing the bones as is from the BVH data, as oppose to trying to modify them also (using IK).*
 
-##### Alternate Approach 
+##### Alternate Approach (Pseudo Immediate Mode approach)
 
-In hindsight I should of implemented this approach first, as it what all the BVH Loaders / Projects i've seen do to render the joints as bones, typically using Immediate Mode (Legacy) OpenGL. The sample code also follows this approach as follows : 
+In hindsight I should of implemented this approach first, as it what all the BVH Loaders / Projects i've seen do to render the joints as bones, typically using Immediate Mode (Legacy) OpenGL with the matrix stack (however I do without a stack using recursion). The sample code also follows this approach as follows : 
 
 Starting from the root joint and an identity matrix we get the joints translation and apply it to the matrix, we get the joints rotation and apply it to the matrix, then for each of the joints children, we do a recursive call to this function passing the current matrix (cumulative transforms). We need to check if we have the root joint passed if so the translation comes from the channel / motion data, else the translation comes from the joint offset. The rotation data comes from the joint channel data regardless of course. 
 
@@ -612,17 +596,15 @@ void build(Joint *joint, glm::mat4 trs)
 
 So this approach works and is a good way to directly draw the bones as lines one by one, however it has to be done per frame, as the transform data of course changes.  We see that the starting vertex is at world origin and then is transformed by the current matrix, the second vertex is then the child offset transformed by the current matrix. 
 
-The recursive call for each child joint, then takes the current matrix as a copy (this is vital, do not reference it) so it can add its transformation for its children to it, this enables us to accumulate the joint transformation without using a stack (as we don't need to pop back to the parent matrix after each branch, we just end the recursion), each child call carries forward only its parent transforms, if it itself has no more children, the recursion ends and we don't need to recover the parent matrix to then traverse the other children branches, as they have already been evaluated in their own recursive calls (without recursion would need a stack approach, to recover parent transform before traversing next child branch (for joints with multiple children)). 
+The recursive call for each child joint, then takes the current matrix as a copy (this is vital, do not reference it) so it can add its transformation for its children to it, this enables us to accumulate the joint transformation without using a stack (as we don't need to pop back to the parent matrix after each branch, we just end the recursion), each child call carries forward only its parent transforms, if it itself has no more children, the recursion ends and we don't need to recover the parent matrix to then traverse the other children branches, as they have already been evaluated in their own recursive calls (without recursion would need a stack approach, to recover parent transform before traversing next child branch (for joints with multiple children)). Essentially we use recursion to build the traversal matrix stack for us, instead of creating a matrix stack manually and doing standard non recursive tree traversal. 
 
-However Ideally I would like to go back to my initial approach of pre-building the skeleton tree using the offsets in the rest pose, and then per tick only update the transforms. Because otherwise its going to be difficult just using this approach where transforms are been pulled directly from the BVH Data each frame, to add in the  IK Functionality. 
+My issues stemmed from the fact I was transforming the vertex positions of the bone lines, from the parent  position not the current joints children, with the starting position been transformed only by the parent matrix.  My very first idea I was using start+end verts for the line but then doing the transform of rotation on the GPU via the model matrix, this of course will not work as the start+end verts themselves need to be transformed by this. This was my bad for separating the translation and rotation to separate data to accumulate, makes more sense to accumulate to single matrix and use this to transform the line/bone vertices. 
 
-However I will branch this code off, remove some of the skeleton code (as its not needed just to render FK might as well make it faster by removing this, and just directly render line primitives without using the skeleton concept, as their is no bone transforms passed (as transforms are set directly to vertices to define the bone line start/end  verts), then I can add a GUI to this code, and use it as backup FK / BVH Only code. In case IK is not done in time. I will branch this as a separate project stored locally for now. 
+For rendering eg mesh spheres on joints, we do need the model transform as the input joint pos, we need to use model transform to move the mesh to this pos by setting translation to the joint pos on the model matrix. However the joint pos itself is calculated using the parent transform matrix externally (within anim_state class) this is unrelated but just to clarify, while  meshes need to use model matrix for transformations, for points and lines, they are just used for post scaling the input line/point vert positions. However we can also do post scaling on the mesh on the model matrix, just make sure the transformation is done atop the translation to the joint position of the model matrix.  For rendering joint spheres instancing would make more sense, oppose to individual meshes for each joint, but I don't have time to abstract away joint sphere, just so I can reuse the same mesh data and GPU Resources. For scaling the sphere radius (before model transform) just modify the vert data directly we know the obj file is a unit sphere can just scale the vert positions within here (but either way should be ok). More efficient approach would be use sphere texture quads / sprites. 
 
+However Ideally I would like to go back to my initial approach of pre-building the skeleton tree using the offsets in the rest pose, and then per tick only update the transforms. Because otherwise its going to be difficult just using this approach where transforms are been pulled directly from the BVH Data each frame, to add in the  IK Functionality. Its not very fast re-building the skeleton each time, especially because of the recursion used also the allocation of GPU Resources is un-optimized, there's no-reuse atm because that sort of optimization I don't have time for. 
 
-
-
-
-
+However I will branch this code off, remove the skeleton and bone code (as its not needed just to render FK might as well make it faster by removing this, and just directly render line primitives without using the skeleton concept, as their is no bone transforms passed (as transforms are set directly to vertices to define the bone line start/end  verts), then I can add a GUI to this code, and use it as backup FK / BVH Only code. In case IK is not done in time. I will branch this as a separate project stored locally for now. 
 
 
 
@@ -649,3 +631,173 @@ Get inputs from viewer class (Could just pass window to anim state class directl
 Ray casting from mouse ? Selection from list of joints via GUI ? 
 
 Input like frame stepping will be done within viewer, (inc/decrementing anim frame eg.).
+
+Worst case, select joints using keyboard. Will then need to use keys to move or mouse input (which will rule out using free camera as we need to mouse pos to calc offset).
+
+____
+
+##### BVH Exporter
+
+As this was part of the assignment I implemented this quickly, currently it just reads the motion data from the BVH Loader arrays itself, later on it would read from my custom IK modified joint angles (and resulting motion values per channel DOF). I use the same recursive approach described above to loop over the joint hierarchy, writing out each Joint name, offset and channels to a stringstream, which is then passed as reference to the joint children in a recursive call for each for them to write into and so on, untill we reach the end site where recursion ends (as joint has no more children) and we also write the end site into the stream the same way.
+
+A key thing is to make sure the tab number at each joint in the hierarchy is correct, starting from Root which has 0 tab indent, so this is easy to do by just using the joint index to define the number of tabs to indent, and then for the joint offset/channel info we do another tab indent on top of this so its within the body of the braces defined as the current joint. We finally do a closing bracket at the end of the function (so when each recursive call is popped) to end the joint scope, and result in the tab indents decrementing back to the left of the file. 
+
+We then read the motion data array (again this is just using the BVH Data for now as is), which we split into lines for all channels, per frame.  The .bvh file format has a newline at the end, this is needed.
+
+Thus we have two member functions `void Anim_State::write_bvh(const char *out_path)` and `void Anim_State::write_bvh_traversal(Joint *joint, std::stringstream &stream)`.
+
+Where the callee function for writing is :
+
+```C++
+void Anim_State::write_bvh(const char *out_path)
+{
+	// ============== Check output file is good ==============
+	std::ofstream out(out_path);
+	if (!out.is_open())
+	{
+		std::cerr << "ERROR::Writing BVH File::" << out_path << "::Path is not valid" << std::endl;
+		std::terminate();
+	}
+
+	// ============== Init Write Stream ==============
+	std::stringstream stream; 
+	stream << "HIERARCHY\n";
+
+	// ============== Get Joint Hierachy ==============
+	write_bvh_traverse(bvh->joints[0], stream);
+
+	// ============== Get Motion Data ==============
+	stream << "MOTION\nFrames: " << bvh->num_frame << "\nFrame Time: " << bvh->interval << "\n";
+
+	for (std::size_t c = 0; c < (bvh->num_channel * bvh->num_frame); ++c)
+	{
+		stream << std::fixed << std::setprecision(6) << bvh->motion[c]; 
+		//if (c != 0 && c % bvh->num_channel == 0) stream << "\n"; else stream << " ";
+		if ((c+1) % bvh->num_channel == 0) stream << "\n"; else stream << " ";
+	}
+
+	stream << "\n";
+
+	// Debug
+	//std::cout << "Stream Output :\n\n" << stream.str() << "\n";
+	// ============== Write to file ==============
+	out << stream.str();
+	out.close(); 
+}
+```
+
+And the Traversal function itself is similar to what was used in the Immediate Mode approach to rendering bones and joints, however it only looks up joint translation (offset) data :
+
+```C++
+void Anim_State::write_bvh_traverse(Joint *joint, std::stringstream &stream)
+{
+	// Get tab indent for joint based on index in tree. 
+	std::string tab; for (std::size_t i = 0; i < joint->idx; ++i) tab += "\t";
+	
+	if (joint->is_root) // Root joint, translation from channels. 
+	{
+		glm::vec4 root_offs(0., 0., 0., 1.);
+
+		for (const Channel *c : joint->channels)
+		{
+			switch (c->type)
+			{
+				// Translation
+				case ChannelEnum::X_POSITION:
+				{
+					float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					root_offs.x = x_p;
+					break;
+				}
+				case ChannelEnum::Y_POSITION:
+				{
+					float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					root_offs.y = y_p;
+					break;
+				}
+				case ChannelEnum::Z_POSITION:
+				{
+					float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					root_offs.z = z_p;
+					break;
+				}
+			}
+		}
+
+		// We know root has 6 DOFs so we can hardcode these. 
+		stream << "ROOT " << joint->name << "\n{\n\t"
+			<< "OFFSET " << std::fixed << std::setprecision(6)
+			<< root_offs.x << " " << root_offs.y << " " << root_offs.z << "\n\t"
+			<< "CHANNELS 6 Xposition Yposition Zposition Zrotation Yrotation Xrotation\n";
+	}
+	else // Standard Joint
+	{
+		stream << tab.c_str() << "JOINT " << joint->name << "\n" << tab.c_str() << "{\n" << tab.c_str() << "\t" 
+			<< "OFFSET " << std::fixed << std::setprecision(6)
+			<< joint->offset.x << " " << joint->offset.y << " " << joint->offset.z << "\n" << tab.c_str() << "\t"
+			<< "CHANNELS 3 Zrotation Yrotation Xrotation\n";
+
+		// End Site
+		if (joint->is_end)
+		{
+			stream << tab.c_str() << "\tEnd Site\n" << tab.c_str() << "\t{\n" << tab.c_str() << "\t\t"
+				<< "OFFSET " << joint->end.x << " " << joint->end.y << " " << joint->end.z 
+				<< "\n" << tab.c_str() << "\t}\n";
+		}
+	}
+	for (Joint *child : joint->children)
+	{
+		write_bvh_traverse(child, stream);
+	}
+	stream << tab.c_str() << "}\n";
+}
+```
+
+Again this works great, but its just reading the data from the BVH_Data class itself (within Anim_State class) ideally we will have modified joint angles (and thus motion data section) so the we will be reading modified channel motion data which may be modified from the input BVH Data directly or copied and internally stored to preserve the original BVH motion data per channel.
+
+___
+
+#### Bugs : 
+
+##### Release Mode : Viewer Exec Loop doesn't run (fine in debug mode)
+
+In release mode within viewer::exec() the application loop condition ` !esc_pressed()` seems to be getting optimized out , leading to the condition failing and the application / viewer closing immediately : 
+
+```C++
+void Viewer::exec()
+{
+	// ==== Init Operations ====
+	render_prep();
+
+	// ==== Application Loop ====
+	while (!glfwWindowShouldClose(window) && !esc_pressed())
+	{
+		// Tick viewer application
+		tick();
+	} 
+}	
+```
+
+ The GLFW call seems to work fine alone, but when the `&& !esc_pressed()` is present it leads the condition to be false when in release mode (works fine in debug mode), maybe its the resulting rvalue from `esc_pressed()` gets optimized out, not ideal. Ok Yeah I think this is the case because : 
+
+```C++
+void Viewer::exec()
+{
+	// ==== Init Operations ====
+	render_prep();
+
+	// ==== Application Loop ====
+	bool esc = false; 
+	while (!glfwWindowShouldClose(window) && !esc)
+	{
+		// Tick viewer application
+		tick();
+
+		// Query Esc key
+		esc = esc_pressed();
+	} 
+}
+```
+
+Fixes the issue. I guess that's my bad for using an rvalue bool to check the condition against, but I'd of thought the compiler would of known not to optimize out an rvalue used within a loop condition. 
+
