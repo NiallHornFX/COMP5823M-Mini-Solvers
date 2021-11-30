@@ -14,20 +14,17 @@
 class Bone
 {
 public:
-	Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, std::size_t ID); 
+	Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, std::size_t ID, int32_t Joint_ID); 
 	~Bone() = default; 
 
 	 void render(bool Render_Line = false);
 	 void set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp);
-	 void set_jointIDs(std::size_t joint_a, std::size_t joint_b);
 
 public:
-	std::size_t bone_id; 
+	std::size_t bone_id;
+	int32_t joint_id; // Joint ID (Joint at starting point of bone) 
 	glm::vec3 start, end;
 	glm::mat4 transform; 
-	std::pair<std::size_t, std::size_t> joint_ids;
-
-private:
 
 	Mesh *mesh;
 	Primitive *line; 

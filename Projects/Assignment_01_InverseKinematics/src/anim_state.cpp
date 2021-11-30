@@ -28,40 +28,123 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 	max_frame = bvh->num_frame;
 	interval  = bvh->interval;
 
-//	build_bvhSkeleton();
-	test();
-	//chan_check();
-	//build_per_tick();
+	build_bvhSkeleton();
+	test_local_transform();
 }
 
 void Anim_State::build_bvhSkeleton()
 {
 	// Fill out Skeleton from BVH Tree using offsets (only need to be done once per BVH file load, then update channels per anim frame)
 
-	// Hacky Way to get inital pose 
-	for (Joint *cur : bvh->joints)
+	// Get root offset  from Channel Data of 0th frame
+	// Channel indices should be first 3 (as root is first joint in hierachy)
+	glm::vec3 root_offs(bvh->motion[0], bvh->motion[1], bvh->motion[2]);
+
+	for (Joint *joint : bvh->joints)
 	{
-		// Get Parent Offset 
-		glm::vec3 par_offs(0.f);
-		Joint *p = cur;
-		while (p->parent)
+		if (joint->is_root)
 		{
-			// Accumulate offset
-			par_offs += p->parent->offset;
-
-			// Traverse up to parent 
-			p = p->parent;
+			// Use fetched root offset
+			skel.add_bone(glm::vec3(0.f), root_offs, glm::mat4(1), -1); // Bone has no starting parent joint (hence -1 index).
 		}
-		// Start is then parent offset, end is the current joint offset + parent offset (total parent offset along tree).
+		else // Regular Joint
+		{
+			// Get Parent Offset 
+			glm::vec3 par_offs(0.f);
+			Joint *p = joint;
+			while (p->parent)
+			{
+				// Accumulate offset
+				par_offs += p->parent->offset;
 
-		// Add Bone to Skeleton
-		//skel.add_bone(par_offs, (cur->offset + par_offs), glm::mat4(1));
-		// With Joint IDs
-		std::size_t cur_par_idx = cur->parent ? cur->parent->idx : 0;
-		skel.add_bone(par_offs, (cur->offset + par_offs), glm::mat4(1), cur_par_idx, cur->idx);
+				// Traverse up to parent 
+				p = p->parent;
+			}
+			// Add fetched Root offset
+			par_offs += root_offs;
+
+			// Add Bone to Skeleton
+			std::size_t cur_par_idx = joint->parent ? joint->parent->idx : 0;
+			skel.add_bone(par_offs, (joint->offset + par_offs), glm::mat4(1), joint->parent->idx); // Bone starts at parent joint. 
+		}
 	}
-	
 }
+
+// do this using reucrsion so can pass trans mat...
+
+void Anim_State::test_local_transform()
+{
+	for (Bone &bone : skel.bones)
+	{
+		Joint *joint; 
+		if (bone.joint_id == -1)
+		{
+			// Root
+			joint = bvh->joints[0];
+		}
+		else
+		{
+			// Fetch Bone Joint
+			joint = bvh->joints[bone.joint_id];
+
+			// Need mat with trans for this ...
+			glm::vec3 tmp = bone.start; 
+			bone.start -= tmp;
+			bone.end -= tmp;
+
+			// Test getting rot data
+			glm::mat4 xx(1.f), yy(1.f), zz(1.f);
+			for (const Channel *c : joint->channels)
+			{
+				switch (c->type)
+				{
+					case ChannelEnum::Z_ROTATION:
+					{
+						float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						zz = glm::rotate(glm::mat4(1.f), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
+						break;
+					}
+					case ChannelEnum::Y_ROTATION:
+					{
+						float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						yy = glm::rotate(glm::mat4(1.f), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
+						break;
+					}
+					case ChannelEnum::X_ROTATION:
+					{
+						float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						xx = glm::rotate(glm::mat4(1.f), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
+						break;
+					}
+				}
+			}
+
+			glm::mat4 rot = (xx * yy * zz); // Only parent transform, needs actual accumulated parent transform mat...
+			bone.start = glm::vec3(rot * glm::vec4(bone.start, 1.f));
+			bone.end =   glm::vec3(rot * glm::vec4(bone.end, 1.f));
+
+			bone.start += tmp;
+			bone.end   += tmp;
+
+			// Updte Mesh Data
+			std::vector<vert> line_data; line_data.resize(2);
+			line_data[0].pos = bone.start;
+			line_data[1].pos = bone.end;
+			bone.line->set_data_mesh(line_data);
+			
+		}
+	
+		std::cout << "Bone_" << bone.bone_id << "  Joint_" << joint->name << "\n";
+	}
+}
+
+
+
+
+
+
+
+
 
 // Is it easier to rebuild the Skeleton per tick, (with the current set anim frame motion/channel angles retrived)
 // Oppose to building skeleton and updating bone transform joints later in seperate per tick step.
@@ -344,7 +427,9 @@ void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
 // Sets Joint Angles for current frame 
 void Anim_State::tick()
 {
-	//build_test(bvh->joints[0]);
+	if (anim_loop) inc_frame();
+
+	// Update Skeleton Bone, Joint Angles of current anim frame [..]
 }
 
 // Set Animation Frame Member Functions

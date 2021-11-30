@@ -38,6 +38,7 @@ public:
 	// Debug
 	void debug() const;
 	void chan_check(std::size_t f) const; 
+	void test_local_transform();
 
 public:
 

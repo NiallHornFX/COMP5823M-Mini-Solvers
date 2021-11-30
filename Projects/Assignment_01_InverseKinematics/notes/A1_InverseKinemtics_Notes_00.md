@@ -173,9 +173,9 @@ continue;
 // [..]
 ```
 
-Each joint has array of pointer to its channels. If joint is end_site, its offset is the end postion. 
+Each joint has array of pointer to its channels. If joint is end_site, it stores both its offset AND the end_site offset position (which is offset from the joints offset, kinda like another embedded joint who starts at the end of the joint containing the end site). 
 
-Each Channel stores its type (of the 6DOFs), an Index. 
+Each Channel stores its type (of the 6DOFs), an Index. Typically only root will ever have 6 DOF Channels, all other joints in the hierarchy will have 3 DOFs (rotational only). 
 
 ##### Channel Per Frame Data : 
 
@@ -385,8 +385,6 @@ Need to get each joint and the next joint to get the current and next offset to 
 
 We need correct traversal from the BVH Root joint to each end site regardless, this is done via depth first traversal (so all parent nodes along each branch can concatenate to the final transformation applied to each rendered bone of both offset and rotation (defined by BVH Motion/Channels data)).
 
-
-
 ____
 
 ***Ugly Notes as I figured out how to accumulate transform and draw bones***
@@ -405,21 +403,15 @@ inverse rel to parent rotation not just trans (offset...)
 
 need to translate root joint  segment using its channel (6DOF, using its translation components as it has 0 offset)
 
-glm axis angle rot creates scaling be from accumulation need to fix this. 
+Just use 0 start, joint offset end bone bone / line (start,end) then put concat offset in matrix to translate rel to? Oppose to doing inverse transform of prebuilt hierarchy ? So when transform is applied we have parent offset + 0 for the start pos , and parent offset + child offset for end (with rotations included).
 
-Just use 0 start, offset end for line start end, then put concat offset in matrix to translate rel to?
+Or other approach, prebuild bones from joint hierarchy, then per tick Inverts trans + rot of parent, apply my joint transform of current anim channel data, then un inverse back to offset location. 
 
-So when transform is applied we have parent offset + 0 for the start pos , and parent offset + child offset for end (with rotations included).
+think my issues might be due to root transform... Or something to do with branching children as single bone strip seems to work, is my recursive approach not correct for child rotations ? (It was because I was using parent as child, so my hierarchy transforms were off by one when rotation was applied, see below)
 
-Inverts trans + rot of parent, apply my joint transform, then un inverse
+Do we continue with approach of prebuilding rest pose with offsets then per frame / tick, correctly inverse do the local rotation rel to parent (to move bones via joints motion channel (and eventually IK angles)), or do we just reconstruct the bones per tick, with the transforms precomputed and passed directly as resulting start and end positions of the bone lines. The bones would be inverted to their parent joints (first point) transform to then apply their transform.
 
-think my issues might be due to root transform... Or something to do with branching children as single bone strip seems to work, is my recursive approach not correct for child rotations ? 
-
-Do we continue with approach of prebuilding rest pose with offsets then per frame / tick, correctly inverse do the local rotation rel to parent (to move bones via joints), or do we just reconstruct the bones per tick, with the transforms precomputed and passed directly as resulting start and end postions of the bone lines. The bones would be inverted to their parent joints (first point) transform to then apply their transform.
-
-In the sample code they define a bone as a single mesh object (which my bone class can render as also) so they concat the translation (offset) to define the centre between two joints along with the rotation to define the bone transform. For my sake for now rendering as lines, the offsets define the line segments start and end and the rotation is applied atop of this via the transform matrix (which becomes the primitives model matrix), I'm thinking its correct that eg for a line ((0,0,0), (0,1,0)) the rotation origin should be at the centre of origin so maybe before the rotation is applied in the shader we should be inverting line verts to origin...
-
-Or just create line procedurally based on distance of offsets, put offsets into matrix form internally with rotation matrix passed ? The rot transformation should be computed on the CPU side really, because otherwise the model matrix is applying just the rotation component, to the off-setted lines in the shader. This is why offset alone works fine (as it defines the line positions in WS relative to parent offsets) but not the rotations... Can still use model matrix to do the post transform scaling and translation (to scale resulting skeleton)
+Or just create line procedurally based on distance of offsets, put offsets into matrix form internally with rotation matrix passed ? The rot transformation should be computed on the CPU side really, because otherwise the model matrix is applying just the rotation component, to the offsetted lines in the shader. This is why offset alone works fine (as it defines the line positions in WS relative to parent offsets) but not the rotations... Can still use model matrix to do the post transform scaling and translation (to scale resulting skeleton). Yeah this was a terrible approach, why did I think this would work, both the offset (translation) and rotation need to be applied to the bone verts together, why did I think I could apply the rotation later using the model matrix. I'd have to inverse, re-fetch and then re-transform, which is what i'm trying to do but the transformations would be concatenated still unlike this approach where I split them. 
 
 ##### Building Skeleton of bones from BVH Data 
 
@@ -506,13 +498,11 @@ void Anim_State::build_per_tick()
 
 Bones are not mapped to joints, so updating transforms from joints to resulting bones is not ideal, we could rebuild the tree with offsets and transforms per tick (so joint transform is passed directly on bone construction, no need to then map joint transforms to bones per anim frame), but this is very inefficient, we should only build skeleton once and then update bone transforms per tick needing to define a mapping from joints to bones, to then update their transforms. 
 
-The sample code kinda does this (it doesnt maintain a skeleton state, it re calcs per call to render directly using legacy GL.  It uses recursion approach for this starting from root). I could do a similar approach, where skel is rebuilt per call so transforms can be applied directly, but as above its not very effcient because reconstructing the same skeleton tree with changed rotations is a waste of time if we can find a way just to update joint rotations on pre-built skeleton. 
+The sample code kinda does this (it doesnt maintain a skeleton state, it re calcs per call to render directly using legacy GL.  It uses recursion approach for this starting from root). I could do a similar approach, where skel is rebuilt per call so transforms can be applied directly, but as above its not very effcient because reconstructing the same skeleton tree with changed rotations is a waste of time,  (See Immediate Mode approach below). 
 
-So need a robust way to handle updating bone transforms from BVH Joints, the joint is what defines the start of the bone ie in the above example, the parent of the current iterated joint. 
+If we can find a way just to update joint rotations on pre-built skeleton. So need a robust way to handle updating bone transforms from BVH Joints, the joint is what defines the start of the bone ie in the above example, the parent of the current iterated joint. 
 
-The Scaling + Translation only happens in the Bone Rendering calls (ie to Primitive Model matrix) so this should not affect the transforms of the bone itself, as they are applied after the bone transform matrix is passed to the primitive as its model matrix. 
-
-
+The Scaling + Translation only happens in the Bone Rendering calls (ie to Primitive Model matrix), these are post transform operations to re-scale the visual output ie bones to be smaller / closer to world origin, so this should not affect the transforms of the bone itself, as they are applied after the bone transform matrix is passed to the primitive as its model matrix. 
 
 ____
 
@@ -598,15 +588,15 @@ So this approach works and is a good way to directly draw the bones as lines one
 
 The recursive call for each child joint, then takes the current matrix as a copy (this is vital, do not reference it) so it can add its transformation for its children to it, this enables us to accumulate the joint transformation without using a stack (as we don't need to pop back to the parent matrix after each branch, we just end the recursion), each child call carries forward only its parent transforms, if it itself has no more children, the recursion ends and we don't need to recover the parent matrix to then traverse the other children branches, as they have already been evaluated in their own recursive calls (without recursion would need a stack approach, to recover parent transform before traversing next child branch (for joints with multiple children)). Essentially we use recursion to build the traversal matrix stack for us, instead of creating a matrix stack manually and doing standard non recursive tree traversal. 
 
-My issues stemmed from the fact I was transforming the vertex positions of the bone lines, from the parent  position not the current joints children, with the starting position been transformed only by the parent matrix.  My very first idea I was using start+end verts for the line but then doing the transform of rotation on the GPU via the model matrix, this of course will not work as the start+end verts themselves need to be transformed by this. This was my bad for separating the translation and rotation to separate data to accumulate, makes more sense to accumulate to single matrix and use this to transform the line/bone vertices. 
+My issues stemmed from the fact I was transforming the vertex positions of the bone lines, from the parent  position not the current joints children, with the starting position been transformed only by the parent matrix. So following the sample code where the joint bone starts from the parent and then ends at the child. So parent vert is local space (0,0,0) transformed to parent position via current matrix and end vert is the child joint offset transformed by the matrix. Originally I was doing the inverse, where I'd treat each joint as the child, and define the bone, from the parent (previous recursive call) to the current joint (as the child) however as I was using the current joint offset as the parent position (bone start position) I always had incorrect offsets and the rotations did not work properly (they were offset by one joint). So it makes more sense to define a bone from the current joint, to its children, oppose to the current joint to its parent. 
+
+ My very first idea I was using start+end verts for the line but then doing the transform of rotation on the GPU via the model matrix, this of course will not work as the start+end verts themselves need to be transformed by this. This was my bad for separating the translation and rotation to separate data to accumulate, makes more sense to accumulate to single matrix and use this to transform the line/bone vertices. 
 
 For rendering eg mesh spheres on joints, we do need the model transform as the input joint pos, we need to use model transform to move the mesh to this pos by setting translation to the joint pos on the model matrix. However the joint pos itself is calculated using the parent transform matrix externally (within anim_state class) this is unrelated but just to clarify, while  meshes need to use model matrix for transformations, for points and lines, they are just used for post scaling the input line/point vert positions. However we can also do post scaling on the mesh on the model matrix, just make sure the transformation is done atop the translation to the joint position of the model matrix.  For rendering joint spheres instancing would make more sense, oppose to individual meshes for each joint, but I don't have time to abstract away joint sphere, just so I can reuse the same mesh data and GPU Resources. For scaling the sphere radius (before model transform) just modify the vert data directly we know the obj file is a unit sphere can just scale the vert positions within here (but either way should be ok). More efficient approach would be use sphere texture quads / sprites. 
 
-However Ideally I would like to go back to my initial approach of pre-building the skeleton tree using the offsets in the rest pose, and then per tick only update the transforms. Because otherwise its going to be difficult just using this approach where transforms are been pulled directly from the BVH Data each frame, to add in the  IK Functionality. Its not very fast re-building the skeleton each time, especially because of the recursion used also the allocation of GPU Resources is un-optimized, there's no-reuse atm because that sort of optimization I don't have time for. 
+However Ideally I would like to go back to my initial approach of pre-building the skeleton tree using the offsets in the rest pose, and then per tick only update the transforms. Because otherwise its going to be difficult just using this approach where transforms are been pulled directly from the BVH Data each frame, to add in the  IK Functionality. Its not very fast re-building the skeleton each time, especially because of the recursion used also the allocation of GPU Resources is un-optimized, there's no-reuse at the moment because that sort of optimization I don't have time for. 
 
 However I will branch this code off, remove the skeleton and bone code (as its not needed just to render FK might as well make it faster by removing this, and just directly render line primitives without using the skeleton concept, as their is no bone transforms passed (as transforms are set directly to vertices to define the bone line start/end  verts), then I can add a GUI to this code, and use it as backup FK / BVH Only code. In case IK is not done in time. I will branch this as a separate project stored locally for now. 
-
-
 
 ___
 
@@ -638,7 +628,7 @@ ____
 
 ##### BVH Exporter
 
-As this was part of the assignment I implemented this quickly, currently it just reads the motion data from the BVH Loader arrays itself, later on it would read from my custom IK modified joint angles (and resulting motion values per channel DOF). I use the same recursive approach described above to loop over the joint hierarchy, writing out each Joint name, offset and channels to a stringstream, which is then passed as reference to the joint children in a recursive call for each for them to write into and so on, untill we reach the end site where recursion ends (as joint has no more children) and we also write the end site into the stream the same way.
+As this was part of the assignment I implemented this quickly, currently it just reads the motion data from the BVH Loader arrays itself, later on it would read from my custom IK modified joint angles (and resulting motion values per channel DOF). I use the same recursive approach described above to loop over the joint hierarchy, writing out each Joint name, offset and channels to a stringstream, which is then passed as reference to the joint children in a recursive call for each for them to write into and so on, until we reach the end site where recursion ends (as joint has no more children) and we also write the end site into the stream the same way.
 
 A key thing is to make sure the tab number at each joint in the hierarchy is correct, starting from Root which has 0 tab indent, so this is easy to do by just using the joint index to define the number of tabs to indent, and then for the joint offset/channel info we do another tab indent on top of this so its within the body of the braces defined as the current joint. We finally do a closing bracket at the end of the function (so when each recursive call is popped) to end the joint scope, and result in the tab indents decrementing back to the left of the file. 
 

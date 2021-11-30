@@ -4,8 +4,8 @@
 // Std Headers
 #include <random>
 
-Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID)
-	: start(Start), end(End),  transform(Trs), bone_id(ID)
+Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID, int32_t Joint_ID)
+	: start(Start), end(End),  transform(Trs), bone_id(ID), joint_id(Joint_ID)
 {
 	// Bone Mesh
 	mesh = new Mesh("bone_", "../../assets/mesh/bone_test.obj");
@@ -99,8 +99,3 @@ void Bone::render(bool Render_Line)
 	}
 }
 
-// Set Joint Indices
-void Bone::set_jointIDs(std::size_t joint_a, std::size_t joint_b)
-{
-	joint_ids.first = joint_a, joint_ids.second = joint_b;
-}

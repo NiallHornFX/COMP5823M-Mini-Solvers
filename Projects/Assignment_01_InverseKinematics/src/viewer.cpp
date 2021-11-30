@@ -253,26 +253,9 @@ void Viewer::render()
 
 	// ==================== Render Bones ====================
 	// Tick Anim
-	anim.inc_frame();
-	anim.test();
-	//anim.debug();
-
-	//anim.test();
-
 	//anim.tick();
 
-	// Testing Only (Build per tick).
-	//anim.skel.render_mesh = true;
-	//anim.anim_loop = false;
-	//anim.set_frame(0);
-	//anim.build_per_tick(); 
-
-
-
-
-
-
-	// Render Skeleton
+	// Render Anim
 	anim.skel.render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 	// ==================== Render Debug ====================

@@ -15,40 +15,21 @@ Skeleton::Skeleton()
 	render_mesh = false;
 }
 
-
 // Add Bone, using Joint Offsets and Transformations
-
-// Trasnformation Precomputed
-void Skeleton::add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &trs)
-{
-	bones.emplace_back(start, end, trs, bone_count + 1);
-	bone_count++;
-}
-
 // With joint indices
-void Skeleton::add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &trs, std::size_t joint_a, std::size_t joint_b)
+void Skeleton::add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &trs, std::size_t joint_id)
 {
-	Bone b(start, end, trs, bone_count + 1);
-	b.set_jointIDs(joint_a, joint_b);
+	Bone b(start, end, trs, bone_count + 1, joint_id);
 	bones.push_back(b);
 	bone_count++;
 }
 
-// Transformation done within body (need to pass parent matrix + joint angles.
-void Skeleton::add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &parent, float rot_z, float rot_y, float rot_x)
+void Skeleton::add_bone(const glm::vec3 &start, const glm::vec3 &end, const glm::mat4 &trs)
 {
-	// Calculte Center
-
-	// Do rotation in LS 
-
-	// Re apply trans
-
-	// Multiply with Parent
-
-	//bones.emplace_back(start, end, trs, bone_count + 1);
-	//bone_count++;
+	Bone b(start, end, trs, bone_count + 1, -1);
+	bones.push_back(b);
+	bone_count++;
 }
-
 
 void Skeleton::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
