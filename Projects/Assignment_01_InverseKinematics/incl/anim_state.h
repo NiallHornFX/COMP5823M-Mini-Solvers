@@ -22,8 +22,15 @@ public:
 	void inc_frame();
 	void dec_frame();
 
-	// Fetch 
+	// Build Skeleton Inital State
 	void build_bvhSkeleton();
+
+	// Fetch Skeleton Updates (Channel data)
+	//void build_traverse(Joint *joint, glm::mat4 trans); // Recurrsive Tree Traversal to build inital tree state 
+
+	// Fetch Transform of joint (from bone)
+	//glm::mat4 fetch_joint_transform(Joint *joint); 
+	glm::mat4 fetch_traverse(Joint *joint, glm::mat4 trans); //Recurrsive Tree Traversal to fetch per tick transformations
 
 	// Get Joint motion
 	void tick();

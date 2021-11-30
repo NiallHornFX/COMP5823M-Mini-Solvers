@@ -70,7 +70,104 @@ void Anim_State::build_bvhSkeleton()
 	}
 }
 
+// Fetch accumulated transforms (rel to parent) for some joint
+/*
+glm::mat4 Anim_State::fetch_joint_transform(Joint *joint)
+{
+	 return fetch_traverse(joint, glm::mat4(1.f));
+} */
+
+// Because we are passing copy of matrix, we need to make sure end returned matrix is correct accumulated one...
+// Cant pass matrix to recursive call as refernece as would break the stack concept...
+
+glm::mat4 Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
+{
+	//  =========== Get Translation  ===========
+	if (!joint->parent) // Root joint, translation from channels. 
+	{
+		glm::vec4 root_offs(0., 0., 0., 1.);
+
+		for (const Channel *c : joint->channels)
+		{
+			switch (c->type)
+			{
+				// Translation
+			case ChannelEnum::X_POSITION:
+			{
+				float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+				root_offs.x = x_p;
+				break;
+			}
+			case ChannelEnum::Y_POSITION:
+			{
+				float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+				root_offs.y = y_p;
+				break;
+			}
+			case ChannelEnum::Z_POSITION:
+			{
+				float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+				root_offs.z = z_p;
+				break;
+			}
+			}
+		}
+
+		trans = glm::translate(trans, glm::vec3(root_offs));
+	}
+	else if (joint->parent) // Non root joints, Translation is offset. 
+	{
+		trans = glm::translate(trans, joint->offset);
+	}
+
+	// =========== Get Rotation ===========
+	glm::mat4 xx(1.), yy(1.), zz(1.);
+	for (const Channel *c : joint->channels)
+	{
+		switch (c->type)
+		{
+		case ChannelEnum::Z_ROTATION:
+		{
+			float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+			trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
+			break;
+		}
+		case ChannelEnum::Y_ROTATION:
+		{
+			float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+			trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
+			break;
+		}
+		case ChannelEnum::X_ROTATION:
+		{
+			float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+			trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
+			break;
+		}
+		}
+	}
+
+	/*
+	// ==================== End Point ====================
+	if (joint->is_end)
+	{
+		glm::vec4 v1 = trs * glm::vec4(joint->end, 1.f);
+		skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
+	}
+	*/
+
+	// ==================== Children ====================
+	// Pass each recurrsive call its own copy of the current (parent) transformations to then apply to children.
+	for (std::size_t c = 0; c < joint->children.size(); ++c)
+	{
+		trans *= fetch_traverse(joint->children[c], trans);
+	}
+
+	return trans; 
+}
+
 // do this using reucrsion so can pass trans mat...
+// Do Update using recursive approach instead of doing reuccrusion per bone joint
 
 void Anim_State::test_local_transform()
 {
@@ -87,45 +184,14 @@ void Anim_State::test_local_transform()
 			// Fetch Bone Joint
 			joint = bvh->joints[bone.joint_id];
 
-			// Need mat with trans for this ...
-			glm::vec3 tmp = bone.start; 
-			bone.start -= tmp;
-			bone.end -= tmp;
+			// Fetch Bone Joint Transform. 
+			glm::mat4 trans = fetch_traverse(joint, glm::mat4(1.f));
 
-			// Test getting rot data
-			glm::mat4 xx(1.f), yy(1.f), zz(1.f);
-			for (const Channel *c : joint->channels)
-			{
-				switch (c->type)
-				{
-					case ChannelEnum::Z_ROTATION:
-					{
-						float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-						zz = glm::rotate(glm::mat4(1.f), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
-						break;
-					}
-					case ChannelEnum::Y_ROTATION:
-					{
-						float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-						yy = glm::rotate(glm::mat4(1.f), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
-						break;
-					}
-					case ChannelEnum::X_ROTATION:
-					{
-						float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-						xx = glm::rotate(glm::mat4(1.f), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
-						break;
-					}
-				}
-			}
-
-			glm::mat4 rot = (xx * yy * zz); // Only parent transform, needs actual accumulated parent transform mat...
-			bone.start = glm::vec3(rot * glm::vec4(bone.start, 1.f));
-			bone.end =   glm::vec3(rot * glm::vec4(bone.end, 1.f));
-
-			bone.start += tmp;
-			bone.end   += tmp;
-
+			// Inverse back to origin
+			glm::vec3 offs = trans[3];
+			bone.start -= offs;
+			bone.end -= offs;
+		
 			// Updte Mesh Data
 			std::vector<vert> line_data; line_data.resize(2);
 			line_data[0].pos = bone.start;
