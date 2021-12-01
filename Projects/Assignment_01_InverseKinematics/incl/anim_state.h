@@ -10,11 +10,11 @@
 class Anim_State
 {
 public:
+	// Ctor / Dtor
 	Anim_State();
-
 	~Anim_State() = default; 
 
-
+	// BVH Data
 	void set_bvhFile(const char *BVHPath);
 
 	// Controls
@@ -26,11 +26,9 @@ public:
 	void build_bvhSkeleton();
 
 	// Fetch Skeleton Updates (Channel data)
-	//void build_traverse(Joint *joint, glm::mat4 trans); // Recurrsive Tree Traversal to build inital tree state 
+	void update_bvhSkeleton();
 
-	// Fetch Transform of joint (from bone)
-	//glm::mat4 fetch_joint_transform(Joint *joint); 
-	glm::mat4 fetch_traverse(Joint *joint, glm::mat4 trans); //Recurrsive Tree Traversal to fetch per tick transformations
+	void fetch_traverse(Joint *joint, glm::mat4 trans); //Recurrsive Tree Traversal to fetch per tick transformations
 
 	// Get Joint motion
 	void tick();
@@ -45,7 +43,7 @@ public:
 	// Debug
 	void debug() const;
 	void chan_check(std::size_t f) const; 
-	void test_local_transform();
+	//void test_local_transform();
 
 public:
 
@@ -63,9 +61,6 @@ public:
 	float interval; 
 	bool anim_loop;
 
-	// Testing
-	//glm::mat4 global; 
-	//glm::vec3 global_offs;
 };
 
 

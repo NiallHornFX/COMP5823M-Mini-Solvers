@@ -99,3 +99,30 @@ void Bone::render(bool Render_Line)
 	}
 }
 
+// Update Bone Postions from bones joint transform matrix fetched per tick.
+
+void Bone::update(const glm::mat4 &joint_trs)
+{
+	glm::vec4 bone_ws(start, 1.f);
+	glm::vec4 bone_start(start, 1.f);
+	glm::vec4 bone_end(end, 1.f);
+
+	// Invert to origin along bone start (orginal joint location/trans)
+	bone_start -= bone_ws;
+	bone_end   -= bone_ws;
+
+	// Do rotation in LS
+	bone_start = joint_trs * bone_start;
+	bone_end =   joint_trs * bone_end;
+
+	// Re apply new joint translation back to WS
+	bone_start += joint_trs[3];
+	bone_end += joint_trs[3];
+
+	// Update line Data
+	std::vector<glm::vec3> pos_updt; pos_updt.resize(2);
+	pos_updt[0] = bone_start;
+	pos_updt[1] = bone_end;
+
+	line->update_data_position(pos_updt);
+}

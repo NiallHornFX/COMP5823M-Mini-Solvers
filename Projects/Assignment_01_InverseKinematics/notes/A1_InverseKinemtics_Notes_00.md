@@ -351,6 +351,32 @@ case (RENDER_LINES):
 }
 ```
 
+____
+
+##### ImGUI Setup
+
+Context setup code needs to be called directly after GLFW Setup (within Window_Context() Setup Member function).
+
+Render Loop of GUI needs to be within the OpenGL render loop directly, doesn't work when within VIewer::tick() (despite this been within the GLFW / GL Context and the main application loop, I think its because glClearColour needs to be called first and this is only done within Viewer::Render() which itself is called within Viewer::Tick()).
+
+This can be safely encapsulated within a Member Function, but make sure the correct GL, GLFW calls have been done before its called within the correct scope. 
+
+I had to add the direct path to the imgui headers, because the imgui source files include them (these need to be part of the project, or prebuilt and linked) otherwise i'd have to modify all include calls to find the imgui headers within my projects `../../ext/dearimgui/` header directory, its just easier to pass the path directly as an include search path, so I don't need to change all the includes. 
+
+
+
+Make sure GUI Render calls within render loop are the last call, so the GUI Renders ontop, kind of a no brainer, but worth noting. 
+
+GUI Shutdown calls within Viewer::gui_shutodwn() are called after the viewer application loop exits within viewer::exec().
+
+Make char[] buffers for InputText (Input and Ouput Paths) either static local vars within the gui_render() member function or members so the are not reset on each frame/draw of the GUI. 
+
+Could use ImGUI Tree widget (See demo window example) to list the joint/bone hierarchy. 
+
+
+
+_____
+
 ##### Skeleton Class
 
 Skeleton Class is not inherited from Primitive, but instead contains the array of all bone mesh primitives, defining the skeleton (fetched from BVH_Data), Skeleton will also apply modifications to joints based on the IK Solve.  Its render call, calls render for each bone applying transformations based on joints + channels. 
@@ -600,23 +626,53 @@ However Ideally I would like to go back to my initial approach of pre-building t
 
 However I will branch this code off, remove the skeleton and bone code (as its not needed just to render FK might as well make it faster by removing this, and just directly render line primitives without using the skeleton concept, as their is no bone transforms passed (as transforms are set directly to vertices to define the bone line start/end  verts), then I can add a GUI to this code, and use it as backup FK / BVH Only code. In case IK is not done in time. I will branch this as a separate project stored locally for now. 
 
+____
+
+##### Prebuild Bones From Joint Hierarchy, Update Bones (via joints) per tick :
+
+I got this approach working after some trial and error, essentially the joint hierarchy is traversed initially by using the reverse traversal approach to build the skeleton based on the joint offsets, creating a bone for each. 
+
+The update step uses a similar recursive approach to the immediate mode style approach where we accumulate the transform matrix from the root joint to each child joint, we then find the bone that the joint is part of (where the bone has the joint defining its start position because remember we traverse parent->child) we then pass the updated matrix to the bone, recalculate the bone start and end position in WS internally (by inversing along current bone start to origin, applying rotation of accumulated relative/local transform matrix of parent joints) and then re translating the joints back into WS using the translation column of the matrix. (Note we inverse using original bone start position (as this is rel to the joint), but we re-apply this translation post local space rotation from the accumulated translation of the matrix (of the updated joint transforms for the current frame), this applies the correct SRT (rotation, translation) order of operations.
+
+The performance of this approach is great, and this is even before I refactored the Skeleton -> anim data class, theres no joint-bone hash map (we search each bone for the current traversed joint) yet the perf is still great.
+
+
+
+____
+
+Once bones have been created, we need to update the joints that drive their transform, however as they depend on joints I need to map bones to joints, so when a joint is updated, the bone positions are re-set correctly. If I just update joints and re-build the bone hierarchy it defats the point of trying to separate the bone creation (once only) and bone transform (update only per tick).
+
+
+
+
+
+
+
+
+
 ___
 
-#### Inverse Kinematics
+#### Inverse Kinematics - Handling Combination with FK / Input BVH Motion
 
-Eigen time
+Getting this working with the BVH Motion is going to be challenging, because the BVH Anim will need to be paused, joint selected, joint effector created, moved by user, get affected joints back up to the root, calc joint angles and then do we just override the BVH Motion data for these joints channels, or do we do a keyframe like approach going from the BVH joint angle (motion) data to the new IK based angle data (which may or may not vary temporally, but these will be calculated per tick, not cached), or do we interpolate between the IK Angles and the original BVH FK angles. Many different ways to approach this. 
 
-Pseudo inverse ... 
+Bones map back to joints, modify joints, calculate IK on joints, map back to bone position delta. The joint of each bone, is the joint that is located at the start (parent) of the bone (the other is offset by the joint child offset).
 
-User interaction to move joints ...
+User selects a joint, creates a sphere to be the goal end effector which is positioned in 3D Space, the the joints hierarchy (back up its parents to root) is modified so its per frame angles come from the solved IK and not the BVH motion data. 
 
-Getting this working with the BVH Motion is going to be challenging
+For time sake, we could just hardcode end effectors to operate on sets of joints eg left arm, right arm etc. And then have UI interaction to move the end effectors. Oppose to trying to have a procedural approach with user selection of bones, mapping back to the correct joints etc, we could just hard code pre-defined (rig like) controls (assuming the same joint hierarchy is used between BVH files, which we know for the humanoid files we got, is the case). In this case we don't need the Skeleton and Bone classes really, as we are just modifying sets of joints directly and then their primitives will be updated for drawing, so I could maybe use the FK / BVH Viewer fork as a starting point, oppose to going back to the original assignment code base ? Depends if I want to try and do a more efficient bone primitive update (oppose to re-building per tick).
 
+Recursive build step, recursive update step (pass new transform matrix to bones, recalc bone start/end points internally updating vertex buffers without recreating)
 
+Need to create a hash map of Bones to joints, so we can efficiently do recursive traversal of joint hierarchy for updates to joint transforms, and then pass them to the bones of each joint, we don't want to have to search each bone for the correct bone matching the current JointID each time. This is making me think I could abandon the BVH Class, and combine it all into the anim_state class. Thus all the original BVH Data, joints, channels will live together and will make mapping between joints and bones easier. I will also get rid of the skeleton class and instead keep bones within an array in the anim_state class (as all skeleton class does is encapsulate an array of bones and render them, we can implement this in anim_state).
 
+As for storing the BVH motion data, for now we will use the same approach, but I may need to abstract the motion data array a bit, so I can more easily overwrite joint angles if IK is used for certain joints. 
 
+Remove the mesh object from bone class, not gonna have time to render mesh bones for now. 
 
-##### User Interaction with Bones/Joints
+##### User Interaction with Bones/Joints Ideas
+
+As per above, most likely won't have time for this now, these were my initial ideas. 
 
 Get inputs from viewer class (Could just pass window to anim state class directly to query)
 
@@ -793,3 +849,6 @@ void Viewer::exec()
 
 Fixes the issue. I guess that's my bad for using an rvalue bool to check the condition against, but I'd of thought the compiler would of known not to optimize out an rvalue used within a loop condition. 
 
+##### Depending if in Release or Debug mode, the camera start position (and thus direction) is different.
+
+Not had time to look into this, but it seems the start direction is slightly different when switching between release and debug builds, i've not looked into this as its not a big deal, but there is possibly something going on again in terms of optimization where the initial basis of the camera is incorrect (or different) due to some optimization occurring. 

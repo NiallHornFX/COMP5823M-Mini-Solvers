@@ -10,10 +10,6 @@ Anim_State::Anim_State()
 	max_frame = 0;
 
 	bvh = nullptr;
-
-	// Test global rotation matrix
-	//global = glm::mat4(1);
-	//global_offs = glm::vec3(0.f);
 }
 
 void Anim_State::set_bvhFile(const char *BVHPath)
@@ -29,7 +25,7 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 	interval  = bvh->interval;
 
 	build_bvhSkeleton();
-	test_local_transform();
+	update_bvhSkeleton();
 }
 
 void Anim_State::build_bvhSkeleton()
@@ -70,17 +66,14 @@ void Anim_State::build_bvhSkeleton()
 	}
 }
 
-// Fetch accumulated transforms (rel to parent) for some joint
-/*
-glm::mat4 Anim_State::fetch_joint_transform(Joint *joint)
+// Update Bones based on joint data for current set anim_frame. 
+void Anim_State::update_bvhSkeleton()
 {
-	 return fetch_traverse(joint, glm::mat4(1.f));
-} */
+	 fetch_traverse(bvh->joints[0], glm::mat4(1.f));
+} 
 
-// Because we are passing copy of matrix, we need to make sure end returned matrix is correct accumulated one...
-// Cant pass matrix to recursive call as refernece as would break the stack concept...
-
-glm::mat4 Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
+// Recursivly traverse through hierachy, update joints and their resulting bones... 
+void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 {
 	//  =========== Get Translation  ===========
 	if (!joint->parent) // Root joint, translation from channels. 
@@ -147,6 +140,15 @@ glm::mat4 Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 		}
 	}
 
+	// Search for joint in bones and update transform of each end point.
+	for (Bone &bone : skel.bones)
+	{
+		if (bone.joint_id == joint->idx)
+		{
+			bone.update(trans); // Pass Joint transform matrix to update bone
+		}
+	}
+
 	/*
 	// ==================== End Point ====================
 	if (joint->is_end)
@@ -160,12 +162,12 @@ glm::mat4 Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 	// Pass each recurrsive call its own copy of the current (parent) transformations to then apply to children.
 	for (std::size_t c = 0; c < joint->children.size(); ++c)
 	{
-		trans *= fetch_traverse(joint->children[c], trans);
+		fetch_traverse(joint->children[c], trans);
 	}
-
-	return trans; 
 }
 
+
+/*
 // do this using reucrsion so can pass trans mat...
 // Do Update using recursive approach instead of doing reuccrusion per bone joint
 
@@ -185,7 +187,7 @@ void Anim_State::test_local_transform()
 			joint = bvh->joints[bone.joint_id];
 
 			// Fetch Bone Joint Transform. 
-			glm::mat4 trans = fetch_traverse(joint, glm::mat4(1.f));
+			//glm::mat4 trans = fetch_traverse(joint, glm::mat4(1.f));
 
 			// Inverse back to origin
 			glm::vec3 offs = trans[3];
@@ -203,7 +205,7 @@ void Anim_State::test_local_transform()
 		std::cout << "Bone_" << bone.bone_id << "  Joint_" << joint->name << "\n";
 	}
 }
-
+*/
 
 
 
@@ -496,6 +498,7 @@ void Anim_State::tick()
 	if (anim_loop) inc_frame();
 
 	// Update Skeleton Bone, Joint Angles of current anim frame [..]
+	update_bvhSkeleton();
 }
 
 // Set Animation Frame Member Functions

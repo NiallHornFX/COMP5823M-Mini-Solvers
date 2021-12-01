@@ -253,7 +253,7 @@ void Viewer::render()
 
 	// ==================== Render Bones ====================
 	// Tick Anim
-	//anim.tick();
+	anim.tick();
 
 	// Render Anim
 	anim.skel.render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
