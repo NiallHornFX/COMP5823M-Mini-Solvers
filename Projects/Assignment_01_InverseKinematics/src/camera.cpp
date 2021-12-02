@@ -44,7 +44,7 @@ glm::mat4 Camera::get_PerspMatrix()
 void Camera::update_camera(GLFWwindow *window, float Camera_Speed, float dt, float yaw, float pitch)
 {
 	// ========== Camera Direction Update ==========
-	if (free_look && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+	if (free_look && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS)
 	{
 		Yaw   += yaw   * Sensitvity;
 		Pitch += pitch * Sensitvity;

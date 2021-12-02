@@ -1,7 +1,10 @@
 # Dirs
+
+# Assignment_01 Ignore
 Projects/Assignment_01_InverseKinematics/.vs/
 Projects/Assignment_01_InverseKinematics/_bu/
 Projects/Assignment_01_InverseKinematics/build/intermediate/
+Projects/Assignment_01_InverseKinematics/ext/
 
 # File types
 *.vc.db

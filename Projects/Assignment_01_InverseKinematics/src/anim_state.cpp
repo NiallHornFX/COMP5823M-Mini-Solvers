@@ -1,8 +1,9 @@
 // Implements 
 #include "anim_state.h"
 
-// Basic Ctor, state is set on demmand as needed. 
+#define CREATE_ROOT_BONE 0 
 
+// Default Ctor, state is set on demmand as needed. 
 Anim_State::Anim_State()
 {
 	anim_loop = true;
@@ -18,20 +19,33 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 	if (bvh) delete bvh;
 	skel.reset();
 
+	// Load BVH File into new BVH_Data
 	bvh = new BVH_Data(BVHPath);
 	bvh->Load();
 
+	// Update Frame / Time 
 	max_frame = bvh->num_frame;
 	interval  = bvh->interval;
 
+	// Build Inital Skeleton State
 	build_bvhSkeleton();
 	update_bvhSkeleton();
 }
 
+// Sets Joint Angles for current frame 
+void Anim_State::tick()
+{
+	if (anim_loop) inc_frame();
+
+	// Update Skeleton per tick, from hoint angles. 
+	update_bvhSkeleton();
+}
+
+// Fill out Skeleton from BVH Tree using offsets. 
+// Only needs to be done once per BVH file load, then update joint angles per tick / anim frame.
+
 void Anim_State::build_bvhSkeleton()
 {
-	// Fill out Skeleton from BVH Tree using offsets (only need to be done once per BVH file load, then update channels per anim frame)
-
 	// Get root offset  from Channel Data of 0th frame
 	// Channel indices should be first 3 (as root is first joint in hierachy)
 	glm::vec3 root_offs(bvh->motion[0], bvh->motion[1], bvh->motion[2]);
@@ -41,7 +55,9 @@ void Anim_State::build_bvhSkeleton()
 		if (joint->is_root)
 		{
 			// Use fetched root offset
+			#if CREATE_ROOT_BONE == 1
 			skel.add_bone(glm::vec3(0.f), root_offs, glm::mat4(1), -1); // Bone has no starting parent joint (hence -1 index).
+			#endif
 		}
 		else // Regular Joint
 		{
@@ -72,7 +88,7 @@ void Anim_State::update_bvhSkeleton()
 	 fetch_traverse(bvh->joints[0], glm::mat4(1.f));
 } 
 
-// Recursivly traverse through hierachy, update joints and their resulting bones... 
+// Recursivly traverse through hierachy, update joints and their resulting bones transforms. 
 void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 {
 	//  =========== Get Translation  ===========
@@ -85,24 +101,24 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 			switch (c->type)
 			{
 				// Translation
-			case ChannelEnum::X_POSITION:
-			{
-				float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				root_offs.x = x_p;
-				break;
-			}
-			case ChannelEnum::Y_POSITION:
-			{
-				float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				root_offs.y = y_p;
-				break;
-			}
-			case ChannelEnum::Z_POSITION:
-			{
-				float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				root_offs.z = z_p;
-				break;
-			}
+				case ChannelEnum::X_POSITION:
+				{
+					float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					root_offs.x = x_p;
+					break;
+				}
+				case ChannelEnum::Y_POSITION:
+				{
+					float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					root_offs.y = y_p;
+					break;
+				}
+				case ChannelEnum::Z_POSITION:
+				{
+					float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					root_offs.z = z_p;
+					break;
+				}
 			}
 		}
 
@@ -119,24 +135,24 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 	{
 		switch (c->type)
 		{
-		case ChannelEnum::Z_ROTATION:
-		{
-			float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-			trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
-			break;
-		}
-		case ChannelEnum::Y_ROTATION:
-		{
-			float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-			trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
-			break;
-		}
-		case ChannelEnum::X_ROTATION:
-		{
-			float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-			trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
-			break;
-		}
+			case ChannelEnum::Z_ROTATION:
+			{
+				float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+				trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
+				break;
+			}
+			case ChannelEnum::Y_ROTATION:
+			{
+				float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+				trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
+				break;
+			}
+			case ChannelEnum::X_ROTATION:
+			{
+				float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+				trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
+				break;
+			}
 		}
 	}
 
@@ -153,8 +169,8 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 	// ==================== End Point ====================
 	if (joint->is_end)
 	{
-		glm::vec4 v1 = trs * glm::vec4(joint->end, 1.f);
-		skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
+		// Search for bone with end point joint and update transform.
+		// [..] (not needed for now).
 	}
 	*/
 
@@ -167,344 +183,8 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 }
 
 
-/*
-// do this using reucrsion so can pass trans mat...
-// Do Update using recursive approach instead of doing reuccrusion per bone joint
-
-void Anim_State::test_local_transform()
-{
-	for (Bone &bone : skel.bones)
-	{
-		Joint *joint; 
-		if (bone.joint_id == -1)
-		{
-			// Root
-			joint = bvh->joints[0];
-		}
-		else
-		{
-			// Fetch Bone Joint
-			joint = bvh->joints[bone.joint_id];
-
-			// Fetch Bone Joint Transform. 
-			//glm::mat4 trans = fetch_traverse(joint, glm::mat4(1.f));
-
-			// Inverse back to origin
-			glm::vec3 offs = trans[3];
-			bone.start -= offs;
-			bone.end -= offs;
-		
-			// Updte Mesh Data
-			std::vector<vert> line_data; line_data.resize(2);
-			line_data[0].pos = bone.start;
-			line_data[1].pos = bone.end;
-			bone.line->set_data_mesh(line_data);
-			
-		}
-	
-		std::cout << "Bone_" << bone.bone_id << "  Joint_" << joint->name << "\n";
-	}
-}
-*/
-
-
-
-
-
-
-
-
-// Is it easier to rebuild the Skeleton per tick, (with the current set anim frame motion/channel angles retrived)
-// Oppose to building skeleton and updating bone transform joints later in seperate per tick step.
-// Just for debugging sake. 
-
-// Abanonded this approach for now. Ignore...
-void Anim_State::build_per_tick()
-{
-	skel.reset(); // Testing calling this per tick, so reset...
-
-	for (Joint *cur : bvh->joints)
-	{
-		// Get Parent Offset
-		glm::vec3 par_offs(0.f);
-		// Get Parent Transform
-		glm::mat4 rot(1.f);
-
-		Joint *p = cur;
-		if (p->is_root) continue;
-		while (p->parent)
-		{
-			// Get Angles from motion data of current frame
-			DOF3 angs = bvh->get_joint_DOF3(p->parent->idx, anim_frame);
-			// Build Local Matrix to multiply accumlated with 
-			glm::mat4 tmp(1.f);
-			// Z Rotation 
-			tmp = glm::rotate(tmp, glm::radians(float(std::get<0>(angs))), glm::vec3(0.f, 0.f, 1.f));
-			// Y Rotation 
-			tmp = glm::rotate(tmp, glm::radians(float(std::get<1>(angs))), glm::vec3(0.f, 1.f, 0.f));
-			// X Rotation 
-			tmp = glm::rotate(tmp, glm::radians(float(std::get<2>(angs))), glm::vec3(1.f, 0.f, 0.f));
-			// Accumlate Rotation 
-			rot *= tmp;
-
-			// Accumulate offset
-			//par_offs += p->parent->offset;
-
-			// Traverse up to parent 
-			p = p->parent;
-
-			// Start is then parent offset, end is the current joint offset + parent offset (total parent offset along tree).
-			//skel.add_bone(par_offs, (cur->offset + par_offs), rot);
-			rot = glm::translate(rot, par_offs);
-			skel.add_bone(glm::vec3(0.f), cur->offset, rot);
-		}
-
-	}
-}
-
-void Anim_State::test()
-{
-	skel.reset();
-	glm::tmat4x4<double, glm::highp>;
-
-	//build_test(bvh->joints[0], glm::vec3(0.f), glm::mat4(1.f));
-	build_test_b(bvh->joints[0], glm::mat4(1.f));
-}
-
-// Following BVH Sample file style recursion
-void Anim_State::build_test(Joint *joint, glm::vec3 poffs, glm::mat4 trs)
-{
-	static std::size_t call = 0;
-	// 
-	if (!joint->parent) // Must be root (6DOF Channels) (Root translation/offset comes from motion data)
-	{
-		glm::mat4 xx(1.f), yy(1.f), zz(1.f);
-		for (const Channel *c : joint->channels)
-		{
-			switch (c->type)
-			{
-				// Translation
-				case ChannelEnum::X_POSITION:
-				{
-					float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					poffs.x += x_p;
-					break;
-				}
-				case ChannelEnum::Y_POSITION:
-				{
-					float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					poffs.y += y_p;
-					break;
-				}
-				case ChannelEnum::Z_POSITION:
-				{
-					float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					poffs.z += z_p;
-					break;
-				}
-				// Rotation
-				case ChannelEnum::Z_ROTATION:
-				{
-					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					zz = glm::rotate(glm::mat4(1.f), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
-					break;
-				}
-				case ChannelEnum::Y_ROTATION:
-				{
-					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					yy = glm::rotate(glm::mat4(1.f), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
-					break;
-				}
-				case ChannelEnum::X_ROTATION:
-				{
-					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					xx = glm::rotate(glm::mat4(1.f), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
-					break;
-				}
-			}
-		}
-		
-		// =========== Rotation --> trs Matrix ===========
-		// Accumulate Rotation in YXZ Order 
-		trs = (yy * xx * zz) * trs; 
-
-		// =========== Translation / Offset --> trs Matrix ===========
-		// Root has 0 offset has offset is obtained from channels.
-		trs = glm::translate(trs, poffs);
-
-		// Add Bone, Use Rel offsets for start end only.
-		skel.add_bone(glm::vec3(0.f), poffs, trs);
-	}
-	else if (joint->parent) // Non root joints, 3DOF
-	{
-		// Get Joint Channels, Accumulate to parent matrix
-		glm::mat4 xx(1.f), yy(1.f), zz(1.f);
-		for (const Channel *c : joint->channels)
-		{
-			switch (c->type)
-			{
-				case ChannelEnum::Z_ROTATION:
-				{
-					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					zz = glm::rotate(glm::mat4(1.f), glm::radians(z_r), glm::vec3(0.f, 0.f, 1.f));
-					break;
-				}
-				case ChannelEnum::Y_ROTATION:
-				{
-					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					yy = glm::rotate(glm::mat4(1.f), glm::radians(y_r), glm::vec3(0.f, 1.f, 0.f));
-					break;
-				}
-				case ChannelEnum::X_ROTATION:
-				{
-					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					xx = glm::rotate(glm::mat4(1.f), glm::radians(x_r), glm::vec3(1.f, 0.f, 0.f));
-					break;
-				}
-			}
-		}
-
-		// =========== Rotation --> trs Matrix ===========
-		// DEBUG : This breaks, root transform is fine ...
-		// Accumulate Rotation in YXZ Order 
-		trs = (yy * xx * zz) * trs; 
-
-		// =========== Translation / Offset --> trs Matrix ===========
-		// Add Joint parent offset to matrix as translation
-		trs = glm::translate(trs, joint->parent->offset);
-
-		// Start+end at Rel Offset
-		skel.add_bone(glm::vec3(0.f), joint->offset, trs);
-	}
-
-	// Pass each recurrsive call its own copy of the current accumulated offset and rot, to then apply to children.
-	// don't reference a global one as it will trsform by their non parents. 
-	// Recurse for all joint children
-	for (std::size_t c = 0; c < joint->children.size(); ++c)
-	{
-		build_test(joint->children[c], poffs, trs);
-	}
-
-	call++;
-	//std::cout << "Call Count = " << call << "\n";
-}
-
-
-void Anim_State::build_test_b(Joint *joint, glm::mat4 trs)
-{
-	//  =========== Get Translation  ===========
-	if (!joint->parent) // Root joint, translation from channels. 
-	{
-		glm::vec4 root_offs(0., 0., 0., 1.);
-
-		for (const Channel *c : joint->channels)
-		{
-			switch (c->type)
-			{
-				// Translation
-			case ChannelEnum::X_POSITION:
-			{
-				float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				root_offs.x = x_p;
-				break;
-			}
-			case ChannelEnum::Y_POSITION:
-			{
-				float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				root_offs.y = y_p;
-				break;
-			}
-			case ChannelEnum::Z_POSITION:
-			{
-				float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				root_offs.z = z_p;
-				break;
-			}
-			}
-		}
-
-		trs = glm::translate(trs, glm::vec3(root_offs));
-
-	}
-	else if (joint->parent) // Non root joints, Translation is offset. 
-	{
-		trs = glm::translate(trs, joint->offset);
-	}
-
-	// =========== Get Rotation ===========
-	glm::mat4 xx(1.), yy(1.), zz(1.);
-	for (const Channel *c : joint->channels)
-	{
-		switch (c->type)
-		{
-		case ChannelEnum::Z_ROTATION:
-		{
-			float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-			trs = glm::rotate(trs, glm::radians(z_r), glm::vec3(0., 0., 1.));
-			break;
-		}
-		case ChannelEnum::Y_ROTATION:
-		{
-			float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-			trs = glm::rotate(trs, glm::radians(y_r), glm::vec3(0., 1., 0.));
-			break;
-		}
-		case ChannelEnum::X_ROTATION:
-		{
-			float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-			trs = glm::rotate(trs, glm::radians(x_r), glm::vec3(1., 0., 0.));
-			break;
-		}
-		}
-	}
-
-	// Transformations Applied to vertices using current concatenated matrix.
-
-	// ==================== Viz Joints as Points ====================
-	// Viz Joints as Points 
-	glm::vec4 v0 = trs * glm::vec4(0.f, 0.f, 0.f, 1.f);
-	// Joint point (as line)
-	skel.add_bone(glm::vec3(v0), glm::vec3(v0), glm::mat4(1.f));
-
-	// ==================== End Point ====================
-	if (joint->is_end)
-	{
-		glm::vec4 v1 = trs * glm::vec4(joint->end, 1.f);
-		// Joint point (as line)
-		//skel.add_bone(glm::vec3(v1), glm::vec3(v1), glm::mat4(1.f));
-		// Bone Line 
-		skel.add_bone(glm::vec3(v0), glm::vec3(v1), glm::mat4(1.f));
-	}
-	
-	// ==================== Children ====================
-	// Pass each recurrsive call its own copy of the current (parent) transformations to then apply to children.
-	for (std::size_t c = 0; c < joint->children.size(); ++c) 
-	{
-		// =========== Add Bone for each child offset, rel to parent transform ===========
-		Joint *child = joint->children[c];
-		glm::vec4 v2 = trs * glm::vec4(child->offset, 1.f);
-		// Bone Line
-		skel.add_bone(glm::vec3(v0), glm::vec3(v2), glm::mat4(1.f));
-		
-		// =========== Recurse for all joint children ===========
-		build_test_b(joint->children[c], trs);
-	}
-
-}
-
-// Sets Joint Angles for current frame 
-void Anim_State::tick()
-{
-	if (anim_loop) inc_frame();
-
-	// Update Skeleton Bone, Joint Angles of current anim frame [..]
-	update_bvhSkeleton();
-}
-
-// Set Animation Frame Member Functions
-// Inc and Dec loop. 
-
-// Need to make sure inc/dec is only done for interval of current glfw dt. 
+// ===================== Animation Frame state member functions =====================
+// Need to make sure inc/dec is only done for interval of current dt. 
 
 void Anim_State::inc_frame()
 {
@@ -521,10 +201,11 @@ void Anim_State::set_frame(std::size_t Frame)
 	anim_frame = Frame > max_frame ? max_frame : Frame;
 }
 
-// Will flesh out debug later. 
+// ===================== Debug =====================
+
 void Anim_State::debug() const
 {
-	std::cout << "Anim::" << bvh->filename << " ::Frame = " << anim_frame << "\n";
+	std::cout << "Anim_State::" << bvh->filename << " ::Frame = " << anim_frame << "\n";
 }
 
 void Anim_State::chan_check(std::size_t f) const

@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 
 
 	// Create Viewer Application
-	Viewer app(1024, 1024, "Viewer Application");
+	Viewer app(1024, 1024, "Inverse Kinematics A1 - Niall Horn");
 	// Exec
 	app.exec();
 

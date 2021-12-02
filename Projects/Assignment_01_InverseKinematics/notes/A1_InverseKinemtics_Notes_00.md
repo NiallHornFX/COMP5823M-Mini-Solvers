@@ -933,7 +933,7 @@ As for storing the BVH motion data, for now we will use the same approach, but I
 
 Remove the mesh object from bone class, not gonna have time to render mesh bones for now. 
 
-Makes sense to merge BVH_Data class with Anim_Data so joints are directly part of class members, can do mapping between bones and joints + storing the motion data directly within, so IK can overwrite affected joints per frame motion data, with resulting IK angles. 
+Makes sense to merge BVH_Data class with Anim_Data so joints are directly part of class members, can do mapping between bones and joints + storing the motion data directly within, so IK can overwrite affected joints per frame motion data, with resulting IK angles. However It's gonna lead to a giant class and loss of modularity. 
 
 ##### User Interaction with Bones/Joints Ideas
 

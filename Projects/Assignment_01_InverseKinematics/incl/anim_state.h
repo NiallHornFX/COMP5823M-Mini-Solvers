@@ -5,45 +5,37 @@
 #include "skeleton.h"
 #include "bvhdata.h"
 
-// Info :  Class where animation processing is based (BVH, FK, IK). Exists within app as Tick Stage. 
+// Info :  Class where animation processing is based (BVH, FK, IK). Exists within app as Tick stage. 
 
 class Anim_State
 {
 public:
-	// Ctor / Dtor
+	// ===== Ctor / Dtor =====
 	Anim_State();
 	~Anim_State() = default; 
 
-	// BVH Data
+	// ===== Core =====
+	void tick();
+
+	// ===== BVH Data =====
 	void set_bvhFile(const char *BVHPath);
 
-	// Controls
+	// ===== Anim Controls =====
 	void set_frame(std::size_t Frame);
 	void inc_frame();
 	void dec_frame();
 
-	// Build Skeleton Inital State
-	void build_bvhSkeleton();
+	// ===== Skeleton (Bones) Build and Update =====
+	void build_bvhSkeleton(); // Build Skeleton from joints, inital state.
+	void update_bvhSkeleton(); // Update Skeleton from joints, per tick.
+	void fetch_traverse(Joint *joint, glm::mat4 trans); 
 
-	// Fetch Skeleton Updates (Channel data)
-	void update_bvhSkeleton();
+	// ===== IK =====
+	// [..]
 
-	void fetch_traverse(Joint *joint, glm::mat4 trans); //Recurrsive Tree Traversal to fetch per tick transformations
-
-	// Get Joint motion
-	void tick();
-
-	void build_per_tick(); // testing only...
-	void build_test(Joint *joint, glm::vec3 poffs, glm::mat4 trs);
-	//void build_test_b(Joint *joint, glm::mat4 trs);
-	void build_test_b(Joint *joint, glm::mat4 trs);
-	void test();
-
-
-	// Debug
+	// ===== Debug =====
 	void debug() const;
 	void chan_check(std::size_t f) const; 
-	//void test_local_transform();
 
 public:
 
@@ -60,7 +52,6 @@ public:
 	std::size_t anim_frame, max_frame; 
 	float interval; 
 	bool anim_loop;
-
 };
 
 

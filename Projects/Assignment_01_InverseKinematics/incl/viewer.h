@@ -61,9 +61,7 @@ public:
 	//void get_animData(); 
 
 	// Debug
-	void test_prim(); 
 	void test_mesh();
-	void test_bone();
 
 private:
 	void get_GLError();

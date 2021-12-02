@@ -2,7 +2,6 @@
 #include "viewer.h"
 
 // Project Headers
-//
 
 // Ext Headers
 // GLEW
@@ -17,6 +16,8 @@
 #include <iostream>
 #include <vector>
 #include <thread>
+
+#define USE_FREE_CAMERA 1
 
 // Global GLFW State
 struct
@@ -40,7 +41,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	last_yawoffs = 0.f;
 	last_pitchoffs = 0.f;
 	last_zoom = 0.f;
-	draw_grid = false;
+	draw_grid = true;
 	draw_axis = true;
 
 	// ==== OpenGL Setup ==== 
@@ -63,9 +64,12 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	//anim.set_bvhFile("../../assets/bvh/6test_noroot.bvh");
 	//anim.set_bvhFile("../../assets/bvh/two.bvh");
 
-	// ==== Create Camera ====
-	//camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false); // Fixed
-	camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, true); // Free
+	// ==== Camera ====
+	#if USE_FREE_CAMERA == 0
+	camera = Camera(glm::vec3(0.f, 0.25f, 1.f), 1.f, 80.f, width / height, false); // Fixed
+	#else
+	camera = Camera(glm::vec3(1.5f, 0.5f, 0.f), 1.f, 80.f, width / height, true);   // Free
+	#endif
 }
 
 Viewer::~Viewer() 
@@ -81,9 +85,7 @@ void Viewer::exec()
 	render_prep();
 
 	// Create Test Primtiive
-	//test_prim();
-	//test_mesh();
-	//test_bone();
+	test_mesh();
 
 	// ==== Application Loop ====
 	while (!glfwWindowShouldClose(window) && !esc_pressed())
@@ -198,7 +200,7 @@ void Viewer::render_prep()
 	ground->set_size(4.f);
 	ground->set_tile(4.f);
 
-	// Gnomon to put into class.
+	// Axis primitive.
 	axis = new Primitive("axis");
 	float data[66] =
 	{
@@ -210,7 +212,7 @@ void Viewer::render_prep()
 		0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
 	};
 	axis->set_data_mesh(data, 6);
-	axis->scale(glm::vec3(0.3f));
+	axis->scale(glm::vec3(0.5f));
 	axis->translate(glm::vec3(0.f, 0.01f, 0.f));
 	axis->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
 	axis->mode = Render_Mode::RENDER_LINES;
@@ -251,23 +253,15 @@ void Viewer::render()
 		}
 	}
 
-	// ==================== Render Bones ====================
+	// ==================== Render Anim ====================
 	// Tick Anim
 	anim.tick();
 
 	// Render Anim
 	anim.skel.render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
-	// ==================== Render Debug ====================
-	// Test Render Bones
-	//bone_test->transform = glm::rotate(bone_test->transform, 0.01f, glm::vec3(0.f, 1.f, 0.f));
-	//bone_test->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-	//if (tick_c % 20 != 0) bone_test->render(false); else bone_test->render(true);
-
-	// Test Draw Skeleton
-	//get_GLError();
-	//skel->render_mesh = (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) ? true : false; 
-	//skel->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+	// ==================== Render GUI ====================
+	// [..]
 
 	// ====================  Swap and Poll ====================
 	get_GLError();
@@ -316,79 +310,24 @@ void Viewer::get_dt()
 bool Viewer::esc_pressed()
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;
+	return false;
 }
 
 // =========================================== DEBUG CODE ===========================================
 
-// Function to test OpenGL within Viewer App via Mesh Class. 
-void Viewer::test_prim()
-{
-	Primitive *prim_t = new Primitive("test");
-	float test_verts[11 * 3] =
-	{
-		// Face 0
-		0.0, 0.0, 0.0,  0.0, 1.0, 1.0,	1.0, 0.0, 0.0,	0.1, 0.2,
-		1.0, 0.0, 0.0,  1.0, 0.0, 1.0,	0.0, 1.0, 0.0,	0.1, 0.2,
-		0.5, 1.0, 0.0,  1.0, 1.0, 0.0,	0.0, 0.0, 1.0,	0.1, 0.2
-	};
-	prim_t->set_data_mesh(test_verts, 3);
-	prim_t->set_shader("test.vert", "test.frag");
-	prim_t->scale(glm::vec3(0.2f));
-	prim_t->mode = Render_Mode::RENDER_MESH;
-	prims.push_back(prim_t);
-}
-
 // Obj Loading Test
 void Viewer::test_mesh()
 {
-	/*
-	// Textured Mesh Test 
-	Mesh *mesh_t = new Mesh("Grid", "../../assets/mesh/grid.obj");
-	mesh_t->load_obj(true);
-	mesh_t->set_shader("test_tex.vert", "test_tex.frag");
-	//mesh_t->set_shader("../../shaders/ground.vert", "../../shaders/ground.frag");
-	mesh_t->load_texture("grid.png", 0);
-	mesh_t->tex->set_params(Texture::filter_type::LINEAR);
-	mesh_t->set_colour(glm::vec3(1.f, 0.f, 0.f));
-	mesh_t->mode = Render_Mode::RENDER_MESH;
-	prims.push_back(mesh_t); 
-	*/
-
 	// Pig
-	Mesh *pig = new Mesh("pig", "pighead.obj");
+	Mesh *pig = new Mesh("pig", "../../assets/mesh/pighead.obj");
 	pig->load_obj(false);
-	pig->set_shader("test.vert", "test.frag");
+	pig->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
 	pig->set_colour(glm::vec3(1.f, 0.f, 0.f));
 	pig->translate(glm::vec3(0.f, 0.f, 0.5f));
 	pig->scale(glm::vec3(1.f));
 	pig->mode = Render_Mode::RENDER_MESH;
 	prims.push_back(pig);
 }
-
-void Viewer::test_bone()
-{
-	//bone_test = new Bone(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), glm::mat4(1), 0);
-
-	skel = new Skeleton(glm::mat4(1.f));
-
-	glm::vec3 last_pos(0.f);
-	for (std::size_t i = 0; i < 10; ++i)
-	{
-		float norm = float(i) / 9.f;
-
-		// Define test transform 
-		glm::vec3 ax = (i % 2 == 0) ? glm::vec3(0.f, 1.f, 0.f) : glm::vec3(1.f, 0.f, 0.f);
-		float angle = glm::sin(norm * 5);
-
-		glm::mat4 trs(1.f);
-		trs = glm::rotate(trs, angle, ax);
-		glm::vec3 end = last_pos + glm::vec3(0.f, 0.5f, 0.f);
-		skel->add_bone(last_pos, end, trs);
-		last_pos = end;
-	}
-
-}
-
 // =========================================== GLFW State + Callbacks ===========================================
 
 void Viewer::update_camera()
