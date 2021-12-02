@@ -111,11 +111,15 @@ void Bone::update(const glm::mat4 &joint_trs)
 	bone_start -= bone_ws;
 	bone_end   -= bone_ws;
 
-	// Do rotation in LS
-	bone_start = joint_trs * bone_start;
-	bone_end =   joint_trs * bone_end;
+	// Remove translation component for local space rotation only. 
+	glm::mat4 rot = joint_trs;
+	rot[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
-	// Re apply new joint translation back to WS
+	// Do rotation in LS
+	bone_start = rot * bone_start;
+	bone_end = rot * bone_end;
+
+	// Re apply new joint translation component back to WS
 	bone_start += joint_trs[3];
 	bone_end += joint_trs[3];
 
@@ -123,6 +127,5 @@ void Bone::update(const glm::mat4 &joint_trs)
 	std::vector<glm::vec3> pos_updt; pos_updt.resize(2);
 	pos_updt[0] = bone_start;
 	pos_updt[1] = bone_end;
-
 	line->update_data_position(pos_updt);
 }

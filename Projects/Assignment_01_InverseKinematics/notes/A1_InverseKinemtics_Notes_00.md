@@ -628,27 +628,290 @@ However I will branch this code off, remove the skeleton and bone code (as its n
 
 ____
 
-##### Prebuild Bones From Joint Hierarchy, Update Bones (via joints) per tick :
-
-I got this approach working after some trial and error, essentially the joint hierarchy is traversed initially by using the reverse traversal approach to build the skeleton based on the joint offsets, creating a bone for each. 
-
-The update step uses a similar recursive approach to the immediate mode style approach where we accumulate the transform matrix from the root joint to each child joint, we then find the bone that the joint is part of (where the bone has the joint defining its start position because remember we traverse parent->child) we then pass the updated matrix to the bone, recalculate the bone start and end position in WS internally (by inversing along current bone start to origin, applying rotation of accumulated relative/local transform matrix of parent joints) and then re translating the joints back into WS using the translation column of the matrix. (Note we inverse using original bone start position (as this is rel to the joint), but we re-apply this translation post local space rotation from the accumulated translation of the matrix (of the updated joint transforms for the current frame), this applies the correct SRT (rotation, translation) order of operations.
-
-The performance of this approach is great, and this is even before I refactored the Skeleton -> anim data class, theres no joint-bone hash map (we search each bone for the current traversed joint) yet the perf is still great.
+Once bones have been created, we need to update the joints that drive their transform, however as they depend on joints I need to map bones to joints, so when a joint is updated, the bone positions are re-set correctly. If I just update joints and re-build the bone hierarchy it defats the point of trying to separate the bone creation (once only) and bone transform (update only per tick).
 
 
 
 ____
 
-Once bones have been created, we need to update the joints that drive their transform, however as they depend on joints I need to map bones to joints, so when a joint is updated, the bone positions are re-set correctly. If I just update joints and re-build the bone hierarchy it defats the point of trying to separate the bone creation (once only) and bone transform (update only per tick).
+##### Prebuild Bones From Joint Hierarchy, Update Bones (via joints) per tick :
 
+I got this approach working after some trial and error, essentially the joint hierarchy is traversed and bones built initially by using the reverse traversal approach to build the skeleton based on the joint offsets, creating a bone for each. 
 
+The update step uses a similar recursive approach to the immediate mode style approach where we accumulate the transform matrix from the root joint to each child joint, we then find the bone that the joint is part of (where the bone has the joint defining its start position because remember we traverse parent->child) we then pass the updated matrix to the bone, recalculate the bone start and end position in WS internally (by inversing along current bone start to origin, applying rotation of accumulated relative/local transform matrix of parent joints) and then re translating the joints back into WS using the translation column of the matrix. (Note we inverse using original bone start position (as this is rel to the joint), but we re-apply this translation post local space rotation from the accumulated translation of the matrix (of the updated joint transforms for the current frame), this applies the correct SRT (rotation, translation) order of operations.
 
+Its interesting because even if the translation component is left in the matrix, when applied to the bone positions in local space at origin (after been inversed to origin via subtraction of the current start position (so start of bone is at origin and end of bone is offset along joint offset from origin)) the translation has no affect. Its only when the translation is extracted and added afterwards that it works correctly Ie :
 
+```C++
+// Bone::Update()
+// [..]
+// Invert to origin along bone start (orginal joint location/trans)
+bone_start -= bone_ws;
+bone_end   -= bone_ws;
 
+// Do rotation in LS (Translation column of matrix left as is)
+bone_start = no_trans * bone_start;
+bone_end = no_trans * bone_end;
 
+// Re apply new joint translation back to WS
+bone_start += joint_trs[3];
+bone_end += joint_trs[3];
+// [..] Update bone vert GPU data
+```
 
+Yields the same result as : 
 
+```C++
+// Bone::Update()
+// [..]
+// Invert to origin along bone start (orginal joint location/trans)
+bone_start -= bone_ws;
+bone_end   -= bone_ws;
+
+// Remove Translation from joint transform matrix
+glm::mat4 no_trans = joint_trs;
+no_trans[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
+
+// Do rotation in LS
+bone_start = no_trans * bone_start;
+bone_end   = no_trans * bone_end;
+
+// Re apply new joint translation back to WS
+bone_start += joint_trs[3];
+bone_end   += joint_trs[3];
+// [..] Update bone vert GPU data
+```
+
+The latter is correct as only the rotation should be applied at origin, but I assumed that it would also do the translation back to WS also (within the matrix multipcation) so I wouldn't need to then add the translation column back to the start/end positions as a separate step, but I guess I do. The matrix seems to be correct, so I can't see why the translation multipcation wouldn't work, but doing it as a separate addition is not a big deal, just interesting that the translation has no affect within the matrix multipcation. Could debug further but no time at the moment and this is working as is. 
+
+The performance of this approach is great, and this is even before I refactored the Skeleton -> anim data class, there's no joint-bone hash map (we search each bone for the current traversed joint) yet the perf is still great.
+
+Theoretically each bone is defined by two joints (start joint is the "parent" joint of which the matrix we accumulate and update is used to update the bones start + end transformation, as the end point is defined as the parent joint transform + the child joints offset). However we treat it as if the bone stores a single joint index, which is the joint at the start of the bone, as per above this defines the transform of the bone itself, the end point is just this + the joint->offset. Hence we search bones for joint id which is the starting joint, and we update the correct bone according to which bone has this current traversed joint as its joint ID / starting (parent) joint in a parent->child like relationship. 
+
+The approach itself is split into two parts, as state the bone hierarchy of joints is pre-built initially once (when BVH File is loaded), this is done by the non recursive approach, ie Loop over each joint, and accumulate translation / offset back to root (including root's translation), and add bones at these start and end locations. Where start position is the parent joints accumulated offset and end position is this offset + the joint's offset (parent-child order). Code for this can be seen here : 
+
+```C++
+// Fill out Skeleton from BVH Tree using offsets (only need to be done once per BVH file load, then update channels per anim frame)
+void Anim_State::build_bvhSkeleton()
+{
+	// Get root offset  from Channel Data of 0th frame
+	// Channel indices should be first 3 (as root is first joint in hierachy)
+	glm::vec3 root_offs(bvh->motion[0], bvh->motion[1], bvh->motion[2]);
+
+	for (Joint *joint : bvh->joints)
+	{
+		if (joint->is_root)
+		{
+			// Use fetched root offset
+			skel.add_bone(glm::vec3(0.f), root_offs, glm::mat4(1), -1); // Bone has no starting parent joint (hence -1 index).
+		}
+		else // Regular Joint
+		{
+			// Get Parent Offset 
+			glm::vec3 par_offs(0.f);
+			Joint *p = joint;
+			while (p->parent)
+			{
+				// Accumulate offset
+				par_offs += p->parent->offset;
+
+				// Traverse up to parent 
+				p = p->parent;
+			}
+			// Add fetched Root offset
+			par_offs += root_offs;
+
+			// Add Bone to Skeleton
+			std::size_t cur_par_idx = joint->parent ? joint->parent->idx : 0;
+			skel.add_bone(par_offs, (joint->offset + par_offs), glm::mat4(1), joint->parent->idx); // Bone starts at parent joint. 
+		}
+	}
+}
+```
+
+While it avoids recursion it may be a bit in-efficient as each joint has its hierarchy reverse traversed back to root, as oppose to just traversing the whole skeleton once from root via recursion like approach, but this seems to work fine for now and the joint offsets of parents is accumulated correctly, with the root offset been added also.  Note you don't need to add the root bone itself, but it can be done to viz the offset of the root from world origin, as this approach uses reverse traversal, there's no worry about not adding root but still needing to accumulate its offset, as root offset is added to all joints resulting accumulated offset anyway, but that doesn't mean we need to create a root bone itself (whose start would be at world origin and end at the root offset, which can look odd for a skeleton).  
+
+Now even though the Skeleton is built from joints -> bones, we need to update the joints themselves and then from this update the bones (as oppose to traversing bone objects and then updating joints, because we'd still need to access joints to know where the children are as bones only store there starting joint index, so makes sense to update joints directly). So we have a recursive traversal of the joints from root, we accumulate the translation (offset) (which is only time dependent for the root of course as its offset comes from motion data (the first 3 values of motion data are the roots X,Y,Z translation)) and rotation which is time dependent, based on the current animation frame set within Anim_State.  We accumulate the rotation axis by axis and apply it / rotate it to the matrix (via glm::rotate) and then from here we ideally would have a stored mapping of <bone,joint> so we know which bone to update based on this new joint transformation, for the initial POC I just search the skeleton bone array for the matching joint (the joint is the starting joint of the bone which defines its offset rel to parent + the child joints offset which defines the end point of the bone). (Note for now I don't handle the end points of the joints, however this can be added back later, can add attribute to bones to define if they are end sites, but the process will be the same, for skeleton joint hierarchy end_sites are at (0) offset from the last joint itself). Code for this can be seen here :
+
+```C++
+// Update Bones based on joint data for current set anim_frame. 
+void Anim_State::update_bvhSkeleton()
+{
+	 fetch_traverse(bvh->joints[0], glm::mat4(1.f));
+} 
+
+// Recursivly traverse through hierachy, update joints and their resulting bones... 
+void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
+{
+	//  =========== Get Translation  ===========
+	if (!joint->parent) // Root joint, translation from channels. 
+	{
+		glm::vec4 root_offs(0., 0., 0., 1.);
+
+		for (const Channel *c : joint->channels)
+		{
+			switch (c->type)
+			{
+				// Translation
+			case ChannelEnum::X_POSITION:
+			{
+				float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+				root_offs.x = x_p;
+				break;
+			}
+			case ChannelEnum::Y_POSITION:
+			{
+				float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+				root_offs.y = y_p;
+				break;
+			}
+			case ChannelEnum::Z_POSITION:
+			{
+				float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+				root_offs.z = z_p;
+				break;
+			}
+			}
+		}
+
+		trans = glm::translate(trans, glm::vec3(root_offs));
+	}
+	else if (joint->parent) // Non root joints, Translation is offset. 
+	{
+		trans = glm::translate(trans, joint->offset);
+	}
+
+	// =========== Get Rotation ===========
+	glm::mat4 xx(1.), yy(1.), zz(1.);
+	for (const Channel *c : joint->channels)
+	{
+		switch (c->type)
+		{
+		case ChannelEnum::Z_ROTATION:
+		{
+			float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+			trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
+			break;
+		}
+		case ChannelEnum::Y_ROTATION:
+		{
+			float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+			trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
+			break;
+		}
+		case ChannelEnum::X_ROTATION:
+		{
+			float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+			trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
+			break;
+		}
+		}
+	}
+
+	// Search for joint in bones and update transform of each end point.
+	for (Bone &bone : skel.bones)
+	{
+		if (bone.joint_id == joint->idx)
+		{
+			bone.update(trans); // Pass Joint transform matrix to update bone
+		}
+	}
+
+	/*
+	// ==================== End Point ====================
+	if (joint->is_end)
+	{
+		// Not Handeled currently, but we'd find bones who are end_sites
+		// and update them the same way. 
+	}
+	*/
+
+	// ==================== Children ====================
+	// Pass each recurrsive call its own copy of the current (parent) transformations to then apply to children, creating stacked matrix accumulation. 
+	for (std::size_t c = 0; c < joint->children.size(); ++c)
+	{
+		fetch_traverse(joint->children[c], trans);
+	}
+}
+```
+
+To Update the bone we then pass the accumulated transformation matrix to the `Bone::update()` member function which then recalculates the start and end positions by inverting the bone to local space (relative to the start position (and thus parent joint), with the end position offset from the origin by the joint itself offset (child offset)), we apply the rotation component of the matrix, and then move back into world space by adding the translation component of the matrix. We now have a update start + end position (and line defining the bone) transformed based on the current joint angles, accumulated along the joint hierarchy. Its a much better approach than calculating the start + end transforms inline and then passing to bone, it makes more sense for bone to  be passed its new transform matrix to then calculate the modified start + end positions from, thus the initial rest pose would be defined by an identify transform (as the accumulated rotation and translation would not effect the rest pose start end, defined by the original call to `Anim_State::build_bvhSkeleton`). Note Joint's themselves don't store any transformation state, this accumulated state is passed directly to bones for now of which the joint defines the start of, however when doing IK we may need a more stateful current tick representation of joint where we also store the current tick/anim frames transform in the joint class itself, for further joint operations (IK) without having to lookup the matrix we just passed to the joints bone. 
+
+Code can be seen here : 
+
+```c++
+void Bone::update(const glm::mat4 &joint_trs)
+{
+	glm::vec4 bone_ws(start, 1.f);
+	glm::vec4 bone_start(start, 1.f);
+	glm::vec4 bone_end(end, 1.f);
+
+	// Invert to origin along bone start (orginal joint location/trans)
+	bone_start -= bone_ws;
+	bone_end   -= bone_ws;
+
+	// Remove translation component for local space rotation only. 
+	glm::mat4 rot = joint_trs;
+	rot[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
+
+	// Do rotation in LS
+	bone_start = rot * bone_start;
+	bone_end = rot * bone_end;
+
+	// Re apply new joint translation component back to WS
+	bone_start += joint_trs[3];
+	bone_end += joint_trs[3];
+
+	// Update line Data
+	std::vector<glm::vec3> pos_updt; pos_updt.resize(2);
+	pos_updt[0] = bone_start;
+	pos_updt[1] = bone_end;
+	line->update_data_position(pos_updt);
+}
+```
+
+We pass these new start+end positions to the the bones vertex data and update the vertex buffer via the `Primitive::update_data_position(std::vector<glm::vec3> &vert_positions)` member function which essentially just replaces the VBO data via updating the internal Primitive vetex data float array (by replacing position attributes per vertex along a single vertex stride) and then calling glBufferData to update the OpenGL resource. Code :
+
+```C++
+// Only sets position of vertices (allows for updating positions per tick)
+void Primitive::update_data_position(const std::vector<glm::vec3> &posData)
+{
+	for (std::size_t v = 0; v < vert_count; ++v)
+	{
+		std::size_t i = v * 11; // Vert Index, Position. 
+		vert_data[i++] = posData[v].x;
+		vert_data[i++] = posData[v].y;
+		vert_data[i++] = posData[v].z;
+	}
+
+	// Refill Buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+```
+
+Compare this approach to the "Immediate Mode" approach where new bone render primitives are re-built per frame, within the recursive traversal of the joint hierarchy, requiring new OpenGL resources to be allocated, spun up old ones deallocated etc it was slow (hence why that approach made more sense to use actual immediate mode OpenGL, and not me replicating it with Modern OpenGL and recursive matrix stack). 
+
+###### Improvements :
+
+Merge the BVH_Data class and Anim_State together as mentioned elsewhere in these notes, and create a hash map to map joints to bones, without needing to search all bones joint indices members for the current joint been transform been updated within the `Anim_State::fetch_traverse()` call. This would mean we could eliminate the need for the search :
+
+```c++
+// Anim_State::fetch_traversal()
+// [..]
+	// Search for joint in bones and update transform of each end point.
+	for (Bone &bone : skel.bones)
+	{
+		if (bone.joint_id == joint->idx)
+		{
+			bone.update(trans); // Pass Joint transform matrix to update bone
+		}
+	}
+// [..]	
+```
+
+We could just get the map <joint, bone> bone and pass trans matrix directly to it, saving some time for sure. 
 
 ___
 
@@ -662,13 +925,15 @@ User selects a joint, creates a sphere to be the goal end effector which is posi
 
 For time sake, we could just hardcode end effectors to operate on sets of joints eg left arm, right arm etc. And then have UI interaction to move the end effectors. Oppose to trying to have a procedural approach with user selection of bones, mapping back to the correct joints etc, we could just hard code pre-defined (rig like) controls (assuming the same joint hierarchy is used between BVH files, which we know for the humanoid files we got, is the case). In this case we don't need the Skeleton and Bone classes really, as we are just modifying sets of joints directly and then their primitives will be updated for drawing, so I could maybe use the FK / BVH Viewer fork as a starting point, oppose to going back to the original assignment code base ? Depends if I want to try and do a more efficient bone primitive update (oppose to re-building per tick).
 
-Recursive build step, recursive update step (pass new transform matrix to bones, recalc bone start/end points internally updating vertex buffers without recreating)
+Recursive build step, recursive update step (pass new transform matrix to bones, recalc bone start/end points internally updating vertex buffers without recreating) (see above section).
 
 Need to create a hash map of Bones to joints, so we can efficiently do recursive traversal of joint hierarchy for updates to joint transforms, and then pass them to the bones of each joint, we don't want to have to search each bone for the correct bone matching the current JointID each time. This is making me think I could abandon the BVH Class, and combine it all into the anim_state class. Thus all the original BVH Data, joints, channels will live together and will make mapping between joints and bones easier. I will also get rid of the skeleton class and instead keep bones within an array in the anim_state class (as all skeleton class does is encapsulate an array of bones and render them, we can implement this in anim_state).
 
 As for storing the BVH motion data, for now we will use the same approach, but I may need to abstract the motion data array a bit, so I can more easily overwrite joint angles if IK is used for certain joints. 
 
 Remove the mesh object from bone class, not gonna have time to render mesh bones for now. 
+
+Makes sense to merge BVH_Data class with Anim_Data so joints are directly part of class members, can do mapping between bones and joints + storing the motion data directly within, so IK can overwrite affected joints per frame motion data, with resulting IK angles. 
 
 ##### User Interaction with Bones/Joints Ideas
 
