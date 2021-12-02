@@ -1,9 +1,13 @@
 #ifndef ANIM_STATE_H
 #define ANIM_STATE_H
 
+// Std Headers
+#include <map>
+
 // Project Headers
 #include "skeleton.h"
 #include "bvhdata.h"
+#include "effector.h"
 
 // Info :  Class where animation processing is based (BVH, FK, IK). Exists within app as Tick stage. 
 
@@ -31,7 +35,11 @@ public:
 	void fetch_traverse(Joint *joint, glm::mat4 trans); 
 
 	// ===== IK =====
+	void ik_test();
+
 	// [..]
+	// IK Init
+	// IK Solve (per tick)
 
 	// ===== Debug =====
 	void debug() const;
@@ -43,7 +51,8 @@ public:
 	BVH_Data *bvh;
 
 	// ===== IK Data =====
-	// [..]
+	std::vector<Effector*> effectors; 
+
 
 	// ===== Shared Anim State =====
 	// Skeleton 

@@ -76,8 +76,7 @@ void Anim_State::build_bvhSkeleton()
 			par_offs += root_offs;
 
 			// Add Bone to Skeleton
-			std::size_t cur_par_idx = joint->parent ? joint->parent->idx : 0;
-			skel.add_bone(par_offs, (joint->offset + par_offs), glm::mat4(1), joint->parent->idx); // Bone starts at parent joint. 
+			skel.add_bone(par_offs, (par_offs + joint->offset), glm::mat4(1), joint->parent->idx); // Bone starts at parent joint. 
 		}
 	}
 }
@@ -156,15 +155,16 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 		}
 	}
 
+	
 	// Search for joint in bones and update transform of each end point.
-	for (Bone &bone : skel.bones)
+	for (Bone *bone : skel.bones)
 	{
-		if (bone.joint_id == joint->idx)
+		if (bone->joint_id == joint->idx)
 		{
-			bone.update(trans); // Pass Joint transform matrix to update bone
+			bone->update(trans); // Pass Joint transform matrix to update bone
 		}
 	}
-
+	
 	/*
 	// ==================== End Point ====================
 	if (joint->is_end)
@@ -181,6 +181,25 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 		fetch_traverse(joint->children[c], trans);
 	}
 }
+
+// ===================== IK Setup =====================
+void Anim_State::ik_test()
+{
+	// Right Arm test. 
+	// Get Thumb Pos as Inital Effector location. 
+
+	Joint *r_thumb = bvh->find_joint("RThumb");
+	if (!r_thumb) std::terminate;
+
+	//Effector *eff_arm_r = new Effector(r_thumb.)
+	// Pusback to effectors
+
+	// Traverse back to root, to get joints forming the right arm IK chain. Pass these to IK Solver per tick. 
+	// IK Solve
+
+	// Update Joint angles Motion Data for affected joints of IK solve. 
+}
+
 
 
 // ===================== Animation Frame state member functions =====================

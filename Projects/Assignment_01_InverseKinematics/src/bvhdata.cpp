@@ -320,7 +320,19 @@ DOF6 BVH_Data::get_root_DOF6(std::size_t frame) const
 
 glm::vec3 BVH_Data::get_joint_offset(std::size_t joint_idx) const
 {
+	// Need to handle root joint case.
 	return joints[joint_idx]->offset;
+}
+
+// Find Joint by name string
+Joint* BVH_Data::find_joint(const std::string &name)
+{
+	for (Joint *joint : joints)
+	{
+		if (joint->name == name) return joint; 
+	}
+
+	return nullptr; 
 }
 
 void BVH_Data::Debug(bool to_file)

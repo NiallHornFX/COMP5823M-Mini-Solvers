@@ -935,17 +935,64 @@ Remove the mesh object from bone class, not gonna have time to render mesh bones
 
 Makes sense to merge BVH_Data class with Anim_Data so joints are directly part of class members, can do mapping between bones and joints + storing the motion data directly within, so IK can overwrite affected joints per frame motion data, with resulting IK angles. However It's gonna lead to a giant class and loss of modularity. 
 
+To map between Joints and Bones without merging classes we can use friend classes of Anim_State,BVH_Data and Skeleton. However as Skeleton class currently stores bones as a vector of bone objects I changed this to vector of pointer to bones, so I can easily map each joint ptr (pointing to joints in the BVHData class joint array, to Bone pointers within the Skeleton class bone array via `std::map<joint*, bone*>`) or I could of used the map to store index of bone to joint ptr, instead of the bone ptr directly. Make sure the bone joint ptr, is the parent joint of the current joint (same for defining the bones joint index member) :
+
+```C++
+// Anim_State::build_bvhSkeleton()
+// [..]
+// Add Bone to Skeleton
+std::size_t cur_par_idx = joint->parent ? joint->parent->idx : -1;
+skel.add_bone(par_offs, (par_offs + joint->offset), glm::mat4(1), joint->parent->idx); 
+// Bone starts at parent joint. 
+// Add Joint-Bone Mapping (Joint is within BVH_Data, Bone within Skeleton Class)
+//                       Joint*         Bone*
+joint_bone.insert({ joint->parent, skel.bones.back() });
+// [..]
+```
+
+If a bone from the root joint is not created then there will be no bone that maps from the root joint ptr, to a bone ptr, so we need to be careful of this, before this was handled by just discarding the transform update for the joint if no bone was found with the joint index, but doing a direct mapping means we have to check this case still. Bear in mind multiple bones will have the root joint as their joint index (where the bone starts) as the root joint has multiple children ofcourse, this is more nicely handled in the search approach then direct mapping because again we need to check if the joint in the map, maps to the root joint, however because in this case no bone has been created for the root joint (for viz sake we abandon it) it breaks the mapping of these bones who have root joint as their start/joint parent. The search approach directly maps these to the 0th index of the joints array, but the map approach doesn't because no mapping exists. 
+
+For the sake of time, I'm going to not use a hash map to map joints to bones, searching for bones with the current parent joint to pass the joint transform update to was working fine, and the perf is not too costly. Its not like we are searching 10000s of elements.  
+
+____
+
+##### Inverse Kinematics - Anim State Interfacing
+
+Input glm based transforms, internally uses eigen, output glm transforms and joint angles. 
+
+Eigen will only be used internally of the Inverse Kinematics Solver classes, if I had time i'd define a polymorphic base class IK Solver, to then implement for each type of IK solver, but as I'm probs only going to have time for one type of IK, i'll keep it simple for now and avoid polymorphism approach, can always add later. 
+
+I've made the decision that IK will directly operator on joints, not bones (and through bones, their joints) thus we will do the same as the FK update, joints updated via recursive traversal, accumulation of transformations rel to parent from root, from this find bones affected and pass updated transform matrices to bones, to update bone start/end vert postions. Thus bones are really just a rendering construct, operations for both FK and IK are done on joints and motion data directly. 
+
+I don't plan on needing to store joint transforms on joints directly, as most likely we just return the joint angles to then update the motion data array (replacing or copying from the BVH File import data) with the joint angle data solved from IK.
+
+Input is an effector (which is just a position and a mesh primitive wrapped into a class, so we can move it about to define a IK effector) and the joints to affect by IK, this may just be one joint, we then need to determine affected joints by traversing back to root in reverse and collection parent joints, or user could just specify affected joints (so whole hierarchy branch is not indirectly affected by IK, like a depth parameter). Then based on these inputs we calculate the jacobian pseudo inverse so that the joint angles iteratively tend towards the end effector. Return array of joint angles, or write directly back to motion data array ? 
+
+So this specifies an IK Chain. The effector class also stores a vector of joint pointers, to the joints it effects, these will be the joints of the IK chain also. Will create Member Function to collect joints back along hierarchy to define IK Chain.  We could also implement some method to get IK chains from end_site joints back up to some depth (or to root) but will worry about that later, for now will define hardcoded IK chains of joints to solve. 
+
+Could do with another recursive function to get joint position (concat offsets from root), unless we store these onto joints when building bone skeleton. Eg I need this so I can use it as the end effector starting position. This is where using bones as the base would make more sense as we have the positions of bones in WS calculated already. 
+
+For test sake the IK Setup will be done within Anim_State on a predefined set of joints (eg the left hand back to the root) by some end effector. 
+
 ##### User Interaction with Bones/Joints Ideas
 
 As per above, most likely won't have time for this now, these were my initial ideas. 
 
-Get inputs from viewer class (Could just pass window to anim state class directly to query)
+Get inputs from viewer class (Could just pass window to anim state class directly to query).
 
-Ray casting from mouse ? Selection from list of joints via GUI ? 
+Ray casting from mouse ? Selection from list of joints via GUI ?  Input like frame stepping will be done within viewer, (inc/decrementing anim frame eg.). Worst case, select joints using keyboard. Will then need to use keys to move or mouse input (which will rule out using free camera as we need to mouse pos to calc offset).
 
-Input like frame stepping will be done within viewer, (inc/decrementing anim frame eg.).
+____
 
-Worst case, select joints using keyboard. Will then need to use keys to move or mouse input (which will rule out using free camera as we need to mouse pos to calc offset).
+##### Inverse Kinematics - Solver Class
+
+
+
+
+
+
+
+
 
 ____
 

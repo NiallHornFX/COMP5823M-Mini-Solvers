@@ -44,6 +44,9 @@ public:
 	DOF3 get_joint_DOF3(std::size_t joint_idx, std::size_t frame) const;
 	glm::vec3 get_joint_offset(std::size_t joint_idx)             const;
 
+	// Joint Lookup
+	Joint* find_joint(const std::string &name);
+
 public:
 
 	std::string filename;
