@@ -92,9 +92,11 @@ struct Joint
 	glm::vec3 offset;
 	glm::vec3 end;
 	Joint *parent;
-	std::vector<Joint*> children;
 
+	std::vector<Joint*> children;
 	std::vector<Channel*> channels;
+
+	glm::vec3 position; // Current Position in WS
 };
 
 #endif

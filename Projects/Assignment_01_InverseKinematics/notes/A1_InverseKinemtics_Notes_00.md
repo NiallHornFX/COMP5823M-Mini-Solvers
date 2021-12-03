@@ -970,7 +970,7 @@ Input is an effector (which is just a position and a mesh primitive wrapped into
 
 So this specifies an IK Chain. The effector class also stores a vector of joint pointers, to the joints it effects, these will be the joints of the IK chain also. Will create Member Function to collect joints back along hierarchy to define IK Chain.  We could also implement some method to get IK chains from end_site joints back up to some depth (or to root) but will worry about that later, for now will define hardcoded IK chains of joints to solve. 
 
-Could do with another recursive function to get joint position (concat offsets from root), unless we store these onto joints when building bone skeleton. Eg I need this so I can use it as the end effector starting position. This is where using bones as the base would make more sense as we have the positions of bones in WS calculated already. 
+Could do with another recursive function to get joint position (concat offsets from root), unless we store these onto joints when building bone skeleton (ie just a zero vec4 multiplied with the current joint transform matrix, should given the current WS pos).  I need this so I can use it as the end effector starting position. This is where using bones as the base would make more sense as we have the positions of bones in WS calculated already, however then we'd have to access joints via bones, maybe that makes sense, for now I'm avoiding this approach though. 
 
 For test sake the IK Setup will be done within Anim_State on a predefined set of joints (eg the left hand back to the root) by some end effector. 
 

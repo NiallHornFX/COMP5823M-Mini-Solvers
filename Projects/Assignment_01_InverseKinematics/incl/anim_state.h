@@ -20,6 +20,7 @@ public:
 
 	// ===== Core =====
 	void tick();
+	void render(); 
 
 	// ===== BVH Data =====
 	void set_bvhFile(const char *BVHPath);
@@ -35,7 +36,8 @@ public:
 	void fetch_traverse(Joint *joint, glm::mat4 trans); 
 
 	// ===== IK =====
-	void ik_test();
+	void ik_test_setup();
+	void ik_test_tick();
 
 	// [..]
 	// IK Init

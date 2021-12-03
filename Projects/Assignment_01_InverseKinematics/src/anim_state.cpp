@@ -155,6 +155,9 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 		}
 	}
 
+	// Store current position. 
+	joint->position = glm::vec3(trans * glm::vec4(0.f, 0.f, 0.f, 1.f));
+
 	
 	// Search for joint in bones and update transform of each end point.
 	for (Bone *bone : skel.bones)
@@ -183,16 +186,17 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 }
 
 // ===================== IK Setup =====================
-void Anim_State::ik_test()
+void Anim_State::ik_test_setup()
 {
 	// Right Arm test. 
 	// Get Thumb Pos as Inital Effector location. 
-
 	Joint *r_thumb = bvh->find_joint("RThumb");
 	if (!r_thumb) std::terminate;
 
-	//Effector *eff_arm_r = new Effector(r_thumb.)
+	Effector *eff_arm_r = new Effector(r_thumb->position, effectors.size());
+	eff_arm_r->joints.push_back(r_thumb);
 	// Pusback to effectors
+	effectors.push_back(eff_arm_r);
 
 	// Traverse back to root, to get joints forming the right arm IK chain. Pass these to IK Solver per tick. 
 	// IK Solve
@@ -200,7 +204,23 @@ void Anim_State::ik_test()
 	// Update Joint angles Motion Data for affected joints of IK solve. 
 }
 
+// For drawing Anim_States own primtives (eg effectors)
+void Anim_State::render()
+{
+	for (Effector *effec : effectors)
+	{
+		Primitive *prim = effec->mesh;
 
+		// Scale Model Matrix (Post BVH transform) 
+		prim->scale(glm::vec3(0.05f));
+		prim->model[3] = prim->model[3] * glm::vec4(0.05f, 0.05f, 0.05f, 1.f); // Also Scale Translation (Post Scale)
+		// Set Camera Transform
+		prim->set_cameraTransform(view, persp);
+
+		// Render
+		prim->render();
+	}
+}
 
 // ===================== Animation Frame state member functions =====================
 // Need to make sure inc/dec is only done for interval of current dt. 
