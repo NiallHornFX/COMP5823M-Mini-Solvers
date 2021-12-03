@@ -27,7 +27,7 @@ Camera::Camera(glm::vec3 pos, float target_offset, float fov, float ar, bool fre
 
 	// Set Defualt Perspective Members - 
 	Near_Plane = 0.01f;
-	Far_Plane = 100.0f;
+	Far_Plane = 1000.0f;
 }
 
 glm::mat4 Camera::get_ViewMatrix()

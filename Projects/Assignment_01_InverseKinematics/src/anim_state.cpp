@@ -30,14 +30,25 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 	// Build Inital Skeleton State
 	build_bvhSkeleton();
 	update_bvhSkeleton();
+
+	// IK Setup
+	ik_test_setup();
 }
 
 // Sets Joint Angles for current frame 
 void Anim_State::tick()
 {
+	// Incrment Anim Frame
 	if (anim_loop) inc_frame();
 
-	// Update Skeleton per tick, from hoint angles. 
+	// Update Effector Positions (wrap this into effector::tick() ? )
+	for (Effector *e : effectors)
+	{
+		//e->set_pos(e->target->position + (e->target_offset * glm::sin(viewer_dt * 5.f)));
+		e->set_pos(e->target->position + e->target_offset);
+	}
+
+	// Update Skeleton per tick, from joint angles. 
 	update_bvhSkeleton();
 }
 
@@ -193,32 +204,56 @@ void Anim_State::ik_test_setup()
 	Joint *r_thumb = bvh->find_joint("RThumb");
 	if (!r_thumb) std::terminate;
 
+	// Create Effector to solve for 
 	Effector *eff_arm_r = new Effector(r_thumb->position, effectors.size());
-	eff_arm_r->joints.push_back(r_thumb);
-	// Pusback to effectors
+	eff_arm_r->target = r_thumb;
+	eff_arm_r->target_offset = glm::vec3(-7.5f, 8.f, 0.f);
 	effectors.push_back(eff_arm_r);
 
-	// Traverse back to root, to get joints forming the right arm IK chain. Pass these to IK Solver per tick. 
+	// Define IK Chain of joints
+	std::vector<Joint*> chain; 
+	// Gather Joints back to root up to some depth 
+	gather_joints(r_thumb, chain, 3);
+
+	// Pass Chain and End Effector to IK Solve 
+
 	// IK Solve
 
 	// Update Joint angles Motion Data for affected joints of IK solve. 
 }
 
-// For drawing Anim_States own primtives (eg effectors)
-void Anim_State::render()
+// Used to create IK chain of joints, gathering joints from starting joint, back to root, up to some depth. 
+void Anim_State::gather_joints(Joint *start, std::vector<Joint*> &joints, int32_t depth)
 {
+	// if depth -1, gather joints all the way back to root. 
+	std::size_t c = 0; 
+	
+	Joint *joint = start;
+	while (joint->parent)
+	{
+		joints.push_back(joint); // Append to chain
+
+		if (depth > 0 && depth == c) break;
+
+		joint = joint->parent;
+		c++; 
+	}
+}
+
+// For drawing Anim_States own primtives (eg effectors)
+void Anim_State::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
+{
+	// =========== Render Effectors ===========
 	for (Effector *effec : effectors)
 	{
-		Primitive *prim = effec->mesh;
+		// Set Scaled Transltion for rendering (copy model current model transform) use 0.025 also used for bones. 
+		effec->mesh->model[3] = glm::vec4((effec->pos * glm::vec3(0.025)), 1.f);
 
-		// Scale Model Matrix (Post BVH transform) 
-		prim->scale(glm::vec3(0.05f));
-		prim->model[3] = prim->model[3] * glm::vec4(0.05f, 0.05f, 0.05f, 1.f); // Also Scale Translation (Post Scale)
 		// Set Camera Transform
-		prim->set_cameraTransform(view, persp);
+		effec->mesh->set_cameraTransform(view, persp);
 
 		// Render
-		prim->render();
+		effec->mesh->render();
 	}
 }
 

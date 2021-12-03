@@ -81,7 +81,7 @@ void Viewer::exec()
 	render_prep();
 
 	// Create Test Primtiive
-	test_mesh();
+	//test_mesh();
 
 	// ==== Application Loop ====
 	while (!glfwWindowShouldClose(window) && !esc_pressed())
@@ -251,10 +251,14 @@ void Viewer::render()
 
 	// ==================== Render Anim ====================
 	// Tick Anim
+	anim.viewer_dt = dt, anim.viewer_tick_c = tick_c; // Pass viewer time vars
 	anim.tick();
 
-	// Render Anim
+	// Render Bones
 	anim.skel.render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+
+	// Render Effectors
+	anim.render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 	// ==================== Render GUI ====================
 	// [..]

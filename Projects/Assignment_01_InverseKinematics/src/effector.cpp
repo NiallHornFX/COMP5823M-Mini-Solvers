@@ -8,14 +8,19 @@
 #include "bvhdata.h"
 
 Effector::Effector(const glm::vec3 &Pos, std::size_t Idx)
-	: pos(Pos)
+	: pos(Pos), target_offset(glm::vec3(0.f))
 {
-	// Create Effector Mesh Prim
+	// ========== Create Effector Mesh Prim ==========
 	std::string name = "Effector_Mesh_" + std::to_string(idx);
 	mesh = new Mesh(name.c_str(), "../../assets/mesh/sphere.obj");
 	mesh->load_obj(false);
 	mesh->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
 	mesh->set_colour(glm::vec3(1.f, 0.f, 0.f));
+
+	// Radius Scale
+	mesh->scale(glm::vec3(0.05f, 0.05f, 0.05f));
+
+	// Translate to effector starting position 
 	mesh->translate(pos);
 }
 

@@ -20,7 +20,7 @@ public:
 
 	// ===== Core =====
 	void tick();
-	void render(); 
+	void render(const glm::mat4x4 &view, const glm::mat4x4 &persp);
 
 	// ===== BVH Data =====
 	void set_bvhFile(const char *BVHPath);
@@ -38,6 +38,8 @@ public:
 	// ===== IK =====
 	void ik_test_setup();
 	void ik_test_tick();
+
+	void gather_joints(Joint *start, std::vector<Joint*> &joints, int32_t depth=-1); // Form Chain of joints. 
 
 	// [..]
 	// IK Init
@@ -63,6 +65,9 @@ public:
 	std::size_t anim_frame, max_frame; 
 	float interval; 
 	bool anim_loop;
+
+	float viewer_dt; 
+	std::size_t viewer_tick_c; 
 };
 
 

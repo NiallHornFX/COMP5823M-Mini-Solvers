@@ -26,13 +26,12 @@ Bone::Bone(glm::vec3 Start, glm::vec3 End, glm::mat4 Trs, size_t ID, int32_t Joi
 	line_data[0].col = glm::vec3(0, 0, 1.f);
 	line_data[1].col = glm::vec3(0, 0, 1.f);
 
-
 	line->set_data_mesh(line_data);
 	line->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
 	line->mode = Render_Mode::RENDER_LINES;
 }
 
-// Forward to Mesh / Primtivie
+// Forward to Mesh / Primitive
 void Bone::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
 	mesh->set_cameraTransform(view, persp);
@@ -41,23 +40,15 @@ void Bone::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp
 
 void Bone::render(bool Render_Line)
 {
-	// Pass Bone Transform Matrix as primitive's Model Matrix. 
-	// Do post transform operations on resulting model matrix of primtive. 
-
-	// Set Transform --> model matrix
-	//mesh->model = transform;
-	//line->model = transform;
-
 	// Bone vert pos precomputed, model just used for post transform scaling
-	mesh->model = glm::mat4(1);
-	line->model = glm::mat4(1);
+	mesh->model = glm::mat4(1.f);
+	line->model = glm::mat4(1.f);
 
 	// Render as Line
 	if (Render_Line)
 	{
 		// ======= Line Model Matrix Transform Operations =======
 		line->scale(glm::vec3(0.025f));
-		//line->translate(glm::vec3(0.f, 15.f, 0.f));
 
 		// ======= Set Line Colour =======
 		// RNG
@@ -99,8 +90,7 @@ void Bone::render(bool Render_Line)
 	}
 }
 
-// Update Bone Postions from bones joint transform matrix fetched per tick.
-
+// Update Bone Postions from bones, joint transform matrix fetched per tick.
 void Bone::update(const glm::mat4 &joint_trs)
 {
 	glm::vec4 bone_ws(start, 1.f);

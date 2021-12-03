@@ -25,9 +25,11 @@ public:
 	void translate(const glm::vec3 &transl);
 
 public:
-	glm::vec3 pos; 
+	glm::vec3 pos;  
 	std::size_t idx; 
-	std::vector<Joint*> joints;
+	Joint* target;             // Joint to use as effector inital target
+	glm::vec3 target_offset;   // Target offset.
+	std::vector<Joint*> chain; // Joints effector, effects (as IK chain)
 
 	// Viz 
 	Mesh *mesh; 

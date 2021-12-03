@@ -289,6 +289,10 @@ Could just wrap uniform access in a getter and call from viewer render loop to e
 
 Hmm, but it seems to work if its called, before the shader is active. 
 
+Strange new bug where some primitive/meshes model matrix diagonal gets zero'd on the GPU, uniform is set correctly on host, matrix is correct on host, but when checked on GPU via renderDoc the diagonal is zero'd and the resulting mesh is scaled to a point. This is so weird as the same primitive and mesh class operations are drawing other meshes fine in the calls before, but then for this mesh this occurs. 				 Ok I think this is my bad, as these mesh has its transform defined by the model matrix (the mesh input is obj file in LS), so I'm scaling the model  matrix per tick, hence its going to zero over time by the time renderdoc captures it, its already at 0. Makes sense, silly mistake on my behalf. This isn't an issue on the other prim/meshes as their model matrices are doing post transform scaling so thats needed per call, to correctly scale down from currently transformed WS position.
+
+This is a good example of using Model matrices to define vertex transformations is not ideal, they should only be used for placing existing transforms onto the GPU. Otherwise if you modify the model transform per tick you get accumulation of transformations. 
+
 ##### GLFW State Callbacks
 
 To be able to use Scroll and Mouse input along with Window resizing, we need to use GLFW callback free functions, however these have fixed parameters (eg width height, x offset y offset) and as they are defined as free functions they cannot modify member state of the Viewer Class (as I'm not using Viewer as a singleton, with static members to update, (which would solve it also)), so I write the callback data (changed GLFW State) from the callback into a struct defined (only) within viewer.cpp called GLFWState, the Viewer::UpdateCamera() member function which is called per tick, then reads from this struct (in global scope). Not ideal with the GLFWState struct been global but I need it as an in-between write from the call-back's (free functions in global namespace) to then read from within the viewer class implementation. 
@@ -626,11 +630,7 @@ However Ideally I would like to go back to my initial approach of pre-building t
 
 However I will branch this code off, remove the skeleton and bone code (as its not needed just to render FK might as well make it faster by removing this, and just directly render line primitives without using the skeleton concept, as their is no bone transforms passed (as transforms are set directly to vertices to define the bone line start/end  verts), then I can add a GUI to this code, and use it as backup FK / BVH Only code. In case IK is not done in time. I will branch this as a separate project stored locally for now. 
 
-____
-
-Once bones have been created, we need to update the joints that drive their transform, however as they depend on joints I need to map bones to joints, so when a joint is updated, the bone positions are re-set correctly. If I just update joints and re-build the bone hierarchy it defats the point of trying to separate the bone creation (once only) and bone transform (update only per tick).
-
-
+Once bones have been created, we need to update the joints that drive their transform, however as they depend on joints I need to map bones to joints or store joint idx within bones, so when a joint is updated, the joint's bone positions are re-set correctly. If I just update joints and re-build the bone hierarchy it defats the point of trying to separate the bone creation (once only) and bone transform (update only per tick). As noted above, a bone start pos is defined by the joint parent, with the end pos been the joint parent + joint offset transform.
 
 ____
 
@@ -911,7 +911,7 @@ Merge the BVH_Data class and Anim_State together as mentioned elsewhere in these
 // [..]	
 ```
 
-We could just get the map <joint, bone> bone and pass trans matrix directly to it, saving some time for sure. 
+We could just get the `std::map<joint*, bone*>` bone and pass trans matrix directly to it, saving some time for sure. 
 
 ___
 
@@ -974,6 +974,8 @@ Could do with another recursive function to get joint position (concat offsets f
 
 For test sake the IK Setup will be done within Anim_State on a predefined set of joints (eg the left hand back to the root) by some end effector. 
 
+Not sure in future if its ideal to store IK chain joints within effector, effector should probs just store the joint its targeting + offset from it (to define the target pos for the joints to tend to) IK chain array of joints probs just passed to IK solve calls directly.
+
 ##### User Interaction with Bones/Joints Ideas
 
 As per above, most likely won't have time for this now, these were my initial ideas. 
@@ -981,6 +983,8 @@ As per above, most likely won't have time for this now, these were my initial id
 Get inputs from viewer class (Could just pass window to anim state class directly to query).
 
 Ray casting from mouse ? Selection from list of joints via GUI ?  Input like frame stepping will be done within viewer, (inc/decrementing anim frame eg.). Worst case, select joints using keyboard. Will then need to use keys to move or mouse input (which will rule out using free camera as we need to mouse pos to calc offset).
+
+We will need some way to move the effectors (ie add offset to their target positions which is most likely a joint, so user can move end effector so it still follows joint target with some offset) to create disparity and thus using IK to solve for the joints to continue targeting the effector. Ideally I want to keep all input polling within Viewer and forward to Anim_State via MFs as I did for the input state for the FK stuff. 
 
 ____
 
