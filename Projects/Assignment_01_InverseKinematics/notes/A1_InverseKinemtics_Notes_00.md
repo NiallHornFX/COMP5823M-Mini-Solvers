@@ -1002,13 +1002,17 @@ We will need some way to move the effectors (ie add offset to their target posit
 
 ____
 
-#### Inverse Kinematics - Solver Class
+#### Inverse Kinematics (IK_Solver)
 
 Build Jacobian from input Joints and Effector, where input joints define known joint positions and angles, effector defines known target position. 
 
 
 
-Need to check if effector position is reachable by joint chain, check for $L_1 - L_2$ and $L_1 + L_2$ min and max distances (eg for 2 bones (lengths of deltas between joint positions)). 
+The follow IK Calculations assume we know all joint positions and the chain end effector (which I will use end sites to define, but theoretically could be any joint defined as the "end" joint in the chain) along with the target for the end effector (I denote as target effector ). These positions are all expected to be within the same coordinate space, and because we now store the accumulated transforms of the joints from the motion / channel array per tick in World Space (via their accumulated local space / relative transforms to parent) we can assume all positions for Joints and Effectors are in world space and will treat as such. 
+
+One thing i'm unsure about is, most texts only cover revolute joints, ie rotational joints with only 1DOF, this is not the case here, all joints have 3DOFs. I've seen mention of the Perturbation method for computing the Jacobian, oppose to the method shown in Rick Parents book and the URegina article, where you use a more typical FDM numerical approach solving as an FK problem, this seems a bit more convoluted and would mean it might make more sense to do this directly in Anim_State class, but I'll come back to this approach if needed. 
+
+Check if Target Effector position is reachable - To check if effector position is reachable by joint chain, check for $||L_1 - L_2||$ and $||L_1 + L_2||$ min and max distances (eg for 2 bones (lengths of deltas between joint positions)). 
 
 
 
@@ -1033,15 +1037,19 @@ t-c = \textbf{J}(\theta_2 - \theta_1)
 $$
 Where $t$ is the target / effector position, $c$ is the current position of the joint these are $3\times1$ vectors, as we don't care about target orientation just the position for now. 
 
-is the unknown joint angle to solve for via the Jacobian these are $N\times 1$ vectors where $N$ is number of joints * Joints DOFs (stacked rotational angles into single vector). 
+The unknown joint angles to solve for via the Jacobian these are $N\times 1$ vectors where $N$ is number of joints * Joints DOFs (stacked rotational angles into single vector). Whom once solved we can use the inverse Jacobian. 
 
 
 
-Jacobian refresher - for system of $n$ equations of $y = f(x)$. To differentiate any $y_i$ we use the chain rule : 
+###### Jacobian refresher 
+
+For system of $n$ equations of $y = f(x)$. To differentiate any $y_i$ we use the chain rule : 
 $$
-\partial y_i = {\partial f_i \over \partial x_1} \partial x_1, {\partial f_i \over \partial x_2} \partial x_2, {\partial f_i \over \partial x_3} \partial x_3, \dots {\partial f_i \over \partial x_n} \partial x_n
+\partial y_i = {\partial f_i \over \partial x_1} \partial x_1, {\partial f_i \over \partial x_2} \partial x_2, {\partial f_i \over \partial x_3} \partial x_3, \dots, {\partial f_i \over \partial x_n} \partial x_n
+\\\vdots\\
+\partial y_n = {\partial f_n \over \partial x_1} \partial x_1, {\partial f_n \over \partial x_2} \partial x_2, {\partial f_n \over \partial x_3} \partial x_3, \dots, {\partial f_n \over \partial x_n} \partial x_n
 $$
-Thus the Jacobian would define each $\partial y_i$ as rows of the matrix where 
+For all $f_i$, thus the Jacobian would define each $\partial y_i$ as rows of the matrix where 
 $$
 J(x_1, \dots x_2) = 
 \begin{bmatrix}
@@ -1075,6 +1083,7 @@ $$
 \end{bmatrix}
 $$
 
+###### Applied to Inverse Kinematics : 
 
 In terms of inverse kinematics the input variables $x_i$ are the joint angles with the output variables $y_i$ representing the target end effector position (and orientation if used). However we want the inverse of this, but we'll worry about that in a bit. For IK this is typically formulated as : 
 $$
@@ -1090,11 +1099,15 @@ J(\theta_1, \dots, \theta_n)
 \dot{\theta_n} \\
 \end{bmatrix}
 $$
-Where $v_x,v_y,v_z$ are the desired linear velocities of the effector, $\omega_x,\omega_y,\omega_z$ are the desired angular velocities of the end effector (which are calculated from the joint angles velocities) $\theta_i$ are the joint angles and $\dot{\theta}_i$ are the unknown joint angle velocites. 
+Where $v_x,v_y,v_z$ are the desired linear velocities of the effector, $\omega_x,\omega_y,\omega_z$ are the desired angular velocities of the end effector (which are calculated from the joint angles velocities) $\theta_i$ are the joint angles and $\dot{\theta}_i$ are the unknown joint angle velocities $V$. Thus to solve for $V$ we have the equation :
+$$
+V = J\dot\theta
+$$
 
-We formulate this Jacobian in terms of the velocities because $\partial P_i = V_i$. However we can disregard the (end) effector orientation and just solve for the positions (and thus linear velocities).
 
-Thus the resulting Jacobian matrix is  thus size of $N\times 3$ where each positional component is differentiated with respect to each joint angle. Where $N$ is number of Joints * Joints DOFs (stacked rotational angles into single vector). 
+The Jacobian relates the change in end effector position to the change in joint angles (ie their velocities via partial derivatives, target effector velocity / joint angle velocity). Thus we formulate this Jacobian in terms of the velocities denoting $\partial P_i = V_i$. However we can disregard the (end) effector orientation and just solve for the positions (and thus linear velocities), so the row count goes from 6 to 3 now.
+
+Thus the resulting Jacobian matrix is  thus size of $3\times N$ where each positional component is differentiated with respect to each joint angle. Where $N$ is number of Joints * Joints DOFs (stacked rotational angles into single vector). Each column defines a single DOF / component.
 $$
 J(\theta_1, \dots, \theta_n) = 
 \begin{bmatrix}
@@ -1108,31 +1121,38 @@ J(\theta_1, \dots, \theta_n) =
 $$
 
 
+Eg for the case of 2 joints (each with DOFs / Angles) and the end effector position only the Jacobian would be $3 \times 6$ :
+$$
+J(\theta_1, \dots, \theta_6) = 
+\begin{bmatrix}
+{\partial P_x \over \partial \theta_1} & {\partial P_x \over \partial \theta_2} & {\partial P_x \over \partial \theta_3} & {\partial P_x \over \partial \theta_4} & {\partial P_x \over \partial \theta_5} & {\partial P_x \over \partial \theta_6}
+\\
+{\partial P_y \over \partial \theta_1} & {\partial P_y \over \partial \theta_2} & {\partial P_y \over \partial \theta_3} & {\partial P_y \over \partial \theta_4} & {\partial P_y \over \partial \theta_5} & {\partial P_y \over \partial \theta_6}
+\\
+{\partial P_z \over \partial \theta_1} & {\partial P_z \over \partial \theta_2} & {\partial P_z \over \partial \theta_3} & {\partial P_z \over \partial \theta_4} & {\partial P_z \over \partial \theta_5} & {\partial P_z \over \partial \theta_6}
+\end{bmatrix}
+$$
 
 
-
-
-Of course the Joint angles are unknown and we want to solve for them, not for the end effector position hence the Inverse of the Jacobian is needed. 
-
-
-
-
-
-
-
-
+Of course the Joint angles are unknown and we want to solve for them, not for the end effector position hence the Inverse of the Jacobian is needed.  Will cover that later. 
 
 ##### Evaluating (Calculating) the Jacobian 
 
 We know the joints axis of rotation (by defining an arbitrary axis based on its channels), we can use this with cross product of the vector to the target / effector position to define the
 $$
-Z_i \cross (E - J_i)
+G = Z_i \cross (E - J_i)
 $$
-Where $Z_i$ is the i'th joint axis of rotation, $E$ is the effectors position and $J_i$ is the i'th joint position / end effectors current position. 
+Defines the instantaneous linear velocity to the goal (target) positions
 
-We need to get the end effectors current position vs its target position 
+Where $Z_i$ is the i'th joint axis of rotation, $E$ is the effectors position and $J_i$ is the i'th joint position / end effectors current position. Each of these defines a column in the Jacobian, with each component (DOF) been on each row. 
 
+So eg $\partial P_z \over \partial \theta_1$ is the velocity x component of the end effector, by the rotation of joint 1's DOF. Which is simply just the x component of the above cross product where the $i$th joint is Joint 1 $J_1$ (Don't confuse j notation with Jacobian) ! However we can see now that this formulation only makes sense for joints with 1 DOF ? How would it be possible if each joint has multiple DOFs as they do in our case. 
 
+##### Alternate Jacobian Method for multiple DOFs per joint
+
+However this method may not work for joints with more than 1 DOF ie rotational joints in my case and not single DOF joints like Revolute or Prismatic joints which the above method for deriving the Jacobian seems to be limited to, hence an alternate approach is needed to allow differentiation for each joint with respect to multiple DOFs for the rotational angles of each joint.
+
+One such approach is  a"perturbation" approach to differentiation to calculate the Jacobian may be needed. Where the joints position and rotation is differentiated with respect to the joint angles in a more FDM like approach (ie using perturbations to solve for the unknown Partial derivatives)
 
 Differentiation where $h = \Delta \theta$ the delta defines the amount of displacement the Jacobian will solve for hence the final transformation of the joints is done over multiple frames. Larger h will result in, inaccurate Finite differences and thus resulting joint angles / transformation. 
 
@@ -1147,6 +1167,18 @@ $$
 A^+ = (A^TA)^{-1} A^T
 $$
 However for cases where this is not the case we may need to use SVD of $A$. 
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
