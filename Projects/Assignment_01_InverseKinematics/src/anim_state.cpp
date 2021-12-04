@@ -1,6 +1,12 @@
 // Implements 
 #include "anim_state.h"
 
+// Project Headers
+#include "ik_solver.h"
+
+// Std Headers
+#include <cassert>
+
 #define CREATE_ROOT_BONE 0 
 
 // Default Ctor, state is set on demmand as needed. 
@@ -199,23 +205,28 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 // ===================== IK Setup =====================
 void Anim_State::ik_test_setup()
 {
-	// Right Arm test. 
-	// Get Thumb Pos as Inital Effector location. 
-	Joint *r_thumb = bvh->find_joint("RThumb");
-	if (!r_thumb) std::terminate;
 
-	// Create Effector to solve for 
-	Effector *eff_arm_r = new Effector(r_thumb->position, effectors.size());
-	eff_arm_r->target = r_thumb;
-	eff_arm_r->target_offset = glm::vec3(-7.5f, 8.f, 0.f);
+	// Create target effector (based on LThumbs Location + offset) 
+	Joint *l_thumb = bvh->find_joint("LThumb");
+	assert(l_thumb);
+	Effector *eff_arm_r = new Effector(l_thumb->position, 0);
+	eff_arm_r->target = l_thumb;
+	eff_arm_r->target_offset = glm::vec3(-20.0f, 8.f, 0.f);
 	effectors.push_back(eff_arm_r);
+
+	// Create IK Chain based at RThumb (end_site)
+	Joint *r_thumb = bvh->find_joint("RThumb");
+	assert(r_thumb && r_thumb->is_end);
 
 	// Define IK Chain of joints
 	std::vector<Joint*> chain; 
 	// Gather Joints back to root up to some depth 
 	gather_joints(r_thumb, chain, 3);
 
+	int foo = 0;
+
 	// Pass Chain and End Effector to IK Solve 
+	test_solve = new IK_Solver(this, chain, eff_arm_r);
 
 	// IK Solve
 

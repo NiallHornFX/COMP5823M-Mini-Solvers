@@ -9,6 +9,8 @@
 #include "bvhdata.h"
 #include "effector.h"
 
+class IK_Solver; 
+
 // Info :  Class where animation processing is based (BVH, FK, IK). Exists within app as Tick stage. 
 
 class Anim_State
@@ -41,10 +43,6 @@ public:
 
 	void gather_joints(Joint *start, std::vector<Joint*> &joints, int32_t depth=-1); // Form Chain of joints. 
 
-	// [..]
-	// IK Init
-	// IK Solve (per tick)
-
 	// ===== Debug =====
 	void debug() const;
 	void chan_check(std::size_t f) const; 
@@ -56,7 +54,7 @@ public:
 
 	// ===== IK Data =====
 	std::vector<Effector*> effectors; 
-
+	IK_Solver *test_solve; 
 
 	// ===== Shared Anim State =====
 	// Skeleton 

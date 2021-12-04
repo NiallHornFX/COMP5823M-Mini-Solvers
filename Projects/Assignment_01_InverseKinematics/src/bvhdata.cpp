@@ -231,6 +231,12 @@ void BVH_Data::Load()
 	// Debug / Write Log 
 	if (write_log) Debug(true);
 
+	// Store End Site Joints ptrs. 
+	for (Joint *joint : joints)
+	{
+		if (joint->is_end) end_sites.push_back(joint);
+	}
+
 	// Debug tmp
 	std::cout << "INFO::Loading BVH File " << filename << " Completed ! \n";
 
@@ -260,6 +266,7 @@ void BVH_Data::Clear()
 	num_frame = 0; 
 	interval = 0.;
 }
+// Note : I didn't end up using these getters, but should do to avoid the need for switch loops later on...
 
 DOF3 BVH_Data::get_joint_DOF3(std::size_t joint_idx, std::size_t frame) const
 {
@@ -325,7 +332,7 @@ glm::vec3 BVH_Data::get_joint_offset(std::size_t joint_idx) const
 }
 
 // Find Joint by name string
-Joint* BVH_Data::find_joint(const std::string &name)
+Joint* BVH_Data::find_joint(const std::string &name) const
 {
 	for (Joint *joint : joints)
 	{
@@ -334,6 +341,7 @@ Joint* BVH_Data::find_joint(const std::string &name)
 
 	return nullptr; 
 }
+
 
 void BVH_Data::Debug(bool to_file)
 {

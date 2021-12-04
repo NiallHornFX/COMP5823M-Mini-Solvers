@@ -956,9 +956,9 @@ For the sake of time, I'm going to not use a hash map to map joints to bones, se
 
 ____
 
-##### Inverse Kinematics - Anim State Interfacing
+##### Interfacing Between Inverse Kinematics - Anim_State 
 
-Input glm based transforms, internally uses eigen, output glm transforms and joint angles. 
+Input glm based transforms within Joints, internally the IK_Solver class uses eigen, joint angles which we then apply using the traversal methods described above, to apply the joint angles to the joints, accumulating the transformations to define bone transforms, in the same FK approach we use for the pure BVH Motion. The resulting joint angles should be the same format, possibly within the same array, so we're just doing the same as before, apart from some joints have new angles computed as part of the IK Solve, while others are based on their original offsets defined in the BVH Motion channel data. 
 
 Eigen will only be used internally of the Inverse Kinematics Solver classes, if I had time i'd define a polymorphic base class IK Solver, to then implement for each type of IK solver, but as I'm probs only going to have time for one type of IK, i'll keep it simple for now and avoid polymorphism approach, can always add later. 
 
@@ -976,6 +976,20 @@ For test sake the IK Setup will be done within Anim_State on a predefined set of
 
 Not sure in future if its ideal to store IK chain joints within effector, effector should probs just store the joint its targeting + offset from it (to define the target pos for the joints to tend to) IK chain array of joints probs just passed to IK solve calls directly.
 
+Joint positions are now stored/updated within joint position member, per tick assuming update_skeleton is called per tick.
+
+ We will also need to calculate IK per tick and integrate the solved joint angles. Or we use an iterative approach and try and solve the whole motion needed to reach the end effector on the current tick / frame. 
+
+We discard end effector orientations, only care about the positions, thus our Jacobian dimensions will be $3 \times N$ where 3DOFs for the end effector and N is the number of angles of all joints in the IK chain. 
+
+Trying not to confuse Effector class with End Site / End Effector of joints.  Effector could be used to define an end effector, or some arbitrary target. Technically the end site would define the start location for the end effector which would then be moved by user interaction. The intention of the effector class is to define the target for the joints end effector / end site, to move towards and thus all linked joints from that end site.
+
+Would make more sense for IK chains to start at end sites joints of the hierarchy, not just random joints, however not a big deal as even if child joints were not affected by IK, they would still be transformed correctly (should be) with relative offsets to there IK transformed parents, along as the resulting IK and original BVH joint angles are accumulated transforms and applied together. 
+
+While we refer to the current effector position and target position, technically this is only for the end effector of the joint, we are actually referring to the current position vs target position of the Joint. All positions for Jacobian evaluation are treated as within World Space, hence why we need to update the Joint hierarchy first to get the current joint WS positions from accumulated relative transforms, before calling IK update related functions. 
+
+###### 
+
 ##### User Interaction with Bones/Joints Ideas
 
 As per above, most likely won't have time for this now, these were my initial ideas. 
@@ -988,13 +1002,151 @@ We will need some way to move the effectors (ie add offset to their target posit
 
 ____
 
-##### Inverse Kinematics - Solver Class
+#### Inverse Kinematics - Solver Class
+
+Build Jacobian from input Joints and Effector, where input joints define known joint positions and angles, effector defines known target position. 
+
+
+
+Need to check if effector position is reachable by joint chain, check for $L_1 - L_2$ and $L_1 + L_2$ min and max distances (eg for 2 bones (lengths of deltas between joint positions)). 
+
+
+
+_____
+
+#### Jacobian Formulation, Evaluation and Inverse
+
+##### Jacobian Formulation
+
+From Rick Parent's textbook we know that : 
+
+```
+For a rotational joint:
+The linear change in the end effector is the cross-product of the axis of revolution and a vector from the joint to the end effector. 
+And
+The rotation at a rotational joint induces an instantaneous linear direction of travel at the end effector.
+```
+
+
+$$
+t-c = \textbf{J}(\theta_2 - \theta_1)
+$$
+Where $t$ is the target / effector position, $c$ is the current position of the joint these are $3\times1$ vectors, as we don't care about target orientation just the position for now. 
+
+is the unknown joint angle to solve for via the Jacobian these are $N\times 1$ vectors where $N$ is number of joints * Joints DOFs (stacked rotational angles into single vector). 
+
+
+
+Jacobian refresher - for system of $n$ equations of $y = f(x)$. To differentiate any $y_i$ we use the chain rule : 
+$$
+\partial y_i = {\partial f_i \over \partial x_1} \partial x_1, {\partial f_i \over \partial x_2} \partial x_2, {\partial f_i \over \partial x_3} \partial x_3, \dots {\partial f_i \over \partial x_n} \partial x_n
+$$
+Thus the Jacobian would define each $\partial y_i$ as rows of the matrix where 
+$$
+J(x_1, \dots x_2) = 
+\begin{bmatrix}
+{\partial f_1 \over \partial x_1} & {\partial f_1 \over \partial x_2} & \dots & {\partial f_1 \over \partial x_n}\\
+{\partial f_2 \over \partial x_1} & \ddots && \vdots \\
+\vdots & & \ddots & \vdots\\
+{\partial f_n \over \partial x_1}  & {\partial f_n \over \partial x_2}  & \dots & {\partial f_n \over \partial x_n}
+\end{bmatrix}
+$$
+Then combining with the vectors of partial derivatives on ethier side, we can solve for the derivatives $y_i$ given $x_i$ : 
+$$
+\begin{bmatrix}
+\partial y_1 \\
+\partial y_2 \\
+\vdots \\
+\partial y_n \\
+\end{bmatrix}
+ = 
+\begin{bmatrix}
+{\partial f_1 \over \partial x_1} & {\partial f_1 \over \partial x_2} & \dots & {\partial f_1 \over \partial x_n}\\
+{\partial f_2 \over \partial x_1} & \ddots && \vdots \\
+\vdots & & \ddots & \vdots\\
+{\partial f_n \over \partial x_1}  & {\partial f_n \over \partial x_2}  & \dots & {\partial f_n \over \partial x_n}
+\end{bmatrix}
+
+\begin{bmatrix}
+\partial x_1 \\
+\partial x_2 \\
+\vdots \\
+\partial x_n \\
+\end{bmatrix}
+$$
+
+
+In terms of inverse kinematics the input variables $x_i$ are the joint angles with the output variables $y_i$ representing the target end effector position (and orientation if used). However we want the inverse of this, but we'll worry about that in a bit. For IK this is typically formulated as : 
+$$
+\begin{bmatrix}
+v_x \\ v_y \\ v_z \\ \omega_x \\ \omega_y \\ \omega_z 
+\end{bmatrix}
+= 
+J(\theta_1, \dots, \theta_n)
+\begin{bmatrix}
+\dot{\theta_1} \\
+\dot{\theta_2} \\
+\vdots \\
+\dot{\theta_n} \\
+\end{bmatrix}
+$$
+Where $v_x,v_y,v_z$ are the desired linear velocities of the effector, $\omega_x,\omega_y,\omega_z$ are the desired angular velocities of the end effector (which are calculated from the joint angles velocities) $\theta_i$ are the joint angles and $\dot{\theta}_i$ are the unknown joint angle velocites. 
+
+We formulate this Jacobian in terms of the velocities because $\partial P_i = V_i$. However we can disregard the (end) effector orientation and just solve for the positions (and thus linear velocities).
+
+Thus the resulting Jacobian matrix is  thus size of $N\times 3$ where each positional component is differentiated with respect to each joint angle. Where $N$ is number of Joints * Joints DOFs (stacked rotational angles into single vector). 
+$$
+J(\theta_1, \dots, \theta_n) = 
+\begin{bmatrix}
+{\partial P_x \over \partial \theta_1} & {\partial P_x \over \partial \theta_2} & {\partial P_x \over \partial \theta_3} & \dots & {\partial P_x \over \partial \theta_n}
+\\
+{\partial P_y \over \partial \theta_1} & {\partial P_y \over \partial \theta_2} & {\partial P_y \over \partial \theta_3} & \dots & {\partial P_y \over \partial \theta_n}
+\\
+\vdots & \vdots & \vdots & \vdots & \vdots \ \\
+{\partial P_n \over \partial \theta_1} & {\partial P_n \over \partial \theta_2} & {\partial P_n \over \partial \theta_3} & \dots & {\partial P_n \over \partial \theta_n}
+\end{bmatrix}
+$$
 
 
 
 
 
 
+Of course the Joint angles are unknown and we want to solve for them, not for the end effector position hence the Inverse of the Jacobian is needed. 
+
+
+
+
+
+
+
+
+
+##### Evaluating (Calculating) the Jacobian 
+
+We know the joints axis of rotation (by defining an arbitrary axis based on its channels), we can use this with cross product of the vector to the target / effector position to define the
+$$
+Z_i \cross (E - J_i)
+$$
+Where $Z_i$ is the i'th joint axis of rotation, $E$ is the effectors position and $J_i$ is the i'th joint position / end effectors current position. 
+
+We need to get the end effectors current position vs its target position 
+
+
+
+Differentiation where $h = \Delta \theta$ the delta defines the amount of displacement the Jacobian will solve for hence the final transformation of the joints is done over multiple frames. Larger h will result in, inaccurate Finite differences and thus resulting joint angles / transformation. 
+
+
+
+##### Pseudo-Inverse of Jacobian
+
+Because of the possibility of under or over constrained system there maybe be no or infinite solutions to the system, thus the Pseudoinverse is needed. 
+
+Depending on the Rank of the Jacobian (Number of linearly independent columns) will depend on how the Pseudo-Inverse is approached, typically calculating the Moore-Penrose Pseudoinverse on a matrix with linearly independent columns is defined as
+$$
+A^+ = (A^TA)^{-1} A^T
+$$
+However for cases where this is not the case we may need to use SVD of $A$. 
 
 
 
@@ -1121,7 +1273,7 @@ Again this works great, but its just reading the data from the BVH_Data class it
 
 ___
 
-#### Bugs : 
+#### Bugs / Issues : 
 
 ##### Release Mode : Viewer Exec Loop doesn't run (fine in debug mode)
 
@@ -1168,3 +1320,13 @@ Fixes the issue. I guess that's my bad for using an rvalue bool to check the con
 ##### Depending if in Release or Debug mode, the camera start position (and thus direction) is different.
 
 Not had time to look into this, but it seems the start direction is slightly different when switching between release and debug builds, i've not looked into this as its not a big deal, but there is possibly something going on again in terms of optimization where the initial basis of the camera is incorrect (or different) due to some optimization occurring. 
+
+____
+
+##### References
+
+* BVH File Reference : 
+  * research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html
+* Inverse Kinematics Reference : 
+  * Rick Parents Book
+  * www2.cs.uregina.ca/~anima/408/Notes/Kinematics/InverseKinematics.htm

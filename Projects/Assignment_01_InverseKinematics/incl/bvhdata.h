@@ -14,7 +14,8 @@
 using real = double; 
 
 using DOF6 = std::tuple<real, real, real, real, real, real>;
-using DOF3 = std::tuple<real, real, real>;
+//using DOF3 = std::tuple<real, real, real>;
+using DOF3 = glm::vec3; 
 
 // FDs
 struct Joint;
@@ -42,10 +43,11 @@ public:
 	// Joint Channel Access
 	DOF6 get_root_DOF6(std::size_t frame)                         const;
 	DOF3 get_joint_DOF3(std::size_t joint_idx, std::size_t frame) const;
-	glm::vec3 get_joint_offset(std::size_t joint_idx)             const;
+
 
 	// Joint Lookup
-	Joint* find_joint(const std::string &name);
+	Joint* find_joint(const std::string &name)                    const;
+	glm::vec3 get_joint_offset(std::size_t joint_idx)             const;
 
 public:
 
@@ -61,6 +63,8 @@ private:
 	std::vector<Joint*>   joints; 
 	std::vector<Channel*> channels; 
 	real *motion; 
+
+	std::vector<Joint*> end_sites; 
 
 	friend class Anim_State;
 };
