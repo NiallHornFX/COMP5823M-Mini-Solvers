@@ -18,7 +18,6 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 	// (Defines single col of Jacobian in the form of P2 - P1 / Dtheta)
 	std::vector<std::pair<glm::vec3, glm::vec3>> pertrub_pos(dof_c, std::pair<glm::vec3, glm::vec3>(glm::vec3(0.f), glm::vec3(0.f)));
 	
-
 	// For each joint, for each DOF, traverse the chain hierachy, perturbing only the cur DOF, and then deriving the resulting end site postion
 	// Note that end site position == last joint (in chain) postion as there is no offset on the end_site locations. 
 

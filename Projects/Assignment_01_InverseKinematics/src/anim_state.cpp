@@ -6,6 +6,7 @@
 
 // Std Headers
 #include <cassert>
+#include <algorithm>
 
 #define CREATE_ROOT_BONE 0 
 
@@ -222,9 +223,11 @@ void Anim_State::ik_test_setup()
 	// Gather Joints back to root up to some depth (or up to root by default)
 	gather_joints(r_thumb, chain);
 
-	// Get Perturbed Postions of end effector, with respect to each joint dof to form Jacobian Matrix (P2 - P1 / Dtheta) 
-	// End Joint / Effector = r_thumb, Start Joint = root. 
 
+	// Get Perturbed Postions of end effector, with respect to each joint dof to use for 
+	// formatuib of  Jacobian Matrix (P2 - P1 / Dtheta) 
+	// End Joint / Effector = r_thumb, Start Joint = root. Each Pair is the P1,P2 vals for each column.
+	std::vector<std::pair<glm::vec3, glm::vec3>> cols_p1p2 = perturb_joints(chain, r_thumb, nullptr, 0.01f);
 
 
 	/*
@@ -236,8 +239,8 @@ void Anim_State::ik_test_setup()
 	// Update Joint angles Motion Data for affected joints of IK solve. 
 }
 
-// Used to create IK chain of joints, gathering joints from starting joint, back to root, up to some depth. 
-void Anim_State::gather_joints(Joint *start, std::vector<Joint*> &joints, int32_t depth)
+// Used to create chain of joints for IK, gathering joints from starting joint, back to root, up to some depth. 
+void Anim_State::gather_joints(Joint *start, std::vector<Joint*> &chain, int32_t depth)
 {
 	// if depth -1, gather joints all the way back to root. 
 	std::size_t c = 0; 
@@ -245,13 +248,18 @@ void Anim_State::gather_joints(Joint *start, std::vector<Joint*> &joints, int32_
 	Joint *joint = start;
 	while (joint->parent)
 	{
-		joints.push_back(joint); // Append to chain
+		chain.push_back(joint); // Append to chain
 
 		if (depth > 0 && depth == c) break;
 
 		joint = joint->parent;
 		c++; 
 	}
+
+	if (depth <= 0) chain.push_back(bvh->joints[0]); // Also add root joint. 
+
+	// Reverse joints order in chain, so root (or joint closest to root) is first, end_site is last. 
+	std::reverse(chain.begin(), chain.end());
 }
 
 // For drawing Anim_States own primtives (eg effectors)
@@ -303,6 +311,8 @@ void Anim_State::set_frame(std::size_t Frame)
 // perturb_factor - factor to perturb each joint's DOF angle by. 
 std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vector<Joint*> &chain, Joint *end_effec, Joint *start_joint, float perturb_factor)
 {
+	Joint *start = start_joint == nullptr ? bvh->joints[0] : start_joint; // Set start joint to root if passed nullptr. 
+	
 	std::size_t dof_c = chain.size() * 3;    // Number of Columns (theta_0 ... theta_n) (size = j * 3) 
 	glm::vec3 end_pos = end_effec->position; // We know number of rows is (size = 3) (3 DOFs in end effector) pos (P_x, P_y, P_z)
 
@@ -310,7 +320,6 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 	// (Defines single col of Jacobian in the form of P2 - P1 / Dtheta)
 	std::vector<std::pair<glm::vec3, glm::vec3>> pertrub_pos(dof_c, std::pair<glm::vec3, glm::vec3>(glm::vec3(0.f), glm::vec3(0.f)));
 	
-
 	// For each joint, for each DOF, traverse the chain hierachy, perturbing only the cur DOF, and then deriving the resulting end site postion
 	// Note that end site position == last joint (in chain) postion as there is no offset on the end_site locations. 
 
@@ -331,153 +340,149 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 			glm::vec3 P1 = end_effec->position; // Un-perturbed end effector postion (x,y,z) 
 			glm::vec3 P2(0.f); // Init P2
 
-			float delta_theta = 0.001f; 
+			float delta_theta = perturb_factor; 
 
-			// The tbd function that traverses the joint from start, and when we reach the preturb joint, we perturb its DOF. 
+			// Function traverses the joint from start of chain (assumed to be root for now), and when we reach the preturb joint, we perturb its DOF. 
 			// We contiune accumulating the resulting transform along the chain and store the resulting end effector / end joint position. 
 			// Currently I'm using a recrusive traversal approach, but iterative may be perfered as we are only traversing the chain. 
-			perturb_traverse(start_joint, perturb_joint, DOF, delta_theta, glm::mat4(1.f));
+
+			perturb_traverse(chain, perturb_joint, DOF, delta_theta);
 
 			// Query Resulting Modified End Effector Postion component
 			P2 = end_effec->position;
+
+			assert(P1 != P2); // Check something is actually happeneing. 
 
 			// Now P1 defines orginal effector pos, P2 defines perturbed effector pos, for the current DOF (rotational channel).
 			pertrub_pos.push_back(std::pair<glm::vec3, glm::vec3>(P1, P2));
 		}
 	}
+
+	return pertrub_pos;
 }
 
 //
-// joint - Joint that we are currently operating (recusivly called) on. 
+// chain - chain to traverse and apply perturbations
 // perturb_joint - the joint in the chain we want to perturb, (check if current joint, == perturb joint).
 // dof - the DOF / axis angle we want to perturb
 // perturb_fac - Perturbation amount
 
-// This is not great as it uses the same recursive approach before to accumulate transforms (with the one perturbed joint, dof) to calc the resulting joint postions
-// including the end postions. 
-// Ideally we iterativly traverse along the Joint chain, so we don't need to eval the whole joint hierachy over and over ....
-void Anim_State::perturb_traverse(Joint *joint, Joint *perturb_joint, ChannelEnum dof, float perturb_fac, glm::mat4 trans)
+// Assume each joint has single child.
+void Anim_State::perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joint, ChannelEnum dof, float perturb_fac)
 {
-	// Do same recursive transformation accumulation approach as before
+	glm::mat4 trans(1.f); // Accumulated Transform
 
-	// Do we perturb the joint currently been evaluated by this call ? 
-	bool perturb_joint = joint->idx == perturb_joint->idx ? true : false;
-
-	//  =========== Translation is the same, as preturbation only occurs on rotation =========== 
-	if (!joint->parent) // Root joint, translation from channels. 
+	for (Joint *joint : chain)
 	{
-		glm::vec4 root_offs(0., 0., 0., 1.);
-
-		for (const Channel *c : joint->channels)
+		//  =========== Translation is the same, as preturbation only occurs on rotation =========== 
+		if (!joint->parent) // Root joint, translation from channels. 
 		{
-			switch (c->type)
+			glm::vec4 root_offs(0., 0., 0., 1.);
+
+			for (const Channel *c : joint->channels)
 			{
-				// Translation
-			case ChannelEnum::X_POSITION:
-			{
-				float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				root_offs.x = x_p;
-				break;
+				switch (c->type)
+				{
+					// Translation
+					case ChannelEnum::X_POSITION:
+					{
+						float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						root_offs.x = x_p;
+						break;
+					}
+					case ChannelEnum::Y_POSITION:
+					{
+						float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						root_offs.y = y_p;
+						break;
+					}
+					case ChannelEnum::Z_POSITION:
+					{
+						float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						root_offs.z = z_p;
+						break;
+					}
+				}
 			}
-			case ChannelEnum::Y_POSITION:
-			{
-				float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				root_offs.y = y_p;
-				break;
-			}
-			case ChannelEnum::Z_POSITION:
-			{
-				float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				root_offs.z = z_p;
-				break;
-			}
-			}
+
+			trans = glm::translate(trans, glm::vec3(root_offs));
+		}
+		else if (joint->parent) // Non root joints, Translation is offset. 
+		{
+			trans = glm::translate(trans, joint->offset);
 		}
 
-		trans = glm::translate(trans, glm::vec3(root_offs));
-	}
-	else if (joint->parent) // Non root joints, Translation is offset. 
-	{
-		trans = glm::translate(trans, joint->offset);
-	}
-
-	// =========== Get Rotation - Constant Or Perturbed ===========
-	glm::mat4 xx(1.), yy(1.), zz(1.);
-
-	if (perturb_joint) // Perturbed Joint Rotation 
-	{
-		for (const Channel *c : joint->channels)
+		if (perturb_joint) // Perturbed Joint Rotation 
 		{
-			switch (c->type)
+			for (const Channel *c : joint->channels)
 			{
-			case ChannelEnum::Z_ROTATION:
-			{
-				float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				// Preturb for DOF Rot_Z
-				if (dof == ChannelEnum::Z_ROTATION) z_r += perturb_fac;
-				trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
-				break;
-			}
-			case ChannelEnum::Y_ROTATION:
-			{
-				float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				// Preturb for DOF Rot_Y
-				if (dof == ChannelEnum::Y_ROTATION) y_r += perturb_fac;
-				trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
-				break;
-			}
-			case ChannelEnum::X_ROTATION:
-			{
-				float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-				// Preturb for DOF Rot_X
-				if (dof == ChannelEnum::X_ROTATION) x_r += perturb_fac;
-				trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
-				break;
-			}
-			}
-		}
-	}
-	else // Constant Joint Rotation
-	{
-		for (const Channel *c : joint->channels)
-		{
-			switch (c->type)
-			{
-				case ChannelEnum::Z_ROTATION:
+				switch (c->type)
 				{
-					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
-					break;
-				}
-				case ChannelEnum::Y_ROTATION:
-				{
-					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
-					break;
-				}
-				case ChannelEnum::X_ROTATION:
-				{
-					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
-					break;
+					case ChannelEnum::Z_ROTATION:
+					{
+						float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						// Preturb for DOF Rot_Z
+						if (dof == ChannelEnum::Z_ROTATION) z_r += perturb_fac;
+						trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
+						break;
+					}
+					case ChannelEnum::Y_ROTATION:
+					{
+						float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						// Preturb for DOF Rot_Y
+						if (dof == ChannelEnum::Y_ROTATION) y_r += perturb_fac;
+						trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
+						break;
+					}
+					case ChannelEnum::X_ROTATION:
+					{
+						float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						// Preturb for DOF Rot_X
+						if (dof == ChannelEnum::X_ROTATION) x_r += perturb_fac;
+						trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
+						break;
+					}
 				}
 			}
 		}
+		else // Constant Joint Rotation
+		{
+			for (const Channel *c : joint->channels)
+			{
+				switch (c->type)
+				{
+					case ChannelEnum::Z_ROTATION:
+					{
+						float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
+						break;
+					}
+					case ChannelEnum::Y_ROTATION:
+					{
+						float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
+						break;
+					}
+					case ChannelEnum::X_ROTATION:
+					{
+						float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
+						break;
+					}
+				}
+			}
+		}
+
+		int hold = 0; 
+		// ONLY transform the end_site, we don't care about actually transforming the other joints aslong as we have their
+		// transforms accumulated (to propgate to the end site joint as it is what we are measuring the delta of). 
+
+		if (joint->is_end) // Assumes last chain joint is an end_site / effector. 
+		{
+			joint->position = glm::vec3(trans * glm::vec4(0.f, 0.f, 0.f, 1.f));
+		}
+		
 	}
-
-
-	// Update current position. (which eventually will be the end_site joint) 
-	joint->position = glm::vec3(trans * glm::vec4(0.f, 0.f, 0.f, 1.f));
-
-	// ==================== Children ====================
-	// Contiune Traversing Joint Children untill end site of chain is reached. 
-	for (std::size_t c = 0; c < joint->children.size(); ++c)
-	{
-		fetch_traverse(joint->children[c], trans);
-	}
-
-	// As state above this recursive approach is not ideal, because its unlikely we want to perturb joint angles / DOFs over 
-	// the whole joint hieracy, ideally we should do this iterativly over the joint chain instead ... 
 }
 
 

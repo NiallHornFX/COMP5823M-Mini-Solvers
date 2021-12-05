@@ -1209,7 +1209,7 @@ To test this out I will implement within Anim_State to build the Jacobian first,
 $$
 P_2 - P_1 \over \Delta \theta_i
 $$
-This result will then define the value of each Jacboian column, ie each DOF angle (of each joint) is perturbed for each $P_(x,y,z)$ component (remember we don't care about differentiating respect to end effector orientation). Thus a single column would look like this,  for ($N \cdot 3$ columns (joints * joint DOFs for each $\theta_i$)) making up the whole matrix, all other joints than the currently perturbed joint DOF are the same / held constant. 
+This result will then define the value of each Jacboian column, ie each DOF angle (of each joint) is perturbed for each $P_(x,y,z)$ component (remember we don't care about differentiating respect to end effector orientation). Thus a single column would look like this,  for ($N \cdot 3$ columns (joints * joint DOFs for each $\theta_i$)) making up the whole matrix, all other joints than the currently perturbed joint DOF are the same / held constant so we can measure the instantaneous change relative to each. 
 $$
 \begin{bmatrix} 
 {P2_x - P1_x \over \Delta \theta_i} \\
@@ -1228,7 +1228,7 @@ I eval each joint at a time, for all 3 of its DOFs, then querying each component
 
 Remember that each column is a single DOF of the joint, not a single joint, as we want each DOF with respect to each effector position component (hence we only change the effector position component on each row within the col, the DOF its differentiated against (and thus perturbed by) remains the same).
 
-Problem is, the Traversal function starts from root, and will continually evaluate the whole joint hierarchy, not just the chain, so Maybe I can replace the current traversal recursive logic, with an iterative approach, seen as we have a bounded joint chain defined anyway. 
+Problem is, the Traversal function starts from root, and will continually evaluate the whole joint hierarchy, not just the chain, so Maybe I can replace the current traversal recursive logic, with an iterative approach, seen as we have a bounded joint chain defined anyway. Should be fine to use iterative approach because we can assume each joint just has one child because we are just traversing along a linear chain (ie we don't need recursive call to each current joints, children). 
 
 
 
