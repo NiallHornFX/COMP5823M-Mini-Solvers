@@ -8,6 +8,11 @@
 #include <cassert>
 #include <algorithm>
 
+// Ext Headers
+// Eigen
+#include "ext/Eigen/Eigen"
+#include "ext/Eigen/Core"
+
 #define CREATE_ROOT_BONE 0 
 
 // Default Ctor, state is set on demmand as needed. 
@@ -229,6 +234,15 @@ void Anim_State::ik_test_setup()
 	// End Joint / Effector = r_thumb, Start Joint = root. Each Pair is the P1,P2 vals for each column.
 	std::vector<std::pair<glm::vec3, glm::vec3>> cols_p1p2 = perturb_joints(chain, r_thumb, nullptr, 0.01f);
 
+	// Now Construct Jacobian. (3 x (j * 3)) j = number of joints in chain.
+	std::size_t r = 3, c = chain.size() * 3; 
+	// Encap into Some class for Eigen use, for now will do inline.
+	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> J; 
+	J.resize(r, c);
+	// Loop col-row wise
+
+	int test = 0; 
+
 
 	/*
 	// Pass Chain and End Effector to IK Solve 
@@ -318,7 +332,7 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 
 	// Vector to store Orginal and preturbed postions of end effector, for each perturbed joint (for all rot DOFs). 
 	// (Defines single col of Jacobian in the form of P2 - P1 / Dtheta)
-	std::vector<std::pair<glm::vec3, glm::vec3>> pertrub_pos(dof_c, std::pair<glm::vec3, glm::vec3>(glm::vec3(0.f), glm::vec3(0.f)));
+	std::vector<std::pair<glm::vec3, glm::vec3>> pertrub_pos;
 	
 	// For each joint, for each DOF, traverse the chain hierachy, perturbing only the cur DOF, and then deriving the resulting end site postion
 	// Note that end site position == last joint (in chain) postion as there is no offset on the end_site locations. 
@@ -344,14 +358,13 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 
 			// Function traverses the joint from start of chain (assumed to be root for now), and when we reach the preturb joint, we perturb its DOF. 
 			// We contiune accumulating the resulting transform along the chain and store the resulting end effector / end joint position. 
-			// Currently I'm using a recrusive traversal approach, but iterative may be perfered as we are only traversing the chain. 
 
 			perturb_traverse(chain, perturb_joint, DOF, delta_theta);
 
 			// Query Resulting Modified End Effector Postion component
 			P2 = end_effec->position;
 
-			assert(P1 != P2); // Check something is actually happeneing. 
+			//assert(P1 != P2); // Check something is actually happeneing. 
 
 			// Now P1 defines orginal effector pos, P2 defines perturbed effector pos, for the current DOF (rotational channel).
 			pertrub_pos.push_back(std::pair<glm::vec3, glm::vec3>(P1, P2));
@@ -367,7 +380,6 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 // dof - the DOF / axis angle we want to perturb
 // perturb_fac - Perturbation amount
 
-// Assume each joint has single child.
 void Anim_State::perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joint, ChannelEnum dof, float perturb_fac)
 {
 	glm::mat4 trans(1.f); // Accumulated Transform
