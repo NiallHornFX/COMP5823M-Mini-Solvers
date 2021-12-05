@@ -3,6 +3,7 @@
 
 // Std Headers
 #include <map>
+#include <tuple>
 
 // Project Headers
 #include "skeleton.h"
@@ -39,7 +40,11 @@ public:
 
 	// ===== IK =====
 	void ik_test_setup();
-	void ik_test_tick();
+	//void ik_test_tick();
+
+	std::vector<std::pair<glm::vec3, glm::vec3>> perturb_joints(std::vector<Joint*> &chain, Joint *end_effec, Joint *start_joint, float perturb_factor); 
+
+	void perturb_traverse(Joint *joint, Joint *perturb_joint, ChannelEnum dof, float perturb_fac, glm::mat4 trans);
 
 	void gather_joints(Joint *start, std::vector<Joint*> &joints, int32_t depth=-1); // Form Chain of joints. 
 

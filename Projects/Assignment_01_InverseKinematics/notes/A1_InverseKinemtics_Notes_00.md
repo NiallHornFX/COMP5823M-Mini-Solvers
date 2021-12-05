@@ -913,6 +913,8 @@ Merge the BVH_Data class and Anim_State together as mentioned elsewhere in these
 
 We could just get the `std::map<joint*, bone*>` bone and pass trans matrix directly to it, saving some time for sure. 
 
+Would be nice to implement this approach of updating the joint transforms (and thus bone vert positions) into my fork BVH_Viewer project, and doing a little writeup about how the immediate mode approach of re-creating the bone GPU resources each frame vs just updating the vert positions from new accumulated joint transforms (inversing back to LS to apply rotation etc) is far faster. 
+
 ___
 
 #### Inverse Kinematics - Handling Combination with FK / Input BVH Motion
@@ -988,8 +990,6 @@ Would make more sense for IK chains to start at end sites joints of the hierarch
 
 While we refer to the current effector position and target position, technically this is only for the end effector of the joint, we are actually referring to the current position vs target position of the Joint. All positions for Jacobian evaluation are treated as within World Space, hence why we need to update the Joint hierarchy first to get the current joint WS positions from accumulated relative transforms, before calling IK update related functions. 
 
-###### 
-
 ##### User Interaction with Bones/Joints Ideas
 
 As per above, most likely won't have time for this now, these were my initial ideas. 
@@ -1004,7 +1004,7 @@ ____
 
 #### Inverse Kinematics (IK_Solver)
 
-Build Jacobian from input Joints and Effector, where input joints define known joint positions and angles, effector defines known target position. 
+Build Jacobian from input Joints and Effector, where input joints define known joint positions and angles including joint end effector along with a target effector defines known target position. 
 
 
 
@@ -1018,26 +1018,23 @@ Check if Target Effector position is reachable - To check if effector position i
 
 _____
 
-#### Jacobian Formulation, Evaluation and Inverse
+#### Jacobian Matrix Formulation & Evaluation
 
 ##### Jacobian Formulation
 
 From Rick Parent's textbook we know that : 
 
 ```
-For a rotational joint:
-The linear change in the end effector is the cross-product of the axis of revolution and a vector from the joint to the end effector. 
-And
 The rotation at a rotational joint induces an instantaneous linear direction of travel at the end effector.
 ```
 
-
+For a single joint we can view the problem as :
 $$
 t-c = \textbf{J}(\theta_2 - \theta_1)
 $$
-Where $t$ is the target / effector position, $c$ is the current position of the joint these are $3\times1$ vectors, as we don't care about target orientation just the position for now. 
+Where $t$ is the *target* position of the effector, $c$ is the *current* position of the joint / end effector (if joint is end site) these are $3\times1$ vectors, as we can discard the target effectors orientation as we only care about matching its position not rotation hence the DOFs of the end effector is also 3. We can see that the Jacobian will define the instantaneous linear velocity to move the joints from $c$ to $t$, as the velocities are calculated by differentiating the target effectors DOFs to the Joints DOFs (angles). Thus we will use the inverse of this to derive the joint angles to do so.  
 
-The unknown joint angles to solve for via the Jacobian these are $N\times 1$ vectors where $N$ is number of joints * Joints DOFs (stacked rotational angles into single vector). Whom once solved we can use the inverse Jacobian. 
+The unknown joint angles to solve for via the Jacobian these are $N\times 1$ vectors where $N$ is number of joints  by the  Joints DOFs (stacked rotational angles into single vector) $ N \times (j \cdot dof)$. 
 
 
 
@@ -1103,8 +1100,6 @@ Where $v_x,v_y,v_z$ are the desired linear velocities of the effector, $\omega_x
 $$
 V = J\dot\theta
 $$
-
-
 The Jacobian relates the change in end effector position to the change in joint angles (ie their velocities via partial derivatives, target effector velocity / joint angle velocity). Thus we formulate this Jacobian in terms of the velocities denoting $\partial P_i = V_i$. However we can disregard the (end) effector orientation and just solve for the positions (and thus linear velocities), so the row count goes from 6 to 3 now.
 
 Thus the resulting Jacobian matrix is  thus size of $3\times N$ where each positional component is differentiated with respect to each joint angle. Where $N$ is number of Joints * Joints DOFs (stacked rotational angles into single vector). Each column defines a single DOF / component.
@@ -1142,21 +1137,93 @@ We know the joints axis of rotation (by defining an arbitrary axis based on its 
 $$
 G = Z_i \cross (E - J_i)
 $$
-Defines the instantaneous linear velocity to the goal (target) positions
+Defines the instantaneous linear velocity to the goal (target) positions, hence this is what we use to define each column of the Jacobian.
 
 Where $Z_i$ is the i'th joint axis of rotation, $E$ is the effectors position and $J_i$ is the i'th joint position / end effectors current position. Each of these defines a column in the Jacobian, with each component (DOF) been on each row. 
 
-So eg $\partial P_z \over \partial \theta_1$ is the velocity x component of the end effector, by the rotation of joint 1's DOF. Which is simply just the x component of the above cross product where the $i$th joint is Joint 1 $J_1$ (Don't confuse j notation with Jacobian) ! However we can see now that this formulation only makes sense for joints with 1 DOF ? How would it be possible if each joint has multiple DOFs as they do in our case. 
+So eg $\partial P_z \over \partial \theta_1$ is the velocity x component of the end effector, by the rotation of joint 1's DOF. Which is simply just the x component of the above cross product where the $i$th joint is Joint 1 $J_1$ (Don't confuse j notation with Jacobian) ! However we can see now that this formulation only makes sense for joints with 1 DOF ? As each column defines a single joint, with a single DOF, How would it be possible if each joint has multiple DOFs as they do in our case ? 
 
 ##### Alternate Jacobian Method for multiple DOFs per joint
 
-However this method may not work for joints with more than 1 DOF ie rotational joints in my case and not single DOF joints like Revolute or Prismatic joints which the above method for deriving the Jacobian seems to be limited to, hence an alternate approach is needed to allow differentiation for each joint with respect to multiple DOFs for the rotational angles of each joint.
+However this method may not work for joints with more than 1 DOF ie rotational joints in my case and not single DOF joints like Revolute or Prismatic joints which the above method for deriving the Jacobian seems to be limited to, hence an alternate approach is needed to allow differentiation for each joint with respect to each DOFs for all its rotational angles. 
 
-One such approach is  a"perturbation" approach to differentiation to calculate the Jacobian may be needed. Where the joints position and rotation is differentiated with respect to the joint angles in a more FDM like approach (ie using perturbations to solve for the unknown Partial derivatives)
+One such approach is a "perturbation" approach to differentiation to calculate the Jacobian. Where the end effector position (and rotation if used) is differentiated with respect to the joint angles for all the joints DOFs, in a forward finite difference like approach, ie using perturbations of $\Delta \theta$ to solve for the unknown partial derivatives numerically. 
 
-Differentiation where $h = \Delta \theta$ the delta defines the amount of displacement the Jacobian will solve for hence the final transformation of the joints is done over multiple frames. Larger h will result in, inaccurate Finite differences and thus resulting joint angles / transformation. 
+So we can define a single term of the Jacobian as : 
+$$
+{\partial P_x \over \partial \theta_1} \approx {\Delta P_x \over \Delta \theta_1} = 
+{P2_x - P1_x \over \Delta \theta_1}
+$$
+However to get $P2_x$ we need to formulate it as a FDM problem, where $P2_x$ is $P1_x$ are positions which are functions of joint angle (for each DOF) but with the perturbation $h$ added. Which is forward differencing  where $h = \Delta \theta$. 
+
+Thus we get : 
+$$
+{P(\theta_1+\Delta\theta)_x - P_{x}(\theta_1) \over \Delta \theta}
+$$
+Where $\theta_1$ is the joint, DOF, current angle, with $\Delta \theta$ been the perturbation applied to form a Forward difference term to evaluate the Jacobian element numerically. Thus we solve the instantaneous rate of change ie the Partial derivative, as the joint angle changes to relate it to the instantaneous change of the end effector position. 
+
+So a single column *(note transpose notation)* of the Jacobian would be : 
+$$
+{\partial P \over \partial \theta_1} = 
+\begin{bmatrix} 
+{\partial P_x \over \partial \theta_1}, 
+{\partial P_y \over \partial \theta_1}, 
+{\partial P_z \over \partial \theta_1} 
+\end{bmatrix}
+^T
+= 
+\begin{bmatrix} 
+{\Delta P_x \over \Delta \theta_1}, 
+{\Delta P_y \over \Delta \theta_1}, 
+{\Delta P_z \over \Delta \theta_1} 
+\end{bmatrix}
+^T
+$$
+ $P$ of course denotes the joint end effector of the chain, or Joint position, if just a single joint is used component, with respect to each angle defined by the joints DOFs, which for a column is a single joint DOF $\theta_1$.  
+
+(*Removed transpose notation for my autistic brain to better view the matrix in its actual form*), this would represent a single joint's 3DOFs (thus 3 columns).
+$$
+\begin{bmatrix} 
+{\partial P_x \over \partial \theta_1} & {\partial P_x \over \partial \theta_2} & {\partial P_x \over \partial \theta_3} &   \: \dots 
+\\ 
+{\partial P_y \over \partial \theta_1} & {\partial P_y \over \partial \theta_2} & {\partial P_y \over \partial \theta_3} & \: \dots 
+\\
+{\partial P_z \over \partial \theta_1} & {\partial P_z \over \partial \theta_2} & {\partial P_z \over \partial \theta_3} & \: \dots \:
+\\
+
+\end{bmatrix}
+$$
+So here we are differentiating $P_x$ with respect to $\theta_1$ so if we apply the $\Delta \theta_1$ to $\theta_1$ with for the $x$ degree of freedom, which we can do by using Forward Kinematics, holding all other joints constant / as is, but perturbing the current joint along its x DOF. 
+
+That means for the perturbations though we need to do FK traversal for each joint adding the perturbation/delta to single joints while holding the rest constant (we cant just add perturbation to each in a single traversal), so this is going to require $N$ joints, evaluations of the joint hierarchy to do the same transformation accumulation (accumulation of each joints Local Space relative transforms from motion data, to put into WS) as before, but this time we are changing a single joints, single degree of freedom $\theta$ by the perturbation factor $\Delta \theta$ each time to relate the change to the change if end effector position of the chain / joint system for each Jacobian matrix element (as expensive as it sounds, and we've still got the inverse to worry about later) ! However as noted below, we only need to do this for joints in the chain (ie joints we want to be affected by the resulting IK solve, in most cases this won't be the whole joint hierarchy, most likely just a chain of joints) however it's not just per joint, its per joint DOF, which is 3 for each joint. 
+
+To test this out I will implement within Anim_State to build the Jacobian first, the method to perturb each joint will be similar to `Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)` but with as *joint now defines the starting joint of some joint chain that will be passed to a caller function, along with some delta factor to define the perturbation amount per joint. However we only need to do this along the joint chain we are solving for, I can discard the rest of the joint system/hierarchy if I don't care about IK not affecting it, so I only need to do perturbations for joints along the joint chain I want to solve for. Eg in the test case, the joints that make up the right arm (from root). So the input would be (start joint, perturb joint, perturb factor) and then the return value should be the end effector position for each perturbed joint DOF, ie $P_2$ we can use with the original position end effector position $P_1$ without perturbation of the joint DOF / angle to define : 
+$$
+P_2 - P_1 \over \Delta \theta_i
+$$
+This result will then define the value of each Jacboian column, for each $P_(x,y,z)$ component (remember we don't care about differentiating respect to end effector orientation). Thus a single column would look like : for ($N \cdot 3$ columns (joints * joint DOFs for each $\theta_i$)). 
+$$
+\begin{bmatrix} 
+{P2_x - P1_x \over \Delta \theta_i} \\
+{P2_y - P1_y \over \Delta \theta_i} \\
+{P2_z - P1_z \over \Delta \theta_i} \\
+\end{bmatrix}
+$$
+Still don't understand how this is then related to the target effector position, as P is the current location of the end effector of the chain...
+
+ Implementation test ...
+
+So we need to gather each joints, DOF perturbation's resulting end effector position, when accumulated along the joint chain hierarchy. This involves using the recursive traversal approach from before, but now we need to do it for each joints, degree of freedom, we update joint positions as we go (although it could be faster not too I guess as the non perturbed joint positions, should be the same as the joint positions currently are) until we get back to the end site, after each call we collect the new end_site of the chain (end effector) position with each perturbed angle / dof per joint, and gather them into an array to define $P_2 - P_1 \over \Delta \theta_i$ for each Jacobian entry / column per joint dof. 
+
+I eval each joint at a time, for all 3 of its DOFs, then querying each component of $P_2$ after the perturbation to form the column of the Jacobian, the Jacobian could be constructed within this func, or I just return the resulting perturbed end effector positions for each column and then use it for $P_2 - P_1 \over \Delta \theta_i$ element wise construction per column of Jacobian in a separate MFunc. 
 
 
+
+Note that the delta defines the amount of displacement the Jacobian will solve for hence the final transformation of the joints is done over multiple frames. Larger h will result in, inaccurate Finite differences and thus resulting joint angles / transformation. Or you evaluate it for multiple iterations within the same frame, successively applying the resulting angles (obtained from the inverse) so that the solution converges within a single frame, as oppose to over time / frames, at the cost of longer per frame computation times. 
+
+___
+
+#### Jacobian Matrix (Pseudo) Inverse
 
 ##### Pseudo-Inverse of Jacobian
 
