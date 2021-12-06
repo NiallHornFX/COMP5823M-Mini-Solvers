@@ -228,18 +228,48 @@ void Anim_State::ik_test_setup()
 	// Gather Joints back to root up to some depth (or up to root by default)
 	gather_joints(r_thumb, chain);
 
-
+	
+	// ============ Get Perturbed Effector Postions for each DOF ============
 	// Get Perturbed Postions of end effector, with respect to each joint dof to use for 
-	// formatuib of  Jacobian Matrix (P2 - P1 / Dtheta) 
+	// formation of  Jacobian Matrix (P2 - P1 / Dtheta) 
 	// End Joint / Effector = r_thumb, Start Joint = root. Each Pair is the P1,P2 vals for each column.
-	std::vector<std::pair<glm::vec3, glm::vec3>> cols_p1p2 = perturb_joints(chain, r_thumb, nullptr, 0.01f);
+	float delta_theta = 0.01f;
+	std::vector<std::pair<glm::vec3, glm::vec3>> cols_p1p2 = perturb_joints(chain, r_thumb, nullptr, delta_theta);
 
+	// ============ Jacobian Construction ============
+	// Encap into Some class for Eigen use, for now will do inline.
 	// Now Construct Jacobian. (3 x (j * 3)) j = number of joints in chain.
 	std::size_t r = 3, c = chain.size() * 3; 
-	// Encap into Some class for Eigen use, for now will do inline.
-	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> J; 
-	J.resize(r, c);
-	// Loop col-row wise
+
+	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> J;  
+	J.resize(r, c); J.setZero();
+
+	// Loop column wise
+	std::size_t col_ind = 0; 
+	std::stringstream r0, r1, r2; 
+	for (auto col : J.colwise())
+	{
+		// Each Column get Non-Perturbed (P1) and Perturbed (P2) end effector postion vector3s. 
+		std::pair<glm::vec3, glm::vec3> &perturb = cols_p1p2[col_ind];
+
+		// Split into Effector Positional components (x,y,z) form ((P2 - P1) / Dtheta) for each el. 
+		col(0) = (perturb.second.x - perturb.first.x) / delta_theta;
+		col(1) = (perturb.second.y - perturb.first.y) / delta_theta;
+		col(2) = (perturb.second.z - perturb.first.z) / delta_theta;
+
+		// Dbg stream output
+		r0 << col(0) << ", "; r1 << col(1) << ", "; r2 << col(2) << ", ";
+
+		col_ind++;
+	}
+	// Dbg Matrix output
+	std::cout << "\n======== DEBUG::JACOBIAN_MATRIX::BEGIN ========\n"
+		<< "Rows = " << J.rows() << " Cols = " << J.cols() << "\n"
+		<< "|" << r0.str() << "|\n" << "|" << r1.str() << "|\n" << "|" << r2.str() << "|\n"
+		<< "======== DEBUG::JACOBIAN_MATRIX::END ========\n";
+
+	auto J_t = J.transpose() * J;
+	//auto J_psi = (J * J.transpose()).inverse() * J.transpose();
 
 	int test = 0; 
 
@@ -293,7 +323,7 @@ void Anim_State::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
 	}
 }
 
-// ===================== Animation Frame state member functions =====================
+// ============================== Animation Frame state member functions ==============================
 // Need to make sure inc/dec is only done for interval of current dt. 
 
 void Anim_State::inc_frame()
@@ -312,11 +342,13 @@ void Anim_State::set_frame(std::size_t Frame)
 }
 
 
-// ===================== Joint Perturbation =====================
-// For construction of Jacobian Matrix, relating joint angles to end effector. We need (P2 - P1 / Dtheta) 
-// Where P1 is the orginal non-perturbed postion of the end effector, P2 is the perturbed postion, for each joint, DOF
-// which defines a single column of the Jacobian Matrix. (Thus the Jacobian is 3 x (j * DOF), which we know is 3 x (j * 3)). 
-// as joints have 3 rotational DOFs as each Joint would define 3 Cols (one for each DOF). 
+// ============================== Joint Perturbation ==============================
+/* 
+   For construction of Jacobian Matrix, relating joint angles to end effector. We need (P2 - P1 / Dtheta) 
+   Where P1 is the orginal non-perturbed postion of the end effector, P2 is the perturbed postion, for each joint, DOF
+   which defines a single column of the Jacobian Matrix. (Thus the Jacobian is 3 x (j * DOF), which we know is 3 x (j * 3)). 
+   as joints have 3 rotational DOFs as each Joint would define 3 Cols (one for each DOF). 
+*/
 
 // Both start_joint + end_effec should be within the joint chain been evaulated. 
 // chain          - joint chain to get perturbed postions for. 
@@ -358,12 +390,10 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 
 			// Function traverses the joint from start of chain (assumed to be root for now), and when we reach the preturb joint, we perturb its DOF. 
 			// We contiune accumulating the resulting transform along the chain and store the resulting end effector / end joint position. 
-
 			perturb_traverse(chain, perturb_joint, DOF, delta_theta);
 
 			// Query Resulting Modified End Effector Postion component
 			P2 = end_effec->position;
-
 			//assert(P1 != P2); // Check something is actually happeneing. 
 
 			// Now P1 defines orginal effector pos, P2 defines perturbed effector pos, for the current DOF (rotational channel).
@@ -374,12 +404,11 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 	return pertrub_pos;
 }
 
-//
+// Traversal of Joint Chain Hierachy. 
 // chain - chain to traverse and apply perturbations
 // perturb_joint - the joint in the chain we want to perturb, (check if current joint, == perturb joint).
 // dof - the DOF / axis angle we want to perturb
 // perturb_fac - Perturbation amount
-
 void Anim_State::perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joint, ChannelEnum dof, float perturb_fac)
 {
 	glm::mat4 trans(1.f); // Accumulated Transform
@@ -423,7 +452,7 @@ void Anim_State::perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joi
 		{
 			trans = glm::translate(trans, joint->offset);
 		}
-
+		// Perturb, or hold constant ? 
 		if (perturb_joint) // Perturbed Joint Rotation 
 		{
 			for (const Channel *c : joint->channels)
@@ -484,16 +513,12 @@ void Anim_State::perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joi
 				}
 			}
 		}
-
-		int hold = 0; 
 		// ONLY transform the end_site, we don't care about actually transforming the other joints aslong as we have their
 		// transforms accumulated (to propgate to the end site joint as it is what we are measuring the delta of). 
-
 		if (joint->is_end) // Assumes last chain joint is an end_site / effector. 
 		{
 			joint->position = glm::vec3(trans * glm::vec4(0.f, 0.f, 0.f, 1.f));
 		}
-		
 	}
 }
 

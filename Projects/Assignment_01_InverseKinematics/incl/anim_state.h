@@ -60,6 +60,8 @@ public:
 	// ===== IK Data =====
 	std::vector<Effector*> effectors; 
 	IK_Solver *test_solve; 
+	std::vector<Joint*> chain_test; 
+	Joint *target_test; 
 
 	// ===== Shared Anim State =====
 	// Skeleton 

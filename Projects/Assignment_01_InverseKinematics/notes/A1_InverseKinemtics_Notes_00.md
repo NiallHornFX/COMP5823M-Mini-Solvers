@@ -1026,6 +1026,8 @@ From Rick Parent's textbook we know that :
 The rotation at a rotational joint induces an instantaneous linear direction of travel at the end effector.
 ```
 
+However, Rick Parent's book as carefully picked situation ie 3 Joint system, with single DOF revolute joints which allows for a $3 \times 3 $ system, so its not the best reference for real world situations. 
+
 For a single joint we can view the problem as :
 $$
 t-c = \textbf{J}(\theta_2 - \theta_1)
@@ -1100,7 +1102,7 @@ Where $v_x,v_y,v_z$ are the desired linear velocities of the effector, $\omega_x
 $$
 V = J\dot\theta
 $$
-The Jacobian relates the change in end effector position (ie velocity) to the change in joint angles (ie their velocities via partial derivatives, target effector velocity / joint angle velocity) we will want the inverse of this later. 
+The Jacobian relates the change in end effector position (ie velocity) to the change in joint angles (ie their velocities via partial derivatives, target effector velocity / joint angle velocity) we will want the inverse of this later. It defines the linear instantaneous rate of change hence for accuracy it needs to be re-calculated for multiple iterations so the resulting inverse gives us incremental joint angle velocities to rotate the joints such that the end effector of the joint chain moves towards the desired goal position. 
 
 We formulate this Jacobian in terms of the velocities denoting $\partial P_i = V_i$. However we can disregard the (end) effector orientation and just solve for the positions (and thus linear velocities), so the row count goes from 6 to 3 now.
 
@@ -1143,7 +1145,7 @@ Defines the instantaneous linear velocity of the chains end effector, hence this
 
 Where $Z_i$ is the i'th joint axis of rotation, $E$ is the chains end effectors position and $J_i$ is the i'th joint position / end effectors current position. So this can be see as the cross product of the Joint Axis and the direction from the joint to the end effector. Each of these defines a column in the Jacobian, with each component (DOF) been on each row. 
 
-So eg $\partial P_z \over \partial \theta_1$ is the velocity x component of the end effector, by the rotation of joint 1's DOF. Which is simply just the x component of the above cross product where the $i$th joint is Joint 1 $J_1$ (Don't confuse j notation with Jacobian) ! However we can see now that this formulation only makes sense for joints with 1 DOF ? As each column defines a single joint, with a single DOF, How would it be possible if each joint has multiple DOFs as they do in our case ? 
+So eg $\partial P_z \over \partial \theta_1$ is the velocity x component of the end effector, by the rotation of joint 1's DOF. Which is simply just the x component of the above cross product where the $i$th joint is Joint 1 $J_1$ (Don't confuse j notation with Jacobian) ! However we can see now that this formulation only makes sense for joints with 1 DOF ? As each column defines a single joint, with a single DOF, How would it be possible if each joint has multiple DOFs as they do in our case ? All texts I see also assume $Z_i$ has a single DOF eg the axis $(0, 0, 1)$ where as in my case each joints 3 DOF axis is arbitrary.
 
 ###### Relating this to the target effector position : 
 
@@ -1504,7 +1506,7 @@ void Anim_State::gather_joints(Joint *start, std::vector<Joint*> &chain, int32_t
 	if (depth <= 0) chain.push_back(bvh->joints[0]); // Also add root joint. 
 
 	// Reverse joints order in chain, so root (or joint closest to root) 
-    // is first, end_site is last. 
+    // is first, end_site joint is last. 
 	std::reverse(chain.begin(), chain.end());
 }
 ```
@@ -1516,16 +1518,59 @@ void Anim_State::gather_joints(Joint *start, std::vector<Joint*> &chain, int32_t
 As stated before each perturbation vector will define a column of the Jacobian following the Forward Difference form of : 
 $$
 \begin{bmatrix} 
-{P2_x - P1_x \over \Delta \theta_i} \\
-{P2_y - P1_y \over \Delta \theta_i} \\
-{P2_z - P1_z \over \Delta \theta_i} \\
+{P2_x - P1_x \over \Delta \theta_i}& \dots \\
+{P2_y - P1_y \over \Delta \theta_i}& \dots \\
+{P2_z - P1_z \over \Delta \theta_i}& \dots \\
 \end{bmatrix}
 $$
 So now we know $(P1, P2)$ for each we can actually build the Jacobian. This is done for now within Anim_State class like the perturbation gathering is, but later I will put it back within the IK_Solver class. 
 
-We build an Eigen Matrix in of size $ 3 \times (j \cdot 3)$ which in this case is of size $3 \times 27$ as we have 9 joints in the chain. Make sure matrix is col major, we then will iterate column wise and build each elements FDM value as per above. 
+We build an Eigen Matrix in of size $ 3 \times (j \cdot 3)$ which in this case is of size $3 \times 27$ as we have 9 joints in the chain. Make sure matrix is col major, we then will iterate column wise and build each elements FDM value as per above.  Loop Col wise, down each row, splitting the $(P1, P2)$ component wise.  For now I implemented this within `Anim_State::ik_test_setup()` Member function : 
+
+```C++
+// Anim_State::ik_test_setup()
+// [..] Create Chain, Get End Effector, Get Perturbed Values 
+
+	// ============ Jacobian Construction ============
+	// Encap into Some class for Eigen use, for now will do inline.
+	// Now Construct Jacobian. (3 x (j * 3)) j = number of joints in chain.
+	std::size_t r = 3, c = chain.size() * 3; 
+	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> J;  
+	J.resize(r, c); J.setZero();
+
+	// Loop column wise
+	std::size_t col_ind = 0; 
+	std::stringstream r0, r1, r2; 
+	for (auto col : J.colwise())
+	{
+		// Each Column get Non-Perturbed (P1) and Perturbed (P2) end 
+        // effector postion vector3s. 
+		std::pair<glm::vec3, glm::vec3> &perturb = cols_p1p2[col_ind];
+
+		// Split into Effector Positional components (x,y,z) form ((P2 - P1) / Dtheta) 
+        // for each col,row element. 
+		col(0) = (perturb.second.x - perturb.first.x) / delta_theta;
+		col(1) = (perturb.second.y - perturb.first.y) / delta_theta;
+		col(2) = (perturb.second.z - perturb.first.z) / delta_theta;
+
+		// Dbg stream output
+		r0 << col(0) << ", "; r1 << col(1) << ", "; r2 << col(2) << ", ";
+
+		col_ind++;
+	}
+	// Dbg Matrix output
+	std::cout << "\n======== DEBUG::JACOBIAN_MATRIX::BEGIN ========\n"
+		<< "Rows = " << J.rows() << " Cols = " << J.cols() << "\n"
+		<< "|" << r0.str() << "|\n" << "|" << r1.str() << "|\n" << "|" << r2.str() << "|\n"
+		<< "======== DEBUG::JACOBIAN_MATRIX::END ========\n";
+// [..]		
+```
+
+This seems to be correct, apart from the last column (26th in this case) is all zeros, this would be the z'th rotation DOF perturbation of the final joint in the chain `r_thumb` ? The final joint is the end effector, so its differeinating its own rotation with respect to its own position (not with respect to itself, ie should not equal 1, as we are differentiation rotation of DOFs to position), thus if there is no change in the resulting end effector delta because of the rotation with what we are doing $P2 - P1 / \Delta \theta$ we get 0, which makes sense. The only case this occurs on is the 26th col for Z Rotation DOF of the `r_thumb` joint / end effector. I believe its correct that the end effector itself should be part of the Jacobian so this seems to make sense. 
 
 
+
+Of course we know the matrix is not square, however this means it does not have a determinant to check. 
 
 ___
 
@@ -1549,7 +1594,7 @@ Depending on the Rank of the Jacobian (Number of linearly independent columns) w
 $$
 A^+ = (A^TA)^{-1} A^T
 $$
-However for cases where this is not the case we may need to use SVD of $A$. 
+However for cases where this is not the case we may need to use SVD of $A$. I.e. $(A^TA)^{-1}$ is not valid for non square matrices, the standard inverse will not work, most "real" cases for Inverse Kinematics will not have square matrices so the above method cannot be used as the Inverse does not exist. This is new for me also as I'm used to dealing with square and possibly symmetric matrices. 
 
 
 
@@ -1684,7 +1729,13 @@ void Anim_State::write_bvh_traverse(Joint *joint, std::stringstream &stream)
 }
 ```
 
-Again this works great, but its just reading the data from the BVH_Data class itself (within Anim_State class) ideally we will have modified joint angles (and thus motion data section) so the we will be reading modified channel motion data which may be modified from the input BVH Data directly or copied and internally stored to preserve the original BVH motion data per channel.
+The formatting of the write into the string stream is hardcoded to match the BVH format as it should, this took a bit of trial and error and running diff against original input BVH files, but it seems to be working well now. 
+
+Note that we pass the string stream by reference so its not copied for each recursive call, and the next call appends to previous write. We then read the final stringstream out to the ofstream bvh file output.
+
+So this works pretty good, but its just reading the data from the BVH_Data class itself (within Anim_State class) ideally we will have modified joint angles (and thus motion data section) so the we will be reading modified channel motion data which may be modified from the input BVH Data directly or copied and internally stored to preserve the original BVH motion data per channel.
+
+However there is a precision issue, because the output writes float data extracted from the Motion Data from the original BVH file, so some level of precision is lost, ideally we should use doubles. 
 
 ___
 
