@@ -1012,6 +1012,8 @@ One thing i'm unsure about is, most texts only cover revolute joints, ie rotatio
 
 Ideally we should be checking if Target Effector position is reachable - To check if effector position is reachable by joint chain, check for $||L_1 - L_2||$ and $||L_1 + L_2||$ min and max distances (eg for 2 bones (lengths of deltas between joint positions)). 
 
+We assume there is only a single chain of joints and a single end effector in this case, if I had time we would allow for multiple end effectors, for multiple chains over the system, eg for each limb, but time wise I'm just focused on single chains. 
+
 Note that the delta defines the amount of displacement the Jacobian will solve for hence the final transformation of the joints is done over multiple frames. Larger h will result in, inaccurate Finite differences and thus resulting joint angles / transformation. Or you evaluate it for multiple iterations within the same frame, successively applying the resulting angles (obtained from the inverse) so that the solution converges within a single frame, as oppose to over time / frames, at the cost of longer per frame computation times. 
 
 _____
@@ -1157,7 +1159,7 @@ So using the Jacobian we relate the desired velocity (ie the velocity of the end
 
 ##### Alternate Jacobian Method for multiple DOFs per joint
 
-However this method may not work for joints with more than 1 DOF ie rotational joints in my case and not single DOF joints like Revolute or Prismatic joints which the above method for deriving the Jacobian seems to be limited to, hence an alternate approach is needed to allow differentiation for each joint with respect to each DOFs for all its rotational angles. 
+However this method may not work for joints with more than 1 DOF ie rotational joints in my case and not single DOF joints like Revolute or Prismatic joints which the above method for deriving the Jacobian seems to be limited to, hence an alternate approach is needed to allow differentiation for each joint with respect to each DOFs for all its rotational angles as the end effector position is a function of the joint angles, hence we want to differentiate it against each individual joint, DOF.  
 
 One such approach is a "perturbation" approach to differentiation to calculate the Jacobian. Where the end effector position (and rotation if used) is differentiated with respect to the joint angles for all the joints DOFs, in a forward finite difference like approach, ie using perturbations of $\Delta \theta$ to solve for the unknown partial derivatives numerically. 
 

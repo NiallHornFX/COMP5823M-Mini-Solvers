@@ -10,6 +10,8 @@
 #include "bvhdata.h"
 #include "effector.h"
 
+using vec3pair = std::pair<glm::vec3, glm::vec3>;
+
 class IK_Solver; 
 
 // Info :  Class where animation processing is based (BVH, FK, IK). Exists within app as Tick stage. 
@@ -40,7 +42,7 @@ public:
 
 	// ===== IK =====
 	void ik_test_setup();
-	//void ik_test_tick();
+	void ik_test_tick();
 
 	std::vector<std::pair<glm::vec3, glm::vec3>> perturb_joints(std::vector<Joint*> &chain, Joint *end_effec, Joint *start_joint, float perturb_factor); 
 
@@ -60,8 +62,10 @@ public:
 	// ===== IK Data =====
 	std::vector<Effector*> effectors; 
 	IK_Solver *test_solve; 
+	// Test Vars
 	std::vector<Joint*> chain_test; 
 	Joint *target_test; 
+	Joint *endeffec_test; 
 
 	// ===== Shared Anim State =====
 	// Skeleton 

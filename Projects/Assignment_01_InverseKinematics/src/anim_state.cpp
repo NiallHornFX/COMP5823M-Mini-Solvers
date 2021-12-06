@@ -223,30 +223,33 @@ void Anim_State::ik_test_setup()
 	Joint *r_thumb = bvh->find_joint("RThumb");
 	assert(r_thumb && r_thumb->is_end);
 
-	// Define IK Chain of joints
-	std::vector<Joint*> chain; 
-	// Gather Joints back to root up to some depth (or up to root by default)
-	gather_joints(r_thumb, chain);
+	endeffec_test = r_thumb;
 
-	
+	// Gather Joints back to root up to some depth (or up to root by default)
+	gather_joints(r_thumb, chain_test);
+}
+
+void Anim_State::ik_test_tick()
+{
+
 	// ============ Get Perturbed Effector Postions for each DOF ============
 	// Get Perturbed Postions of end effector, with respect to each joint dof to use for 
 	// formation of  Jacobian Matrix (P2 - P1 / Dtheta) 
 	// End Joint / Effector = r_thumb, Start Joint = root. Each Pair is the P1,P2 vals for each column.
 	float delta_theta = 0.01f;
-	std::vector<std::pair<glm::vec3, glm::vec3>> cols_p1p2 = perturb_joints(chain, r_thumb, nullptr, delta_theta);
+	std::vector<vec3pair> cols_p1p2 = perturb_joints(chain_test, endeffec_test, nullptr, delta_theta);
 
 	// ============ Jacobian Construction ============
 	// Encap into Some class for Eigen use, for now will do inline.
 	// Now Construct Jacobian. (3 x (j * 3)) j = number of joints in chain.
-	std::size_t r = 3, c = chain.size() * 3; 
+	std::size_t r = 3, c = chain_test.size() * 3;
 
-	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> J;  
+	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> J;
 	J.resize(r, c); J.setZero();
 
 	// Loop column wise
-	std::size_t col_ind = 0; 
-	std::stringstream r0, r1, r2; 
+	std::size_t col_ind = 0;
+	std::stringstream r0, r1, r2;
 	for (auto col : J.colwise())
 	{
 		// Each Column get Non-Perturbed (P1) and Perturbed (P2) end effector postion vector3s. 
@@ -269,18 +272,7 @@ void Anim_State::ik_test_setup()
 		<< "======== DEBUG::JACOBIAN_MATRIX::END ========\n";
 
 	auto J_t = J.transpose() * J;
-	//auto J_psi = (J * J.transpose()).inverse() * J.transpose();
 
-	int test = 0; 
-
-
-	/*
-	// Pass Chain and End Effector to IK Solve 
-	test_solve = new IK_Solver(this, chain, eff_arm_r);
-	*/
-
-	// IK Solve
-	// Update Joint angles Motion Data for affected joints of IK solve. 
 }
 
 // Used to create chain of joints for IK, gathering joints from starting joint, back to root, up to some depth. 
@@ -364,7 +356,7 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 
 	// Vector to store Orginal and preturbed postions of end effector, for each perturbed joint (for all rot DOFs). 
 	// (Defines single col of Jacobian in the form of P2 - P1 / Dtheta)
-	std::vector<std::pair<glm::vec3, glm::vec3>> pertrub_pos;
+	std::vector<vec3pair> pertrub_pos;
 	
 	// For each joint, for each DOF, traverse the chain hierachy, perturbing only the cur DOF, and then deriving the resulting end site postion
 	// Note that end site position == last joint (in chain) postion as there is no offset on the end_site locations. 
@@ -397,7 +389,7 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 			//assert(P1 != P2); // Check something is actually happeneing. 
 
 			// Now P1 defines orginal effector pos, P2 defines perturbed effector pos, for the current DOF (rotational channel).
-			pertrub_pos.push_back(std::pair<glm::vec3, glm::vec3>(P1, P2));
+			pertrub_pos.push_back(vec3pair(P1, P2));
 		}
 	}
 
