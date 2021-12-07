@@ -5,6 +5,11 @@
 #include <map>
 #include <tuple>
 
+// Ext Headers
+// Eigen
+#include "ext/Eigen/Eigen"
+#include "ext/Eigen/Core"
+
 // Project Headers
 #include "skeleton.h"
 #include "bvhdata.h"
@@ -43,6 +48,7 @@ public:
 	// ===== IK =====
 	void ik_test_setup();
 	void ik_test_tick();
+	void ik_apply_deltas(const Eigen::Matrix<float, Eigen::Dynamic, 1> &deltas); 
 
 	std::vector<std::pair<glm::vec3, glm::vec3>> perturb_joints(std::vector<Joint*> &chain, Joint *end_effec, Joint *start_joint, float perturb_factor); 
 
@@ -64,8 +70,8 @@ public:
 	IK_Solver *test_solve; 
 	// Test Vars
 	std::vector<Joint*> chain_test; 
-	Joint *target_test; 
-	Joint *endeffec_test; 
+	Joint    *joint_endeffec; 
+	Effector *target_endeffec;
 
 	// ===== Shared Anim State =====
 	// Skeleton 

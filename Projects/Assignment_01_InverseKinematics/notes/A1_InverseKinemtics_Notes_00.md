@@ -1040,8 +1040,6 @@ Where $t$ is the *target* position of the effector, $c$ is the *current* positio
 
 The unknown joint angles to solve for via the Jacobian these are $N\times 1$ vectors where $N$ is number of joints  by the  Joints DOFs (stacked rotational angles into single vector) $ N \times (j \cdot dof)$. 
 
-
-
 ###### Jacobian refresher 
 
 For system of $n$ equations of $y = f(x)$. To differentiate any $y_i$ we use the chain rule : 
@@ -1084,7 +1082,7 @@ $$
 \end{bmatrix}
 $$
 
-###### Applied to Inverse Kinematics : 
+##### Applied to Inverse Kinematics : 
 
 In terms of inverse kinematics the input variables $x_i$ are the joint angles with the output variables $y_i$ representing the target end effector position (and orientation if used). However we want the inverse of this, but we'll worry about that in a bit. For IK this is typically formulated as : 
 $$
@@ -1134,30 +1132,55 @@ J(\theta_1, \dots, \theta_6) =
 \end{bmatrix}
 $$
 
-
 Of course the Joint angles are unknown and we want to solve for them, not for the end effector position hence the Inverse of the Jacobian is needed.  Will cover that later. 
 
-##### Evaluating (Calculating) the Jacobian 
+##### Relating the Jacobian to the Target End Effector Position : 
 
-We know the joints axis of rotation (by defining an arbitrary axis based on its channels), we can use this with cross product of the vector to the target / effector position to define the
+I initially struggled to understand how the Jacobian (which is the derivative of the joint chains current end effector position wrt the current joint DOF / angles) is then related to the target effector position, as P is the current location of the end effector of the chain. But if we look at the system we are trying to solve, we explicitly define the LHS of the system $V$ the velocities vector which for a single end effector is just a $3\times 1$ vector as we discard its orientation. 
 $$
-G = Z_i \cross (E - J_i)
+V = J(\theta_i)\dot\theta \\ (t-c) = J(\theta_i)\dot\theta 
 $$
-Defines the instantaneous linear velocity of the chains end effector, hence this is what we use to define each column of the Jacobian.
+We relate the desired velocity (ie the velocity of the end effector from its current position to the target position), to the Jacobian (which is the current linear velocity of the end effector wrt to each joint angle / DOF hence the $J(\theta_i)$ notation). Then we have the time derivative / angle velocities $\dot{\theta}$. 
 
-Where $Z_i$ is the i'th joint axis of rotation, $E$ is the chains end effectors position and $J_i$ is the i'th joint position / end effectors current position. So this can be see as the cross product of the Joint Axis and the direction from the joint to the end effector. Each of these defines a column in the Jacobian, with each component (DOF) been on each row. 
+The LHS and RHS are vectors ofcourse, but this notation is more compact. $V = t-c$ is a $3 \times 1$ vector as mentioned for the single end effector.  The Jacobian is ofcourse as $3 \times (j \cdot 3)$ matrix assuming the end effector only has position and each joint $j$ has 3 DOFs. 
 
-So eg $\partial P_z \over \partial \theta_1$ is the velocity x component of the end effector, by the rotation of joint 1's DOF. Which is simply just the x component of the above cross product where the $i$th joint is Joint 1 $J_1$ (Don't confuse j notation with Jacobian) ! However we can see now that this formulation only makes sense for joints with 1 DOF ? As each column defines a single joint, with a single DOF, How would it be possible if each joint has multiple DOFs as they do in our case ? All texts I see also assume $Z_i$ has a single DOF eg the axis $(0, 0, 1)$ where as in my case each joints 3 DOF axis is arbitrary.
+Don't confuse $(\theta_i)$ which is the current joint angles of the joints DOFs as is, with $\dot{\theta}$ which is the angle velocities / angular velocities delta. 
 
-###### Relating this to the target effector position : 
-
-I struggled to understand how this is then related to the target effector position, as P is the current location of the end effector of the chain. I believe its defined in the LHS where :
+Thus where the Inverse is 
 $$
-V = J\dot\theta \\t-c = J(\theta_2 - \theta_1)
+\dot{\theta} = {J(\theta_i)}^{-1}V
 $$
-So using the Jacobian we relate the desired velocity (ie the velocity of the end effector from its current pos to the target pos), to the Jacobian (which is the current velocity of the end effector relative to the joint angles), the LHS and RHS are vectors ofcourse, but this notation is more compact. (t-c is a $3\times1$ vector for each joint in the system).
+We set $V = t-c$ and we have the $J^{-1}$ and we get the $\dot{\theta}$ (also may be denoted $\Delta \theta$) as the output, which is the delta in angular velocity to apply to the joint angles, such that they tend towards the target $V$ end effector velocity. 
 
-##### Alternate Jacobian Method for multiple DOFs per joint
+Thus we treat the velocity $V$ of the end effector we are solving, as $t-c$ and we want to solve so that the resulting velocity matches as closet as possible this goal condition. So it becomes a bit like a Newton Solve where we are linearizing the system and using this to advance the solution iteratively using the inverse, because the actual end effector position as a function of joint angles as you can imagine is highly nonlinear. 
+
+This is where we use either (or both) a time integration approach, to evaluate the the Jacobian multiple times over a number of frames so that the end effector position tends towards the target position gradually over time or, we can do multiple Jacobian + application steps per frame (where resulting $\dot{\theta}$ are applied back to angles directly) using an iterative approach at the cost of longer calculation times per frame (as multiple iterations of Jacobian Calculation, Inversion and Application are needed per frame), however this would remove the need to temporally integrate gradual joint angle deltas over time as it could ensure the end effector reaches the target end effector position, within the current frame. 
+
+An iterative step like approach  could be formulated using a simple error function, where we minimise the error s.t the resulting $V$ approaches $t-c$ 
+
+Something like :
+$$
+||t-c|| > eps
+$$
+Where eps / tol is the tolerance of the position deltas we will allow for. 
+
+We apply the resulting $\dot{\theta}$ to the system using standard FK approach as before, traversing through the chain (using the same method for calculation the end effector perturbations see below) but this time applying the resulting delta angles to each joints rotational axis / DOF. 
+
+##### Building the Jacobian Matrix : Analytically with "The Cross Product Method"
+
+This is the method described in the modules textbook (Rick Parent's book), and while in the book its not described as analytical, because it uses a closed form solution to each column of the Jacobian it's typically denoted as such. The book shows a system of 3 joints where each joint is revolute and only has a single DOF, which makes this method not very useful for our problem where each joint defined from the input BVH joint hierarchy has 3 DOFs for each rotational axis. 
+
+We know the joints axis of rotation (by defining an arbitrary axis based on its channels), we can use this with cross product of the vector to the end effector of the joint chain to define : 
+$$
+Z_i \cross (E - J_i)
+$$
+Defines the instantaneous linear velocity of the chains end effector, hence this is what we use to define each column of the Jacobian. Where $Z_i$ is the i'th joint axis of rotation, $E$ is the chains end effectors position and $J_i$ is the i'th joint position. So this can be see as the cross product of the Joint Axis and the direction from the joint to the end effector. Each of these defines a column in the Jacobian, with each component (DOF) been on each row hence the matrix is of size $3 \times (j \cdot 3)$. 
+
+So eg $\partial P_z \over \partial \theta_1$ is the velocity x component of the end effector, by the rotation of joint 1's DOF. Which is simply just the x component of the above cross product where the $i$th joint is Joint 1 $J_1$ (Don't confuse j notation with Jacobian) ! 
+
+However we can see now that this formulation only makes sense for joints with 1 DOF ? As each column defines a single joint, with a single DOF, How would it be possible if each joint has multiple DOFs as they do in our case ? All texts I see also assume $Z_i$ has a single DOF eg the axis $(0, 0, 1)$ where as in my case each joints 3 DOF axis is arbitrary.
+
+##### Building the Jacobian Matrix : Numerically with "The Perturbation Method"
 
 However this method may not work for joints with more than 1 DOF ie rotational joints in my case and not single DOF joints like Revolute or Prismatic joints which the above method for deriving the Jacobian seems to be limited to, hence an alternate approach is needed to allow differentiation for each joint with respect to each DOFs for all its rotational angles as the end effector position is a function of the joint angles, hence we want to differentiate it against each individual joint, DOF.  
 
@@ -1515,7 +1538,7 @@ void Anim_State::gather_joints(Joint *start, std::vector<Joint*> &chain, int32_t
 
  I'm wondering if I should do this in double precision as the perturbation factor $\Delta \theta$ is small so $P2-P1$ deltas are very small, and likely to accumulate FP error overtime just using single precision fp32. 
 
-###### Build Jacobian from Perturbations : 
+##### Build Jacobian from Perturbations : 
 
 As stated before each perturbation vector will define a column of the Jacobian following the Forward Difference form of : 
 $$
@@ -1570,15 +1593,21 @@ We build an Eigen Matrix in of size $ 3 \times (j \cdot 3)$ which in this case i
 
 This seems to be correct, apart from the last column (26th in this case) is all zeros, this would be the z'th rotation DOF perturbation of the final joint in the chain `r_thumb` ? The final joint is the end effector, so its differeinating its own rotation with respect to its own position (not with respect to itself, ie should not equal 1, as we are differentiation rotation of DOFs to position), thus if there is no change in the resulting end effector delta because of the rotation with what we are doing $P2 - P1 / \Delta \theta$ we get 0, which makes sense. The only case this occurs on is the 26th col for Z Rotation DOF of the `r_thumb` joint / end effector. I believe its correct that the end effector itself should be part of the Jacobian so this seems to make sense. 
 
-
-
 Of course we know the matrix is not square, however this means it does not have a determinant to check. 
+
+##### Iteration of Jacobian to Target Effector 
+
+Now we can build the Jacobian via fetching perturbed end effector positions, we need to do it iteratively, so we can satisfy 
+$$
+V = J(\theta_i)\dot\theta \ \\ (t-c) = J(\theta_i)\dot\theta
+$$
+This involves calculating the Jacobian, Inversing it, applying the resulting delta angle velocities to the joints in the system and either by integration over time / a number of frames or successively for $k$ iterations within a single frame. 
 
 ___
 
 #### Jacobian Matrix (Pseudo) Inverse
 
-We have at the moment the velocities of the end effector from the resulting Jacobian in the form of : 
+From the Jacobian calculation, we have at the velocities of the end effector wrt to each joints DOFs angles in the form of : 
 $$
 V = J\dot\theta \
 $$
@@ -1586,23 +1615,57 @@ However we want the Joint Angle velocities, which we can apply to the joints to 
 $$
 \dot\theta = J^{-1}V
 $$
-However we know that for systems of joints larger than 3, the Jacobian is non square. There also may be singularities that occur that are impossible to avoid, depending on the joint configuration which may lead to an over constrained system, because of this the Pseudo-Inverse is used instead.
+Where $\dot{\theta}$ is the angular velocity of the joints to integrate to the joint angles, also denoted as $\Delta \theta$ but I omit that as it may be confused with the above perturbation factor of $\Delta \theta$. Where as derived above, $V = t-c$ the delta of the target vs the current end effector position. 
 
-##### Pseudo-Inverse of Jacobian
+However we know that for systems of joints larger than 3, the Jacobian is non square, meaning it has no actual inverse as it has no deterimant. 
 
-Apart from the 3 Joint case (where each joint has a single DOF) and we only care about the end effector position (which defines a $3\times3$ matrix) we cannot just use the transpose as the inverse. 
+There may also be singularities that occur, that are impossible to avoid, depending on the joint configuration which may lead to an over constrained system where their are too few solutions or under constrained where their are too many solutions and no single unique solution, because of this the Pseudo-Inverse is used instead.
+
+##### First - Approximating Inverse with Transpose
+
+For simple initial case we could just use the Jacobian transpose as the inverse and thus return the $\dot{\theta}$ values as :
+$$
+\dot{\theta} = J^T  V
+$$
+For the test case described above, where $J$ is a matrix of dimensions $3 \times 27$ for 3 End Effector positional DOFs and 9 joints with 3 rotational DOFs, $V$ is a column vector of dimensions $3 \times 1$ for the 3 positional DOFs of the end effector. Thus $\dot{\theta}$ is a $27 \times 1$ vector of the resulting joint angle velocities. 
+
+We know this is correct because $J^T$ is of dimensions $27 \times 3$ and $V$ of dimensions $3 \times 1$ so we have the matrix vector product : $(27 \times 3) \cdot (3 \times 1)$  with a matching inner pair $3,3$ that validates the matrix vector product is possible and the outer pair $27, 1$ defines the resulting vector size. We then take each set of 3 DOF Angles and use them to perform Forward Kinematics on the joint chain to modify their angles and thus transforms (and thus transform of the end effector to tend towards the target effector position).
+
+##### Pseudo-Inverse 
+
+Apart from the 3 Joint case (where each joint has a single DOF) and we only care about the end effector position (which defines a $3\times3$ matrix) we cannot just use the transpose as the inverse and get a stable result.  For low rank matrices where most columns are not linearly independent the transpose becomes much less of an approximation of the Inverse and we need to use another method to approximate the inverse, hence the Pseudo-Inverse.
 
 Depending on the Rank of the Jacobian (Number of linearly independent columns) will depend on how the Pseudo-Inverse is approached, typically calculating the Moore-Penrose Pseudoinverse on a matrix with linearly independent columns is defined as
 $$
 A^+ = (A^TA)^{-1} A^T
 $$
-However for cases where this is not the case we may need to use SVD of $A$. I.e. $(A^TA)^{-1}$ is not valid for non square matrices, the standard inverse will not work, most "real" cases for Inverse Kinematics will not have square matrices so the above method cannot be used as the Inverse does not exist. This is new for me also as I'm used to dealing with square and possibly symmetric matrices. 
+
+
+$(A^TA)$ should result in a square matrix, which then allows for the inverse to occur. This is then multiplied by the transpose again (of the original matrix).
+
+Note Eigen `matrix.transpose()` doesn't actually reshape the matrix, is just swaps the pointers internally, so the size still stays the same, however It seems to result in square matrix result when printed, however it may not be the same internally, because the Inverse method asserts the sizes are the same, but because they are dynamic matrices and it seems even though the member functions (rows(), cols()) return the correct square size, internally they are still the size they were first resized() to Maybe just resize() ?. 
+
+
+
+May need other methods like calculating SVD of $A$ and using for Pseudo-Inverse calc. 
+
+_____
+
+##### Applying / Integrating the Resulting Joint Angle Velocities
+
+Ideally we can re-use the perturbation joint chain traversal code, but instead of perturbing each joint DOF / angle we are applying the resulting angle velocities to them, however we want to update all joint positions in the chain (not just the end effector) in this case from the accumulated transforms from root / start joint in the chain. 
+
+Whether we do this as a multi-iteration process within a single frame, then re-calculating the Jacobian, Inversing, Applying the resulting angle velocities for $k$ iterations Or if we just integrate the resulting single iteration over multiple frames is optional. 
 
 
 
 
 
+____
 
+##### Abstraction back into IK_Solver class
+
+IK Solver for each Joint chain, target effector ...
 
 
 

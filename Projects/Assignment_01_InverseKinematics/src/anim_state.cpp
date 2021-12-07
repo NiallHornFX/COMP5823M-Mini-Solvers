@@ -8,12 +8,8 @@
 #include <cassert>
 #include <algorithm>
 
-// Ext Headers
-// Eigen
-#include "ext/Eigen/Eigen"
-#include "ext/Eigen/Core"
-
 #define CREATE_ROOT_BONE 0 
+#define DEBUG_JACOBIAN 1
 
 // Default Ctor, state is set on demmand as needed. 
 Anim_State::Anim_State()
@@ -42,9 +38,13 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 	// Build Inital Skeleton State
 	build_bvhSkeleton();
 	update_bvhSkeleton();
-
+	
 	// IK Setup
 	ik_test_setup();
+	ik_test_tick();
+
+	// Need to now Update Bones from IK set joint positions ...
+
 }
 
 // Sets Joint Angles for current frame 
@@ -59,6 +59,9 @@ void Anim_State::tick()
 		//e->set_pos(e->target->position + (e->target_offset * glm::sin(viewer_dt * 5.f)));
 		e->set_pos(e->target->position + e->target_offset);
 	}
+
+	// Tick IK Solvers for joint chains ...
+	ik_test_tick();
 
 	// Update Skeleton per tick, from joint angles. 
 	update_bvhSkeleton();
@@ -211,42 +214,36 @@ void Anim_State::fetch_traverse(Joint *joint, glm::mat4 trans)
 // ===================== IK Setup =====================
 void Anim_State::ik_test_setup()
 {
-	// Create target effector (based on LThumbs Location + offset) 
+	// Create Target Effector (based on LThumbs Location + offset) 
 	Joint *l_thumb = bvh->find_joint("LThumb");
 	assert(l_thumb);
-	Effector *eff_arm_r = new Effector(l_thumb->position, 0);
-	eff_arm_r->target = l_thumb;
-	eff_arm_r->target_offset = glm::vec3(-20.0f, 8.f, 0.f);
-	effectors.push_back(eff_arm_r);
+	target_endeffec = new Effector(l_thumb->position, 0);
+	target_endeffec->target = l_thumb;
+	target_endeffec->target_offset = glm::vec3(-20.0f, 8.f, 0.f);
 
 	// Create IK Chain based at RThumb (end_site)
-	Joint *r_thumb = bvh->find_joint("RThumb");
-	assert(r_thumb && r_thumb->is_end);
+	joint_endeffec = bvh->find_joint("RThumb");
+	assert(joint_endeffec && joint_endeffec->is_end);
 
-	endeffec_test = r_thumb;
-
-	// Gather Joints back to root up to some depth (or up to root by default)
-	gather_joints(r_thumb, chain_test);
+	// Gather Joints from end joint, back to root up to some depth (or up to root by default)
+	gather_joints(joint_endeffec, chain_test);
 }
 
 void Anim_State::ik_test_tick()
 {
-
-	// ============ Get Perturbed Effector Postions for each DOF ============
+	// ============================ Get Perturbed Effector Postions foreach Joint DOF ============================
 	// Get Perturbed Postions of end effector, with respect to each joint dof to use for 
-	// formation of  Jacobian Matrix (P2 - P1 / Dtheta) 
-	// End Joint / Effector = r_thumb, Start Joint = root. Each Pair is the P1,P2 vals for each column.
+	// formation of Jacobian Matrix. Each pair contains (P1 = unperturbed, P2 = perturbed).
 	float delta_theta = 0.01f;
-	std::vector<vec3pair> cols_p1p2 = perturb_joints(chain_test, endeffec_test, nullptr, delta_theta);
+	std::vector<vec3pair> cols_p1p2 = perturb_joints(chain_test, joint_endeffec, nullptr, delta_theta);
 
-	// ============ Jacobian Construction ============
+	// ============================ Jacobian Construction from Pertrubation Positions ============================
 	// Encap into Some class for Eigen use, for now will do inline.
 	// Now Construct Jacobian. (3 x (j * 3)) j = number of joints in chain.
-	std::size_t r = 3, c = chain_test.size() * 3;
-
 	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> J;
-	J.resize(r, c); J.setZero();
-
+	std::size_t r = 3, c = chain_test.size() * 3;
+	J.resize(r, c); 
+	J.setZero();
 	// Loop column wise
 	std::size_t col_ind = 0;
 	std::stringstream r0, r1, r2;
@@ -265,14 +262,27 @@ void Anim_State::ik_test_tick()
 
 		col_ind++;
 	}
-	// Dbg Matrix output
+#if DEBUG_JACOBIANn == 1
 	std::cout << "\n======== DEBUG::JACOBIAN_MATRIX::BEGIN ========\n"
 		<< "Rows = " << J.rows() << " Cols = " << J.cols() << "\n"
 		<< "|" << r0.str() << "|\n" << "|" << r1.str() << "|\n" << "|" << r2.str() << "|\n"
 		<< "======== DEBUG::JACOBIAN_MATRIX::END ========\n";
+#endif 
 
-	auto J_t = J.transpose() * J;
+	// ============================ Jacobian Inverse ============================
+	// Inverse via Transpose for now
+	auto Jt = J.transpose();
+	//std::cout << "Jacobian Transpose = \n" << Jt << "\n"; 
 
+	// ============================ Solve for Joint Angle Velocites ============================
+	Eigen::Vector3f end_cur(joint_endeffec->position.x, joint_endeffec->position.y,   joint_endeffec->position.z);
+	Eigen::Vector3f end_tgt(target_endeffec->pos.x, target_endeffec->pos.y, target_endeffec->pos.z);
+	Eigen::Vector3f V = end_tgt - end_cur;
+	Eigen::Matrix<float, Eigen::Dynamic, 1> theta_vel = Jt * V;
+	std::cout << "Theta_Vel = \n" << theta_vel << "\n";
+
+	// ============================ Apply Joint Angle Velocites via FK to chain ============================
+	ik_apply_deltas(theta_vel);
 }
 
 // Used to create chain of joints for IK, gathering joints from starting joint, back to root, up to some depth. 
@@ -296,6 +306,92 @@ void Anim_State::gather_joints(Joint *start, std::vector<Joint*> &chain, int32_t
 
 	// Reverse joints order in chain, so root (or joint closest to root) is first, end_site is last. 
 	std::reverse(chain.begin(), chain.end());
+}
+
+// Apply Joint Angle Deltas to Joints in IK Chain. 
+// Accumulating transforms from first joint / root to end effector joint. 
+void Anim_State::ik_apply_deltas(const Eigen::Matrix<float, Eigen::Dynamic, 1> &deltas)
+{
+	glm::mat4 trans(1.f); // Accumulated Transform
+
+	for (std::size_t j = 0; j < chain_test.size(); ++j)
+	{ 
+		Joint *joint = chain_test[j];
+
+		//  =========== Joint Translation =========== 
+		if (!joint->parent) 
+		{
+			glm::vec4 root_offs(0., 0., 0., 1.);
+			for (const Channel *c : joint->channels)
+			{
+				switch (c->type)
+				{
+					// Translation
+					case ChannelEnum::X_POSITION:
+					{
+						float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						root_offs.x = x_p;
+						break;
+					}
+					case ChannelEnum::Y_POSITION:
+					{
+						float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						root_offs.y = y_p;
+						break;
+					}
+					case ChannelEnum::Z_POSITION:
+					{
+						float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+						root_offs.z = z_p;
+						break;
+					}
+				}
+			}
+
+			trans = glm::translate(trans, glm::vec3(root_offs));
+		}
+		else if (joint->parent) // Non root joints, Translation is offset. 
+		{
+			trans = glm::translate(trans, joint->offset);
+		}
+
+		//  =========== Joint Rotation =========== 
+		// Apply Joint Angle Delta, get 3 angles of joints DOF.
+		std::size_t dt_i = j * 3;
+		float dt_x = deltas[j++];
+		float dt_y = deltas[j++];
+		float dt_z = deltas[j++];
+
+		// Scale deltas by step_size ...
+		// Integrate ...
+
+		// For now just apply rotation directly.
+
+		for (const Channel *c : joint->channels)
+		{
+			switch (c->type)
+			{
+				case ChannelEnum::Z_ROTATION:
+				{
+					trans = glm::rotate(trans, glm::radians(dt_z), glm::vec3(0., 0., 1.));
+					break;
+				}
+				case ChannelEnum::Y_ROTATION:
+				{
+					trans = glm::rotate(trans, glm::radians(dt_y), glm::vec3(0., 1., 0.));
+					break;
+				}
+				case ChannelEnum::X_ROTATION:
+				{
+					trans = glm::rotate(trans, glm::radians(dt_x), glm::vec3(1., 0., 0.));
+					break;
+				}
+			}
+		}
+
+		// Update Joint Pos (WS) from accumulated trans. 
+		joint->position = glm::vec3(trans * glm::vec4(0.f, 0.f, 0.f, 1.f));
+	}
 }
 
 // For drawing Anim_States own primtives (eg effectors)
@@ -374,7 +470,6 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 			// Reset Joint Pos back to orginal (to remove last perturbation)
 			perturb_joint->position = org_pos; 
 
-			glm::vec3 col(0.f); // Column vector init
 			glm::vec3 P1 = end_effec->position; // Un-perturbed end effector postion (x,y,z) 
 			glm::vec3 P2(0.f); // Init P2
 
@@ -513,9 +608,6 @@ void Anim_State::perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joi
 		}
 	}
 }
-
-
-
 
 
 // ===================== Debug =====================
