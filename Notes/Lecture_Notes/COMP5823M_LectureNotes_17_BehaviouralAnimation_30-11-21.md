@@ -20,6 +20,4 @@ Flocks, Crowds.
 
 Flocking, Craig Reynolds 87 - Boids paper. Each agent avoid colliding with neighbours and follow the general formation
 
-
-
 Crowd modelling for stampedes and crushing, > 7 people per square meter leads to problems. 

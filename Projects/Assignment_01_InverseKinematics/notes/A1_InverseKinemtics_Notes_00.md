@@ -1667,6 +1667,10 @@ ____
 
 IK Solver for each Joint chain, target effector ...
 
+Also need to update bone transform method so it doesn't just fetch the BVH Data and overwrite the joints within the IK Chain/s deltas. Need to branch for joints still using BVH Transforms vs ones using IK transforms. Or do we write into the motion data array then we can unify the joint and bone update.
+
+We need to update Joint Positions also (which are the resulting World Space transforms from the concatenated parent transform matrices) because the Joint's WS Positions, specifically the end effector of the chain, is needed to be updated for each new Jacobian iteration. We could avoid updating the rest of the joints position members, because bone rendering does not use Joint positions (its passed the transform matrix directly, to transform the start + end verts of the bones of course). 
+
 
 
 

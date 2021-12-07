@@ -37,7 +37,7 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 
 	// Build Inital Skeleton State
 	build_bvhSkeleton();
-	update_bvhSkeleton();
+	//update_bvhSkeleton();
 	
 	// IK Setup
 	ik_test_setup();
@@ -64,7 +64,7 @@ void Anim_State::tick()
 	ik_test_tick();
 
 	// Update Skeleton per tick, from joint angles. 
-	update_bvhSkeleton();
+	//update_bvhSkeleton();
 }
 
 // Fill out Skeleton from BVH Tree using offsets. 
@@ -308,91 +308,7 @@ void Anim_State::gather_joints(Joint *start, std::vector<Joint*> &chain, int32_t
 	std::reverse(chain.begin(), chain.end());
 }
 
-// Apply Joint Angle Deltas to Joints in IK Chain. 
-// Accumulating transforms from first joint / root to end effector joint. 
-void Anim_State::ik_apply_deltas(const Eigen::Matrix<float, Eigen::Dynamic, 1> &deltas)
-{
-	glm::mat4 trans(1.f); // Accumulated Transform
 
-	for (std::size_t j = 0; j < chain_test.size(); ++j)
-	{ 
-		Joint *joint = chain_test[j];
-
-		//  =========== Joint Translation =========== 
-		if (!joint->parent) 
-		{
-			glm::vec4 root_offs(0., 0., 0., 1.);
-			for (const Channel *c : joint->channels)
-			{
-				switch (c->type)
-				{
-					// Translation
-					case ChannelEnum::X_POSITION:
-					{
-						float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-						root_offs.x = x_p;
-						break;
-					}
-					case ChannelEnum::Y_POSITION:
-					{
-						float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-						root_offs.y = y_p;
-						break;
-					}
-					case ChannelEnum::Z_POSITION:
-					{
-						float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
-						root_offs.z = z_p;
-						break;
-					}
-				}
-			}
-
-			trans = glm::translate(trans, glm::vec3(root_offs));
-		}
-		else if (joint->parent) // Non root joints, Translation is offset. 
-		{
-			trans = glm::translate(trans, joint->offset);
-		}
-
-		//  =========== Joint Rotation =========== 
-		// Apply Joint Angle Delta, get 3 angles of joints DOF.
-		std::size_t dt_i = j * 3;
-		float dt_x = deltas[j++];
-		float dt_y = deltas[j++];
-		float dt_z = deltas[j++];
-
-		// Scale deltas by step_size ...
-		// Integrate ...
-
-		// For now just apply rotation directly.
-
-		for (const Channel *c : joint->channels)
-		{
-			switch (c->type)
-			{
-				case ChannelEnum::Z_ROTATION:
-				{
-					trans = glm::rotate(trans, glm::radians(dt_z), glm::vec3(0., 0., 1.));
-					break;
-				}
-				case ChannelEnum::Y_ROTATION:
-				{
-					trans = glm::rotate(trans, glm::radians(dt_y), glm::vec3(0., 1., 0.));
-					break;
-				}
-				case ChannelEnum::X_ROTATION:
-				{
-					trans = glm::rotate(trans, glm::radians(dt_x), glm::vec3(1., 0., 0.));
-					break;
-				}
-			}
-		}
-
-		// Update Joint Pos (WS) from accumulated trans. 
-		joint->position = glm::vec3(trans * glm::vec4(0.f, 0.f, 0.f, 1.f));
-	}
-}
 
 // For drawing Anim_States own primtives (eg effectors)
 void Anim_State::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
@@ -428,7 +344,9 @@ void Anim_State::set_frame(std::size_t Frame)
 {
 	anim_frame = Frame > max_frame ? max_frame : Frame;
 }
-
+// ===========================================================================================================
+//										TEST INVERSE KINEMTATICS CODE 
+// ===========================================================================================================
 
 // ============================== Joint Perturbation ==============================
 /* 
@@ -491,7 +409,7 @@ std::vector<std::pair<glm::vec3, glm::vec3>> Anim_State::perturb_joints(std::vec
 	return pertrub_pos;
 }
 
-// Traversal of Joint Chain Hierachy. 
+// Traversal of Joint Chain Hierachy, applying perturbations to specified DOF on specified joint. 
 // chain - chain to traverse and apply perturbations
 // perturb_joint - the joint in the chain we want to perturb, (check if current joint, == perturb joint).
 // dof - the DOF / axis angle we want to perturb
@@ -605,6 +523,103 @@ void Anim_State::perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joi
 		if (joint->is_end) // Assumes last chain joint is an end_site / effector. 
 		{
 			joint->position = glm::vec3(trans * glm::vec4(0.f, 0.f, 0.f, 1.f));
+		}
+	}
+}
+
+
+
+// Apply Joint Angle Deltas to Joints in IK Chain. 
+// Accumulating transforms from first joint / root to end effector joint. 
+void Anim_State::ik_apply_deltas(const Eigen::Matrix<float, Eigen::Dynamic, 1> &deltas)
+{
+	glm::mat4 trans(1.f); // Accumulated Transform
+
+	for (std::size_t j = 0; j < chain_test.size(); ++j)
+	{
+		Joint *joint = chain_test[j];
+
+		//  =========== Joint Translation =========== 
+		if (!joint->parent)
+		{
+			glm::vec4 root_offs(0., 0., 0., 1.);
+			for (const Channel *c : joint->channels)
+			{
+				switch (c->type)
+				{
+					// Translation
+				case ChannelEnum::X_POSITION:
+				{
+					float x_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					root_offs.x = x_p;
+					break;
+				}
+				case ChannelEnum::Y_POSITION:
+				{
+					float y_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					root_offs.y = y_p;
+					break;
+				}
+				case ChannelEnum::Z_POSITION:
+				{
+					float z_p = bvh->motion[anim_frame * bvh->num_channel + c->index];
+					root_offs.z = z_p;
+					break;
+				}
+				}
+			}
+
+			trans = glm::translate(trans, glm::vec3(root_offs));
+		}
+		else if (joint->parent) // Non root joints, Translation is offset. 
+		{
+			trans = glm::translate(trans, joint->offset);
+		}
+
+		//  =========== Joint Rotation =========== 
+		// Apply Joint Angle Delta, get 3 angles of joints DOF.
+		std::size_t dt_i = j * 3;
+		float dt_x = deltas[j++];
+		float dt_y = deltas[j++];
+		float dt_z = deltas[j++];
+
+		// Scale deltas by step_size ...
+		// Integrate ...
+
+		// For now just apply rotation directly.
+
+		for (const Channel *c : joint->channels)
+		{
+			switch (c->type)
+			{
+			case ChannelEnum::Z_ROTATION:
+			{
+				trans = glm::rotate(trans, glm::radians(dt_z), glm::vec3(0., 0., 1.));
+				break;
+			}
+			case ChannelEnum::Y_ROTATION:
+			{
+				trans = glm::rotate(trans, glm::radians(dt_y), glm::vec3(0., 1., 0.));
+				break;
+			}
+			case ChannelEnum::X_ROTATION:
+			{
+				trans = glm::rotate(trans, glm::radians(dt_x), glm::vec3(1., 0., 0.));
+				break;
+			}
+			}
+		}
+
+		// Update Joint Pos (WS) from accumulated trans. 
+		joint->position = glm::vec3(trans * glm::vec4(0.f, 0.f, 0.f, 1.f));
+
+		// Search for joint in bones and update transform of each end point.
+		for (Bone *bone : skel.bones)
+		{
+			if (bone->joint_id == joint->idx)
+			{
+				bone->update(trans); // Pass Joint transform matrix to update bone
+			}
 		}
 	}
 }
