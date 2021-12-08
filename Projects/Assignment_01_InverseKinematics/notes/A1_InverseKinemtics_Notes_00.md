@@ -1685,6 +1685,12 @@ Also will remove the Pair<P1,P2> perturbation end effector positions per DOF, as
 
 Actually might make more sense to keep the chains within Anim_State, so when we do the Transformation Accumulation traversal and resulting joint positions and bone updates, we can query each joint to check if its part of an IK Chain, if so, we fetch its joint angles from there, else we use the BVH Data. Note that the initial state of the IK Joints will be written from the loading of the BVH File, the IK angle updates should then add / integrate on top of this. 
 
+I will define a separate motion array for IK Joints, this will be initialized with the rest pose of the skeleton, translation will still be updated from the offsets defined in the BVH Hierarchy but rotations will be updated only by IK into this array. It will just define the angles for the current frame / iteration.
+
+if I just want the joints in the rest pose, then as long as the initial BVH Skeleton build step is done, All joint positions should contain the accumulated relative transforms that define there WS locations, However we also want the 0th frames, initial rotational angles, which IK will be added to atop of this (as well as updating the translation / offset from root). Problem is the array size is not the same as the BVH Motion array, so how do we index, relative to the Joint chain, might just make sense to store within an Array internally to lookup within the IK Solver, and pass the initial state array from Anim_State ? And then store a per joint dvec3 of Joint Angles to update. Note Root translation and Joint offsets will always be looked up from the original Joint offsets (defined in the BVH hierarchy). 
+
+We've got to bear in mind that even though all this is hard coded to just support one IK Chain, ideally everything would be array based, Array of IK Solvers, Joint Chains, Effector Targets, IK Motion Data etc. For now I don't really care because its about getting one chain working for the assignment, but I hate hardcoding stuff in that's not extendable, but oh well. 
+
 
 
 

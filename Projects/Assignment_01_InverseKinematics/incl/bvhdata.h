@@ -15,7 +15,7 @@ using real = double;
 
 using DOF6 = std::tuple<real, real, real, real, real, real>;
 //using DOF3 = std::tuple<real, real, real>;
-using DOF3 = glm::vec3; 
+using DOF3 = glm::dvec3; 
 
 // FDs
 struct Joint;
@@ -41,13 +41,13 @@ public:
 	void Debug(bool to_file = false); 
 
 	// Joint Channel Access
-	DOF6 get_root_DOF6(std::size_t frame)                         const;
-	DOF3 get_joint_DOF3(std::size_t joint_idx, std::size_t frame) const;
-
+	DOF6 get_root_DOF6(std::size_t frame)                               const;
+	DOF3 get_joint_DOF3(std::size_t joint_idx, std::size_t frame)       const;
+	DOF3 get_joint_offset(std::size_t joint_idx, std::size_t frame = 0) const;
 
 	// Joint Lookup
-	Joint* find_joint(const std::string &name)                    const;
-	glm::vec3 get_joint_offset(std::size_t joint_idx)             const;
+	Joint* find_joint(const std::string &name) const;
+
 
 public:
 
@@ -92,16 +92,15 @@ struct Joint
 	std::string name;
 	std::size_t idx;
 
-	bool is_root, is_end;
+	glm::dvec3 offset;   // Relative Joint Offset to parent
+	glm::dvec3 end;      // Relative End_Site offset to Joint offset. 
+	glm::dvec3 position; // Joint Accumulated Transform Pos (WS)
 
-	glm::vec3 offset;
-	glm::vec3 end;
 	Joint *parent;
-
 	std::vector<Joint*> children;
 	std::vector<Channel*> channels;
 
-	glm::vec3 position; // Current Position in WS
+	bool is_root, is_end;
 };
 
 #endif

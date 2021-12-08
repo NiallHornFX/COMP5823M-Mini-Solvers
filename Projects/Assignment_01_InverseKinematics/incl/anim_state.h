@@ -15,8 +15,6 @@
 #include "bvhdata.h"
 #include "effector.h"
 
-using vec3pair = std::pair<glm::vec3, glm::vec3>;
-
 class IK_Solver; 
 
 // Info :  Class where animation processing is based (BVH, FK, IK). Exists within app as Tick stage. 
@@ -26,7 +24,7 @@ class Anim_State
 public:
 	// ===== Ctor / Dtor =====
 	Anim_State();
-	~Anim_State() = default; 
+	~Anim_State();
 
 	// ===== Core =====
 	void tick();
@@ -43,19 +41,16 @@ public:
 	// ===== Skeleton (Bones) Build and Update =====
 	void build_bvhSkeleton(); // Build Skeleton from joints, inital state.
 	void update_bvhSkeleton(); // Update Skeleton from joints, per tick.
-	void fetch_traverse(Joint *joint, glm::mat4 trans); 
+	void fetch_traverse(Joint *joint, glm::dmat4 trans);
 
 	// ===== IK Setup =====
 	void ik_setup(); 
 	std::vector<Joint*> create_joint_chain(Joint *end_joint, int32_t depth = -1); 
 
-	void ik_test_tick();
-	void ik_apply_deltas(const Eigen::Matrix<float, Eigen::Dynamic, 1> &deltas); 
-
-	std::vector<std::pair<glm::vec3, glm::vec3>> perturb_joints(std::vector<Joint*> &chain, Joint *end_effec, Joint *start_joint, float perturb_factor); 
-
-	void perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joint, ChannelEnum dof, float perturb_fac); 
-
+	//void ik_test_tick();
+	//void ik_apply_deltas(const Eigen::Matrix<float, Eigen::Dynamic, 1> &deltas); 
+	//std::vector<std::pair<glm::vec3, glm::vec3>> perturb_joints(std::vector<Joint*> &chain, Joint *end_effec, Joint *start_joint, float perturb_factor); 
+	//void perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joint, ChannelEnum dof, float perturb_fac); 
 
 	// ===== Debug =====
 	void debug() const;
@@ -67,20 +62,26 @@ public:
 	BVH_Data *bvh;
 
 	// ===== IK Data =====
+	// IK Joints Motion Data (Array per chain, for now just single)
+	real *ik_rightArm_motion; 
+	
+
+	// ===== IK Chain =====
 	// Right Arm IK 
 	IK_Solver *ik_rightArm;
 	std::vector<Joint*> chain_rightArm;
 	Joint    *joint_endeffec;
 	Effector *target_endeffec;
 
-	// Skeleton 
+	// ===== Skeleton =====
 	Skeleton skel;
 
+	// ===== Anim Playback State =====
 	std::size_t anim_frame, max_frame; 
 	float interval; 
 	bool anim_loop;
 
-	// Viewer Data
+	// ===== Viewer Data =====
 	float viewer_dt; 
 	std::size_t viewer_tick_c; 
 };

@@ -25,18 +25,21 @@ public:
 	IK_Solver(Anim_State *Anim, const std::vector<Joint*> &joint_chain, const Joint *joint_end, const Effector &target);
 	~IK_Solver() = default;
 
+	//============== Tick / Update ===============
 	void tick(); 
 
-	// ======== Build Jacobian ========
-	//void build_jacobian();
-	std::vector<glm::vec3> perturb_joints(double perturb_fac);
+	// =============== Build Jacobian ===============
+	void                   build_jacobian();
+	std::vector<glm::vec3> perturb_joints();
+	void                   perturb_traverse(Joint *perturb_joint, ChannelEnum dof, double perturb_factor);
 
-	// ======== Solve for Angles ========
+
+	// =============== Solve for Angles ===============
 	// Pseudo-Inverse Jacobian solve for Joint Angles
 
-	// ======== Integrate Angles ========
+	// =============== Integrate Angles ===============
 
-	// ======== Utility Static Member Functions ========
+	// =============== Utility Static Member Functions ===============
 	static Eigen::Vector3f glmToeig(const glm::vec3 &vec);
 	static Eigen::Vector4f glmToeig(const glm::vec4 &vec);
 
@@ -50,7 +53,7 @@ public:
 	Eigen::Matrix<double, Eigen::Dynamic, 1> *V;  // Velocity Vector
 	Eigen::Matrix<double, Eigen::Dynamic, 1> *DT; // Delta Theta Vector
 
-	//Eigen::Vector3f end_effector_joint; 
+	Eigen::Vector3f endEffector_current; 
 	//Eigen::Vector3f end_effector_target; 
 
 	Anim_State *anim; // Access to anim_state

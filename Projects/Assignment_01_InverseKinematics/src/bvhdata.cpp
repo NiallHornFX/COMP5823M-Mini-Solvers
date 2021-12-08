@@ -266,41 +266,54 @@ void BVH_Data::Clear()
 	num_frame = 0; 
 	interval = 0.;
 }
-// Note : I didn't end up using these getters, but should do to avoid the need for switch loops later on...
 
+// Get Rotational Motion Data for some Joint, for some frame. 
+// Returns in (x,y,z) order so not to confuse indexing with DOF3 = glm::dvec3 (x,y,z)
 DOF3 BVH_Data::get_joint_DOF3(std::size_t joint_idx, std::size_t frame) const
 {
-	Joint *joint = joints[joint_idx];
-
-	// Don't call this function on root. (Has 6 DOF)
-	//if (joint->is_root) std::terminate();
-	if (joint->is_root) return DOF3(0.f, 0.f, 0.f);
-	
 	// Channel count is 3 for 3DOF (ZRot, YRot, XRot) (3DOF) unless root 6DOF (XPos, YPos, ZPos, ZRot, YRot, XRot).
 	// DEBUG CODE (Remove me !) Check Channel Ordering is correct as per above
-	assert((joint->channels[0]->type == ChannelEnum::Z_ROTATION));
-	assert((joint->channels[1]->type == ChannelEnum::Y_ROTATION));
-	assert((joint->channels[2]->type == ChannelEnum::X_ROTATION));
+	//assert((joint->channels[0]->type == ChannelEnum::Z_ROTATION));
+	//assert((joint->channels[1]->type == ChannelEnum::Y_ROTATION));
+	//assert((joint->channels[2]->type == ChannelEnum::X_ROTATION));
 
-	// Should be ordered (Z,Y,X)
-	std::size_t z_rot_idx = joint->channels[0]->index;
-	std::size_t y_rot_idx = joint->channels[1]->index;
-	std::size_t x_rot_idx = joint->channels[2]->index;
+	Joint *joint = joints[joint_idx];
 
-	// Get Channel, frame, from motion data array using index offset (frame * numchannel * channelidx) : 
-	real z_rot = motion[frame * num_channel + z_rot_idx];
-	real y_rot = motion[frame * num_channel + y_rot_idx];
-	real x_rot = motion[frame * num_channel + x_rot_idx];
+	// Get Channel, frame, from motion data array using index offset :
+	// (frame * numchannel * channelidx) : 
+	if (joint->is_root)
+	{
+		// Should be ordered (Z,Y,X), first 3 for root are translational. 
+		std::size_t z_rot_idx = joint->channels[3]->index;
+		std::size_t y_rot_idx = joint->channels[4]->index;
+		std::size_t x_rot_idx = joint->channels[5]->index;
 
-	// Return Tuple. 
-	return DOF3(z_rot, y_rot, x_rot);
+		real z_rot = motion[frame * num_channel + z_rot_idx];
+		real y_rot = motion[frame * num_channel + y_rot_idx];
+		real x_rot = motion[frame * num_channel + x_rot_idx];
+
+		return DOF3(x_rot, y_rot, z_rot);
+	}
+	else
+	{
+		// Should be ordered (Z,Y,X)
+		std::size_t z_rot_idx = joint->channels[0]->index;
+		std::size_t y_rot_idx = joint->channels[1]->index;
+		std::size_t x_rot_idx = joint->channels[2]->index;
+
+		real z_rot = motion[frame * num_channel + z_rot_idx];
+		real y_rot = motion[frame * num_channel + y_rot_idx];
+		real x_rot = motion[frame * num_channel + x_rot_idx];
+
+		return DOF3(x_rot, y_rot, z_rot);
+	}
 }
 
 DOF6 BVH_Data::get_root_DOF6(std::size_t frame) const
 {
 	Joint *root = joints[0];
 	// Root should be the first joint. 
-	if (!root->is_root) std::terminate(); // terminate is tmp, for debug sake. 
+	if (!root->is_root) std::terminate(); 
 
 	// Channel Order for 6DOF Should be : (XPos, YPos, ZPos, ZRot, YRot, XRot)
 	// Translation Channel Indices
@@ -325,9 +338,16 @@ DOF6 BVH_Data::get_root_DOF6(std::size_t frame) const
 	return DOF6(x_trs, y_trs, z_trs, z_rot, y_rot, x_rot);
 }
 
-glm::vec3 BVH_Data::get_joint_offset(std::size_t joint_idx) const
+DOF3 BVH_Data::get_joint_offset(std::size_t joint_idx, std::size_t frame) const
 {
-	// Need to handle root joint case.
+	if (joint_idx == 0) // Root Joint, use Channel Translation Data
+	{
+		real x_trs = motion[frame * num_channel + 0];
+		real y_trs = motion[frame * num_channel + 1];
+		real z_trs = motion[frame * num_channel + 2];
+		return glm::dvec3(x_trs, y_trs, z_trs);
+	}
+	// Non Root Joint use offset.
 	return joints[joint_idx]->offset;
 }
 
@@ -338,10 +358,8 @@ Joint* BVH_Data::find_joint(const std::string &name) const
 	{
 		if (joint->name == name) return joint; 
 	}
-
 	return nullptr; 
 }
-
 
 void BVH_Data::Debug(bool to_file)
 {
