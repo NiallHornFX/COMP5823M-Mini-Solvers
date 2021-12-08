@@ -45,8 +45,10 @@ public:
 	void update_bvhSkeleton(); // Update Skeleton from joints, per tick.
 	void fetch_traverse(Joint *joint, glm::mat4 trans); 
 
-	// ===== IK =====
-	void ik_test_setup();
+	// ===== IK Setup =====
+	void ik_setup(); 
+	std::vector<Joint*> create_joint_chain(Joint *end_joint, int32_t depth = -1); 
+
 	void ik_test_tick();
 	void ik_apply_deltas(const Eigen::Matrix<float, Eigen::Dynamic, 1> &deltas); 
 
@@ -54,7 +56,6 @@ public:
 
 	void perturb_traverse(std::vector<Joint*> &chain, Joint *perturb_joint, ChannelEnum dof, float perturb_fac); 
 
-	void gather_joints(Joint *start, std::vector<Joint*> &chain, int32_t depth=-1);
 
 	// ===== Debug =====
 	void debug() const;
@@ -66,14 +67,12 @@ public:
 	BVH_Data *bvh;
 
 	// ===== IK Data =====
-	std::vector<Effector*> effectors; 
-	IK_Solver *test_solve; 
-	// Test Vars
-	std::vector<Joint*> chain_test; 
-	Joint    *joint_endeffec; 
+	// Right Arm IK 
+	IK_Solver *ik_rightArm;
+	std::vector<Joint*> chain_rightArm;
+	Joint    *joint_endeffec;
 	Effector *target_endeffec;
 
-	// ===== Shared Anim State =====
 	// Skeleton 
 	Skeleton skel;
 
@@ -81,6 +80,7 @@ public:
 	float interval; 
 	bool anim_loop;
 
+	// Viewer Data
 	float viewer_dt; 
 	std::size_t viewer_tick_c; 
 };

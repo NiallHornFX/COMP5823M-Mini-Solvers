@@ -1671,6 +1671,20 @@ Also need to update bone transform method so it doesn't just fetch the BVH Data 
 
 We need to update Joint Positions also (which are the resulting World Space transforms from the concatenated parent transform matrices) because the Joint's WS Positions, specifically the end effector of the chain, is needed to be updated for each new Jacobian iteration. We could avoid updating the rest of the joints position members, because bone rendering does not use Joint positions (its passed the transform matrix directly, to transform the start + end verts of the bones of course). 
 
+Anim_State passed with friend access to IK_Solver so IK related Joint traversal functions (over joint chain can be encapsulated within, without needing to keep these in Anim_State). 
+
+Need to make it easier to add visualizer Points/Prims to verify Joint / End Effector positions are been updated per tick / frame. 
+
+Also will switch to double precision for Jacobian, Inverse and possibly the FK Joint traversal for both BVH and IK Angles.  
+
+IK_Solver will take copy of joint chain, so we don't need to store chains within Anim_State vectors/arrays. Same for effector/s. Note it doesn't matter that these are copies as they contain pointers to the joints defining them (so essentially its just copies of pointers), which will be updated via Anim_State tick or within IK_Solve itself. 
+
+I'm going to refactor the code quite a bit, getting rid of the switch statements in the joint hierarchy traversal functions and putting the IK code within the solver class, with only the chain creation and possibly the resulting angle integration happening within Anim_State.  
+
+Also will remove the Pair<P1,P2> perturbation end effector positions per DOF, as the P1 is the same for all columns of the Jacobian, so is convoluted storing them as a pair. 
+
+Actually might make more sense to keep the chains within Anim_State, so when we do the Transformation Accumulation traversal and resulting joint positions and bone updates, we can query each joint to check if its part of an IK Chain, if so, we fetch its joint angles from there, else we use the BVH Data. Note that the initial state of the IK Joints will be written from the loading of the BVH File, the IK angle updates should then add / integrate on top of this. 
+
 
 
 

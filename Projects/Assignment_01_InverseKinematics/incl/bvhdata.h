@@ -67,6 +67,7 @@ private:
 	std::vector<Joint*> end_sites; 
 
 	friend class Anim_State;
+	friend class IK_Solver;
 };
 
 // ==============================================================================

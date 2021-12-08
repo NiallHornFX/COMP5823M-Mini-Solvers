@@ -7,21 +7,27 @@
 // Project Headers
 #include "bvhdata.h"
 
-Effector::Effector(const glm::vec3 &Pos, std::size_t Idx)
-	: pos(Pos), target_offset(glm::vec3(0.f))
+Effector::Effector(Joint *effector_joint, const glm::vec3 &Offset)
+	: joint_tgt(effector_joint), offset(Offset)
 {
+	// Effector inital state
+	pos = joint_tgt->position + offset; 
+	
 	// ========== Create Effector Mesh Prim ==========
-	std::string name = "Effector_Mesh_" + std::to_string(idx);
+	std::string name = "Effector_Mesh_" + std::to_string(joint_tgt->idx);
 	mesh = new Mesh(name.c_str(), "../../assets/mesh/sphere.obj");
 	mesh->load_obj(false);
 	mesh->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
 	mesh->set_colour(glm::vec3(1.f, 0.f, 0.f));
-
 	// Radius Scale
 	mesh->scale(glm::vec3(0.05f, 0.05f, 0.05f));
-
 	// Translate to effector starting position 
 	mesh->translate(pos);
+}
+
+Effector::Effector()
+{
+	joint_tgt = nullptr; 
 }
 
 Effector::~Effector()
@@ -29,20 +35,24 @@ Effector::~Effector()
 	if (mesh) delete mesh; 
 }
 
-// Re-Set Effector position 
+// Re-Set Effector position from user interaction (adding to offset)
 void Effector::set_pos(const glm::vec3 &updt_Pos)
 {
 	// Reset Mesh Translation
 	mesh->translate(-pos);
-	mesh->translate(updt_Pos);
-
-	pos = updt_Pos;
+	offset += updt_Pos;
+	pos = joint_tgt->position + offset;
+	mesh->translate(pos);
 }
 
-// Translate Effector from current location
-void Effector::translate(const glm::vec3 &transl)
+// Render Effector Mesh 
+void Effector::render(float scale, const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
-	pos += transl;
-	// Translate Mesh
-	mesh->translate(transl);
+	mesh->model[3] = glm::vec4((pos * glm::vec3(scale)), 1.f);
+
+	// Set Camera Transform
+	mesh->set_cameraTransform(view, persp);
+
+	// Render
+	mesh->render();
 }

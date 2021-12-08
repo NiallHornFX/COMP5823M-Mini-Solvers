@@ -13,26 +13,32 @@
 
 struct Joint;
 
-// Basic class to define effector of joints, and ability to draw it. 
+/* Info : Basic class to define effector of joints, and ability to draw it. 
+   This can be used to reprsent both a Chain's End Site / Effector and a Target End Effector. */
+
+// Effector Joint Position should be updated per tick externally via Anim_State.
 
 class Effector
 {
 public:
-	Effector(const glm::vec3 &Pos, std::size_t Idx);
+	Effector(); 
+	Effector(Joint *effector_joint, const glm::vec3 &Offset);
 	~Effector();
 
+	// Update Pos
 	void set_pos(const glm::vec3 &upt_Pos);
-	void translate(const glm::vec3 &transl);
+
+	// Render Effector 
+	void render(float scale, const glm::mat4x4 &view, const glm::mat4x4 &persp);
 
 public:
-	glm::vec3 pos;  
-	std::size_t idx; 
-	Joint* target;             // Joint to use as effector inital target
-	glm::vec3 target_offset;   // Target offset.
-	std::vector<Joint*> chain; // Joints effector, effects (as IK chain)
+	glm::vec3 pos;               // Current Position (with offset)
+	glm::vec3 offset;            // Target offset.
+	std::size_t id; 
+	Joint* joint_tgt;            // Effector Joint    
 
-	// Viz 
-	Mesh *mesh; 
+private:
+	Mesh *mesh;                  // Draw via mesh
 };
 
 #endif

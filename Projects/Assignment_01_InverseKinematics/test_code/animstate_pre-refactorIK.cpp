@@ -35,11 +35,16 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 	max_frame = bvh->num_frame;
 	interval  = bvh->interval;
 
-	// Build and Set, inital Skeleton State
+	// Build Inital Skeleton State
 	build_bvhSkeleton();
-	update_bvhSkeleton();
-
+	//update_bvhSkeleton();
+	
 	// IK Setup
+	ik_test_setup();
+	ik_test_tick();
+
+	// Need to now Update Bones from IK set joint positions ...
+
 }
 
 // Sets Joint Angles for current frame 
@@ -48,20 +53,25 @@ void Anim_State::tick()
 	// Incrment Anim Frame
 	if (anim_loop) inc_frame();
 
+	// Update Effector Positions (wrap this into effector::tick() ? )
+	for (Effector *e : effectors)
+	{
+		//e->set_pos(e->target->position + (e->target_offset * glm::sin(viewer_dt * 5.f)));
+		e->set_pos(e->target->position + e->target_offset);
+	}
+
 	// Tick IK Solvers for joint chains ...
+	ik_test_tick();
 
 	// Update Skeleton per tick, from joint angles. 
-	update_bvhSkeleton();
+	//update_bvhSkeleton();
 }
 
+// Fill out Skeleton from BVH Tree using offsets. 
+// Only needs to be done once per BVH file load, then update joint angles per tick / anim frame.
 
-// ===========================================================================================================
-//										Skeleton Inital State Build
-// ===========================================================================================================
-
-// =============== Build BVH Skeleton ===============
-/* Info : Builds Inital Skeleton of bones, from accumulated joint offset transforms. Resulting in Rest-Pose bones. 
-   Only needs to be done once per BVH file load, then update joint angles per tick / anim frame. */
+// Build BVH Skeleton :
+// Builds Inital Skeleton of bones, from accumulated joint offset transforms. Resulting in Rest-Pose bones. 
 void Anim_State::build_bvhSkeleton()
 {
 	// Get root offset  from Channel Data of 0th frame
@@ -215,32 +225,25 @@ void Anim_State::ik_setup()
 {
 	// ========== Single Chain setup ==========
 	// Joint chain from RThumb (as end joint / end effector), back to root. 
-	Joint *end_joint = bvh->find_joint("RThumb");
-	// Validate End Joint
-	if (!end_joint || !end_joint->is_end)
-	{
-		std::cerr << "ERROR::Cannot create joint chain for::" << end_joint->name << "::Joint is not an end joint." << std::endl;
-		std::terminate();
-	}
-	// Create Chain
-	std::vector<Joint*> chain = create_joint_chain(end_joint);
+	std::vector<Joint*> chain = create_joint_chain("RThumb");
 
 	// Create Target End Effector from some otjer joint, not part of the chain. 
 	Joint *tgt_joint = bvh->find_joint("LThumb");
-	// Validate Target Joint
-	if (!tgt_joint)
-	{
-		std::cerr << "ERROR::Cannot create target effector for::" << tgt_joint->name << "::Joint is not valid." << std::endl;
-		std::terminate();
-	}
 	Effector target(tgt_joint, glm::vec3(-20.0f, 8.f, 0.f));
 
 	// Pass Joint Chain and Target End Effector to IK Solver. 
-	ik_rightArm = new IK_Solver(this, chain, end_joint, target);
+	ik_rightArm = new IK_Solver(this, chain, target);
 }
 
-std::vector<Joint*> Anim_State::create_joint_chain(Joint *end_joint, int32_t depth)
+std::vector<Joint*> Anim_State::create_joint_chain(std::string end_joint_name, int32_t depth)
 {
+	// ========= Find End Joint =========
+	Joint *end_joint = bvh->find_joint(end_joint_name);
+	if (!end_joint || !end_joint->is_end)
+	{
+		std::cerr << "ERROR::Cannot create joint chain for::" << end_joint_name << "::Joint is not an end joint." << std::endl;
+		std::terminate();
+	}
 	// ========= Gather Joints in Chain =========
 	// Gather Joints from end joint, if depth -1, gather joints all the way back to root. 
 	std::vector<Joint*> chain;
@@ -262,6 +265,9 @@ std::vector<Joint*> Anim_State::create_joint_chain(Joint *end_joint, int32_t dep
 	std::reverse(chain.begin(), chain.end());
 	return chain; 
 }
+
+
+
 
 // ===========================================================================================================
 //										Anim State Setters
@@ -563,6 +569,24 @@ void Anim_State::ik_apply_deltas(const Eigen::Matrix<float, Eigen::Dynamic, 1> &
 	}
 }
 
+
+// ===================== IK Setup =====================
+void Anim_State::ik_test_setup()
+{
+	// Create Target Effector (based on LThumbs Location + offset) 
+	Joint *l_thumb = bvh->find_joint("LThumb");
+	assert(l_thumb);
+	target_endeffec = new Effector(l_thumb->position, 0);
+	target_endeffec->target = l_thumb;
+	target_endeffec->target_offset = glm::vec3(-20.0f, 8.f, 0.f);
+
+	// Create IK Chain based at RThumb (end_site)
+	joint_endeffec = bvh->find_joint("RThumb");
+	assert(joint_endeffec && joint_endeffec->is_end);
+
+	// Gather Joints from end joint, back to root up to some depth (or up to root by default)
+	gather_joints(joint_endeffec, chain_test);
+}
 
 void Anim_State::ik_test_tick()
 {
