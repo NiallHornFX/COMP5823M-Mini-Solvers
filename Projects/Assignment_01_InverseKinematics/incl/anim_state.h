@@ -61,15 +61,13 @@ public:
 	// ===== BVH Data =====
 	BVH_Data *bvh;
 
-	// ===== IK Data =====
-	// IK Joints Motion Data (Array per chain, for now just single)
-	real *ik_rightArm_motion; 
-	
-
 	// ===== IK Chain =====
 	// Right Arm IK 
-	IK_Solver *ik_rightArm;
 	std::vector<Joint*> chain_rightArm;
+	// Chain Angle Motion
+	std::vector<glm::dvec3> chain_rotMotion;
+	// ===== IK Data =====
+	IK_Solver *ik_rightArm;
 	Joint    *joint_endeffec;
 	Effector *target_endeffec;
 

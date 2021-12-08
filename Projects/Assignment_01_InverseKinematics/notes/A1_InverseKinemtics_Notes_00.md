@@ -1691,6 +1691,10 @@ if I just want the joints in the rest pose, then as long as the initial BVH Skel
 
 We've got to bear in mind that even though all this is hard coded to just support one IK Chain, ideally everything would be array based, Array of IK Solvers, Joint Chains, Effector Targets, IK Motion Data etc. For now I don't really care because its about getting one chain working for the assignment, but I hate hardcoding stuff in that's not extendable, but oh well. 
 
+Don't confuse the IK Chain angles with the incremental angle velocities from the inverse Jacobian. In fact don't pass this to IK keep it in Anim_State, IK_Solver should only contain data for the IK_Solve itself, not the resulting Joint angle / rotational DOFs state. 
+
+Will update the joints reading from BVH using the method implemented in Anim_State, Will then do IK Update on top of this, to override joint angles for joints within IK Chain. 
+
 
 
 

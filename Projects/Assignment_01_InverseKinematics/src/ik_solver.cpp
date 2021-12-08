@@ -10,26 +10,40 @@ IK_Solver::IK_Solver(Anim_State *Anim, const std::vector<Joint*> &joint_chain, c
 	effector_target = target;
 }
 
+void IK_Solver::tick()
+{
+	// Build Jacobian via Perturbation
 
-// =============== Perturb Joints ================
+	// Inverse Jacobian and Solve for Joint Angle Deltas
+
+	// Integrate Joint Angle Deltas to Joint Chain via FK + Forward Euler. 
+}
+
+// ===========================================================================================================
+//										Jacobian Construction via Joint Perturbation 
+// ===========================================================================================================
+
+// ============================= Perturb Joints : Base Function =============================
 /* Info : Perturbs each joints DOF while hold the rest constant, to calculate each P2 column entry for the Jacobian.
 		  This is the FDM Numerical solve of partial derivatives of the end effector wrt each joint angle. 
 */
-std::vector<glm::vec3> IK_Solver::perturb_joints()
+void IK_Solver::perturb_joints()
 {
+	
 	// Start of chain, is assumed to be root. 
 	Joint *root = anim->bvh->joints[0];
 
 	// Number of Columns (theta_0...theta_n) (size = joints * 3dof) 
 	std::size_t dof_c = chain.size() * 3;
 
-	//  Store Preturbed postions of end effector, for each perturbed joint (for all rot DOFs) aka columns of J. 
-	std::vector<glm::vec3> pertrub_positons;
+	// Vector to store preturbed postions of end effector, for each perturbed joint, DOF. For each column of J. 
+	perturb_positons.reserve(dof_c);
+
 	// Also store the current ticks orginal (non per-turbed) end effector postion. 
 	endEffector_current = glmToeig(end_joint->position);
 
 	// Delta Theta to perturb joint DOFs by FDM : (P2(theta+h) - P1(theta) / h). 
-	double delta_theta = 0.001f; 
+	perturb_factor = 0.001f;
 
 	// For each joint, for each DOF, traverse the chain hierachy, perturbing only the cur DOF, and then deriving
 	// the resulting end site postion , Note that end site position == end joint/effector postion as there is no 
@@ -47,32 +61,30 @@ std::vector<glm::vec3> IK_Solver::perturb_joints()
 
 			// Traverse start of joint chain (assumed to be root), when we reach the preturb joint, we perturb its cur DOF. 
 			// Accumulate the resulting transform along the chain and store the resulting end effector / end joint position. 
-			perturb_traverse(perturb_joint, DOF, delta_theta);
+			perturb_traverse(perturb_joint, DOF);
 
 			// Query Resulting Perturbed End Effector Postion component
 			glm::vec3 P2 = end_joint->position;
 			// Append to P2 Column Array
-			pertrub_positons.push_back(std::move(P2));
+			perturb_positons.push_back(std::move(P2));
 		}
 	}
-	return pertrub_positons;
 }
 
-// =============== Perturb Joints : Traversal ================
+// ============================= Perturb Joints : Traversal =============================
 /* Info : Traversal of Joint Chain Hierachy, applying perturbations to specified DOF on specified joint. 
 		  This is done as an iterative loop along the chain. Non perturbed joints are held constant, the
 		  accumulated transform are passed forward to the child, untill we reach (and modifiy) the end effector pos. 
    Note : Possible via Friend Class of BVHData and Anim_State
 */
-
-void IK_Solver::perturb_traverse(Joint *perturb_joint, ChannelEnum dof, double perturb_factor)
+void IK_Solver::perturb_traverse(Joint *perturb_joint, ChannelEnum dof)
 {
 	glm::dmat4 trans(1.f);                                 // Accumulated Transform
 	std::size_t anim_frame = anim->anim_frame;             // Current Animation Frame;
 	std::size_t num_channel = anim->bvh->num_channel;      // BVH Number of Motion Channels
 	real *bvh_motion = anim->bvh->motion;                  // BVH Motion Data Ptr
-	real *ik_motion = anim->ik_rightArm_motion;            // IK  Motion Data
 
+	std::size_t j_idx = 0;
 	for (Joint *joint : chain)
 	{
 		//  =========== Translation Still Fetches from BVH Joint Data =========== 
@@ -86,25 +98,24 @@ void IK_Solver::perturb_traverse(Joint *perturb_joint, ChannelEnum dof, double p
 					// Joint Translation still fetched from BVH
 					case ChannelEnum::X_POSITION:
 					{
-						float x_p = motion[anim_frame * num_channel + c->index];
+						float x_p = bvh_motion[anim_frame * num_channel + c->index];
 						root_offs.x = x_p;
 						break;
 					}
 					case ChannelEnum::Y_POSITION:
 					{
-						float y_p = motion[anim_frame * num_channel + c->index];
+						float y_p = bvh_motion[anim_frame * num_channel + c->index];
 						root_offs.y = y_p;
 						break;
 					}
 					case ChannelEnum::Z_POSITION:
 					{
-						float z_p = motion[anim_frame * num_channel + c->index];
+						float z_p = bvh_motion[anim_frame * num_channel + c->index];
 						root_offs.z = z_p;
 						break;
 					}
 				}
 			}
-
 			trans = glm::translate(trans, glm::dvec3(root_offs));
 		}
 		else if (joint->parent) // Non root joints, Translation is offset. 
@@ -112,86 +123,168 @@ void IK_Solver::perturb_traverse(Joint *perturb_joint, ChannelEnum dof, double p
 			trans = glm::translate(trans, joint->offset);
 		}
 
-		// ====== Perturbation of Joints OR Hold Constant 
+		// ====== Perturbation of Joints DOF's OR Hold Constant ======
+		// Joint Rotation DOFs, come from Joint Chain Rotional DOF Data Array. 
+		glm::dvec3 j_rot = anim->chain_rotMotion[j_idx];
+
 		if (perturb_joint) // Perturbed Joint Rotation 
 		{
 			for (const Channel *c : joint->channels)
 			{
 				switch (c->type)
 				{
-				case ChannelEnum::Z_ROTATION:
-				{
-					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					// Preturb for DOF Rot_Z
-					if (dof == ChannelEnum::Z_ROTATION) z_r += perturb_fac;
-					trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
-					break;
-				}
-				case ChannelEnum::Y_ROTATION:
-				{
-					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					// Preturb for DOF Rot_Y
-					if (dof == ChannelEnum::Y_ROTATION) y_r += perturb_fac;
-					trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
-					break;
-				}
-				case ChannelEnum::X_ROTATION:
-				{
-					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					// Preturb for DOF Rot_X
-					if (dof == ChannelEnum::X_ROTATION) x_r += perturb_fac;
-					trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
-					break;
-				}
+					case ChannelEnum::Z_ROTATION:
+					{
+						real z_r = j_rot.z; 
+						// Preturb for DOF Rot_Z
+						if (dof == ChannelEnum::Z_ROTATION) z_r += perturb_factor;
+						trans = glm::rotate(trans, glm::radians(z_r), glm::dvec3(0., 0., 1.));
+						break;
+					}
+					case ChannelEnum::Y_ROTATION:
+					{
+						real y_r = j_rot.y; 
+						// Preturb for DOF Rot_Y
+						if (dof == ChannelEnum::Y_ROTATION) y_r += perturb_factor;
+						trans = glm::rotate(trans, glm::radians(y_r), glm::dvec3(0., 1., 0.));
+						break;
+					}
+					case ChannelEnum::X_ROTATION:
+					{
+						real x_r = j_rot.x; 
+						// Preturb for DOF Rot_X
+						if (dof == ChannelEnum::X_ROTATION) x_r += perturb_factor;
+						trans = glm::rotate(trans, glm::radians(x_r), glm::dvec3(1., 0., 0.));
+						break;
+					}
 				}
 			}
 		}
-		else // Constant Joint Rotation
+		else // Constant Joint Rotation for all DOFs
 		{
 			for (const Channel *c : joint->channels)
 			{
 				switch (c->type)
 				{
-				case ChannelEnum::Z_ROTATION:
-				{
-					float z_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					trans = glm::rotate(trans, glm::radians(z_r), glm::vec3(0., 0., 1.));
-					break;
-				}
-				case ChannelEnum::Y_ROTATION:
-				{
-					float y_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					trans = glm::rotate(trans, glm::radians(y_r), glm::vec3(0., 1., 0.));
-					break;
-				}
-				case ChannelEnum::X_ROTATION:
-				{
-					float x_r = bvh->motion[anim_frame * bvh->num_channel + c->index];
-					trans = glm::rotate(trans, glm::radians(x_r), glm::vec3(1., 0., 0.));
-					break;
-				}
+					case ChannelEnum::Z_ROTATION:
+					{
+						real z_r = j_rot.z;
+						trans = glm::rotate(trans, glm::radians(z_r), glm::dvec3(0., 0., 1.));
+						break;
+					}
+					case ChannelEnum::Y_ROTATION:
+					{
+						real y_r = j_rot.y;
+						trans = glm::rotate(trans, glm::radians(y_r), glm::dvec3(0., 1., 0.));
+						break;
+					}
+					case ChannelEnum::X_ROTATION:
+					{
+						real x_r = j_rot.x;
+						trans = glm::rotate(trans, glm::radians(x_r), glm::dvec3(1., 0., 0.));
+						break;
+					}
 				}
 			}
 		}
 		// ONLY transform the end_site, we don't care about actually transforming the other joints aslong as we have their
 		// transforms accumulated (to propgate to the end site joint as it is what we are measuring the delta of). 
-		if (joint->is_end) // Assumes last chain joint is an end_site / effector. 
+		if (joint->is_end) 
 		{
 			joint->position = glm::vec3(trans * glm::vec4(0.f, 0.f, 0.f, 1.f));
 		}
+
+		j_idx++; // Joint Index inc
 	}
+}
+
+void IK_Solver::build_jacobian()
+{
+	// ============================ Get UnPerturbed Joint End Effector Postions ============================
+	// Get Un-perturbed Joint End Effector Position (P1) 
+	endEffector_current = glmToeig(end_joint->position);
+
+	// ============================ Get Perturbed Effector Postions wrt Joint DOF ============================
+	// Perturb Joints to calc partial(x) / partial(theta) of joint end effector wrt joint rotiational DOFs. 
+	perturb_joints();
+
+	// ============================ Allocate Jacobian Matrix ============================
+	std::size_t rows = 3; // 3 End Effector DOFs
+	std::size_t cols = chain.size() * 3; // Joint Count * 3 Rot DOFs.
+	J = new Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
+	J->resize(rows, cols);
+	J->setZero();
+
+	// ============================ Build Jacobian Column Wise ============================
+	// In form of : Forward Difference (P2(theta + h) - P1(theta) / h)
+	std::size_t col_ind = 0; // Column / Joint DOF index. 
+	for (auto col : J->colwise())
+	{
+		// Each Column get Non-Perturbed (P1) and Perturbed (P2) end effector postion vector3s. 
+		Eigen::Vector3d P1 = endEffector_current;
+		Eigen::Vector3d P2 = glmToeig(perturb_positons[col_ind]);
+
+		// Split into Effector Positional components (x,y,z) form ((P2 - P1) / h) for each el. 
+		col(0) = (P2.x() - P1.x()) / perturb_factor;
+		col(1) = (P2.y() - P1.y()) / perturb_factor;
+		col(2) = (P2.z() - P1.z()) / perturb_factor;
+
+		col_ind++;
+	}
+}
+
+// ===========================================================================================================
+//										Jacobian Inverse & Solve for Angle Delta
+// ===========================================================================================================
+void IK_Solver::solve()
+{
+	// ============================ Compute RHS V ============================
+	V = glmToeig(effector_target.pos) - glmToeig(end_joint->position);
+	
+	// ============================ (Pseudo) Inverse of Jacobian ============================
+	// Pinv using Transpose 
+	//JI = new Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
+	auto J_Transpose = J->transpose();
+
+	// Joint DOF Angle Vector
+	//DT = new Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
+	//DT->resize(J->cols(), 1);
+
+	auto DT_a = J_Transpose * V;
 }
 
 
 
-// ============================= Static Member Functions ==========================
+// ===========================================================================================================
+//										Integration of Delta Joint Angles
+// ===========================================================================================================
+// Use Hardcoded Joint Chain Angles for RightArm chain within Anim_State. 
+// Ideally extend to multiple arrays / chains of angles to integrate. 
+
+
+
+
+// ===========================================================================================================
+//										Utility, Debug & Static Member Functions
+// ===========================================================================================================
+
 // glm to eigen conversions
 Eigen::Vector3f IK_Solver::glmToeig(const glm::vec3 &vec)
 {
 	return Eigen::Vector3f(vec.x, vec.y, vec.z);
 }
 
+Eigen::Vector3d IK_Solver::glmToeig(const glm::dvec3 &vec)
+{
+	return Eigen::Vector3d(vec.x, vec.y, vec.z);
+}
+
 Eigen::Vector4f IK_Solver::glmToeig(const glm::vec4 &vec)
 {
 	return Eigen::Vector4f(vec.x, vec.y, vec.z, vec.w);
 }
+
+Eigen::Vector4d IK_Solver::glmToeig(const glm::dvec4 &vec)
+{
+	return Eigen::Vector4d(vec.x, vec.y, vec.z, vec.w);
+} 
