@@ -7,11 +7,11 @@
 // Project Headers
 #include "bvhdata.h"
 
-Effector::Effector(Joint *effector_joint, const glm::vec3 &Offset)
+Effector::Effector(Joint *effector_joint, const glm::dvec3 &Offset)
 	: joint_tgt(effector_joint), offset(Offset)
 {
 	// Effector inital state
-	pos = joint_tgt->position + offset; 
+	pos = joint_tgt->position + offset;
 	
 	// ========== Create Effector Mesh Prim ==========
 	std::string name = "Effector_Mesh_" + std::to_string(joint_tgt->idx);
@@ -36,19 +36,19 @@ Effector::~Effector()
 }
 
 // Re-Set Effector position from user interaction (adding to offset)
-void Effector::set_pos(const glm::vec3 &updt_Pos)
+void Effector::set_pos(const glm::dvec3 &updt_Pos)
 {
 	// Reset Mesh Translation
 	mesh->translate(-pos);
 	offset += updt_Pos;
-	pos = joint_tgt->position + offset;
+	pos = joint_tgt->position + glm::dvec3(offset.x, offset.y, offset.z);
 	mesh->translate(pos);
 }
 
 // Render Effector Mesh 
 void Effector::render(float scale, const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
-	mesh->model[3] = glm::vec4((pos * glm::vec3(scale)), 1.f);
+	mesh->model[3] = glm::vec4((glm::vec3(pos.x, pos.y, pos.z)* glm::vec3(scale)), 1.f);
 
 	// Set Camera Transform
 	mesh->set_cameraTransform(view, persp);

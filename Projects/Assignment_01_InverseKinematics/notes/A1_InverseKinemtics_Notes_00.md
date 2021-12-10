@@ -1695,11 +1695,13 @@ Don't confuse the IK Chain angles with the incremental angle velocities from the
 
 Will update the joints reading from BVH using the method implemented in Anim_State, Will then do IK Update on top of this, to override joint angles for joints within IK Chain. 
 
+Could create ptr in Joint that can point to some Chain Motion Array element to easier access the joints motion data if part of an IK chain (ie Point from joint to dvec3 Angle DOF element in array within Anim_State for chain its part of), but if we know the order of the joint chain we can just index it to the chain motion array like we do for FK in the BVH data.
 
+Set IK Chain Motion Data (IK_Solver->Anim_State) using integrated joint angle deltas. However Anim_State is then responsible for propagating / updating these joints transforms (and thus Joint Positions + Bone Transforms), this method will be called from within IK_Solver so it happens per IK_Solve tick (which itself is called from Anim_State::Tick() for all IK_Solvers)
 
+____
 
-
-
+I ran out of time on this project and had to hand in without the IK Code, not happy about that, but I have so much to do I don't really have time to be annoyed. However I do want to finish this project and at least get the IK Chain working for the right arm. Really want to come back to IK in the future so I can spend the time experimenting with different pseudo-inverse methods (Damped Least Squares etc) and try other methods than Jacobian based eg (Newton Based or Cyclic Coordinate Descent) now that I have the FK and IK Update plumbing in place. Although I'd like to improve the Joint Hierarchy traversal / updates and add more abstraction where needed. Also only using BVH to define the initial skeleton based on Joint Hierarchy and using IK for foot planting / walking could be cool. 
 
 
 

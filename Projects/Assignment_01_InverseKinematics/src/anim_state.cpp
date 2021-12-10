@@ -24,7 +24,7 @@ Anim_State::Anim_State()
 Anim_State::~Anim_State()
 {
 	// Deallocate singles IK Data
-	if (ik_rightArm)     delete ik_rightArm;
+	//if (ik_rightArm)     delete ik_rightArm;
 	if (joint_endeffec)  delete joint_endeffec;
 	if (target_endeffec) delete target_endeffec;
 }
@@ -48,7 +48,9 @@ void Anim_State::set_bvhFile(const char *BVHPath)
 	update_bvhSkeleton();
 
 	// IK Setup
-	//ik_setup();
+	ik_setup();
+	// Initial Tick of IK solvers
+	ik_rightArm->tick();
 }
 
 // Updates Joint Angles for current frame via Skeleton State
@@ -224,8 +226,7 @@ void Anim_State::ik_setup()
 	// ========== Single Chain setup ==========
 	// Joint chain from RThumb (as end joint / end effector), back to root. 
 	Joint *end_joint = bvh->find_joint("RThumb");
-	// Validate End Joint
-	if (!end_joint || !end_joint->is_end)
+	if (!end_joint || !end_joint->is_end) // Validate End Joint
 	{
 		std::cerr << "ERROR::Cannot create joint chain for::" << end_joint->name << "::Joint is not an end joint." << std::endl;
 		std::terminate();
@@ -234,17 +235,15 @@ void Anim_State::ik_setup()
 
 	// ====== Create Target End Effector from some otjer joint, not part of the chain ======
 	Joint *tgt_joint = bvh->find_joint("LThumb");
-	// Validate Target Joint
-	if (!tgt_joint)
+	if (!tgt_joint) // Validate Target Joint
 	{
 		std::cerr << "ERROR::Cannot create target effector for::" << tgt_joint->name << "::Joint is not valid." << std::endl;
 		std::terminate();
 	}
-	Effector target(tgt_joint, glm::vec3(-20.0f, 8.f, 0.f));
+	Effector target(tgt_joint, glm::dvec3(-20.0, 8., 0.));
 
 	// ====== Get Inital Joint Chain Rotational DOFs Motion ======
 	// Note : we discard position DOFs for root, will fetch this from BVH Motion data later. 
-	chain_rotMotion = std::vector<glm::dvec3>(chain_rightArm.size(), glm::dvec3(0.f));
 	// Fetch Joint Rotational DOFs (root --> end)
 	for (Joint *joint : chain_rightArm)
 	{

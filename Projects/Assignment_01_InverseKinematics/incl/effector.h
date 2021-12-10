@@ -22,18 +22,18 @@ class Effector
 {
 public:
 	Effector(); 
-	Effector(Joint *effector_joint, const glm::vec3 &Offset);
+	Effector(Joint *effector_joint, const glm::dvec3 &Offset);
 	~Effector();
 
 	// Update Pos
-	void set_pos(const glm::vec3 &upt_Pos);
+	void set_pos(const glm::dvec3 &upt_Pos);
 
 	// Render Effector 
 	void render(float scale, const glm::mat4x4 &view, const glm::mat4x4 &persp);
 
 public:
-	glm::vec3 pos;               // Current Position (with offset)
-	glm::vec3 offset;            // Target offset.
+	glm::dvec3 pos;               // Current Position (with offset)
+	glm::dvec3 offset;            // Target offset.
 	std::size_t id; 
 	Joint* joint_tgt;            // Effector Joint    
 

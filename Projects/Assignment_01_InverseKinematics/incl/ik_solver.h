@@ -22,7 +22,7 @@
 class IK_Solver
 {
 public:
-	IK_Solver(Anim_State *Anim, const std::vector<Joint*> &joint_chain, const Joint *joint_end, const Effector &target);
+	IK_Solver(Anim_State *Anim, const std::vector<Joint*> &joint_chain, Joint *joint_end, const Effector &target);
 	~IK_Solver() = default;
 
 	// ============== Tick / Update ===============
@@ -40,6 +40,9 @@ public:
 
 	// =============== Integrate Angles ===============
 
+	// =============== Debug ===============
+	void print_jacobian();
+
 	// =============== Utility Static Member Functions ===============
 	static Eigen::Vector3f glmToeig(const glm::vec3 &vec);
 	static Eigen::Vector4f glmToeig(const glm::vec4 &vec);
@@ -54,12 +57,14 @@ public:
 	std::vector<glm::dvec3> perturb_positons; // Perturbed EndEffector Pos, wrt to each joint DOF. 
 
 	Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> *J;  // Jacobian Matrix
-	Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> *JI; // Jacobian (Pseudo) Inverse 
-	Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> *DT; // Delta Theta Vector
-	Eigen::Vector3f V;                            // Velocity Vector
+	//Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> *JI; // Jacobian (Pseudo) Inverse 
+	//Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> *DT; // Delta Theta Vector
+	Eigen::Vector3d V;                            // Velocity Vector
 
-	Eigen::Vector3d endEffector_current; 
-	//Eigen::Vector3f end_effector_target; 
+	//Eigen::Vector3d endEffector_current; 
+	//Eigen::Vector3d end_effector_target; 
+
+	glm::dvec3 endEffector_current;
 
 	double perturb_factor; // Perturbation factor / h value used in Jacobian Construction
 

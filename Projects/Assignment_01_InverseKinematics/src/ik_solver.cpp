@@ -1,11 +1,16 @@
 // Implements
 #include "ik_solver.h"
 
+// Std Headers
+#include <sstream>
+#include <fstream>
 
-IK_Solver::IK_Solver(Anim_State *Anim, const std::vector<Joint*> &joint_chain, const Joint *joint_end, const Effector &target)
-	: anim(Anim)
+#define LOG_OUTPUT 0
+
+IK_Solver::IK_Solver(Anim_State *Anim, const std::vector<Joint*> &joint_chain, Joint *joint_end, const Effector &target)
+	: anim(Anim), end_joint(joint_end)
 {	
-	// Copy Joint Chain and End Effector Target Ptrs
+	// Copy Joint Chain and End Effector Target Ref Ptrs
 	chain = joint_chain;
 	effector_target = target;
 }
@@ -13,6 +18,8 @@ IK_Solver::IK_Solver(Anim_State *Anim, const std::vector<Joint*> &joint_chain, c
 void IK_Solver::tick()
 {
 	// Build Jacobian via Perturbation
+	perturb_joints();
+	build_jacobian();
 
 	// Inverse Jacobian and Solve for Joint Angle Deltas
 
@@ -29,7 +36,6 @@ void IK_Solver::tick()
 */
 void IK_Solver::perturb_joints()
 {
-	
 	// Start of chain, is assumed to be root. 
 	Joint *root = anim->bvh->joints[0];
 
@@ -40,7 +46,7 @@ void IK_Solver::perturb_joints()
 	perturb_positons.reserve(dof_c);
 
 	// Also store the current ticks orginal (non per-turbed) end effector postion. 
-	endEffector_current = glmToeig(end_joint->position);
+	endEffector_current = end_joint->position;
 
 	// Delta Theta to perturb joint DOFs by FDM : (P2(theta+h) - P1(theta) / h). 
 	perturb_factor = 0.001f;
@@ -64,7 +70,7 @@ void IK_Solver::perturb_joints()
 			perturb_traverse(perturb_joint, DOF);
 
 			// Query Resulting Perturbed End Effector Postion component
-			glm::vec3 P2 = end_joint->position;
+			glm::dvec3 P2 = end_joint->position;
 			// Append to P2 Column Array
 			perturb_positons.push_back(std::move(P2));
 		}
@@ -88,7 +94,7 @@ void IK_Solver::perturb_traverse(Joint *perturb_joint, ChannelEnum dof)
 	for (Joint *joint : chain)
 	{
 		//  =========== Translation Still Fetches from BVH Joint Data =========== 
-		if (!joint->parent) // Root joint, translation from channels. 
+		if (joint->is_root) // Root joint, translation from channels. 
 		{
 			glm::vec4 root_offs(0., 0., 0., 1.);
 			for (const Channel *c : joint->channels)
@@ -127,7 +133,7 @@ void IK_Solver::perturb_traverse(Joint *perturb_joint, ChannelEnum dof)
 		// Joint Rotation DOFs, come from Joint Chain Rotional DOF Data Array. 
 		glm::dvec3 j_rot = anim->chain_rotMotion[j_idx];
 
-		if (perturb_joint) // Perturbed Joint Rotation 
+		if (joint->idx == perturb_joint->idx) // Perturbed Joint Rotation 
 		{
 			for (const Channel *c : joint->channels)
 			{
@@ -202,7 +208,7 @@ void IK_Solver::build_jacobian()
 {
 	// ============================ Get UnPerturbed Joint End Effector Postions ============================
 	// Get Un-perturbed Joint End Effector Position (P1) 
-	endEffector_current = glmToeig(end_joint->position);
+	//endEffector_current = end_joint->position;
 
 	// ============================ Get Perturbed Effector Postions wrt Joint DOF ============================
 	// Perturb Joints to calc partial(x) / partial(theta) of joint end effector wrt joint rotiational DOFs. 
@@ -221,7 +227,7 @@ void IK_Solver::build_jacobian()
 	for (auto col : J->colwise())
 	{
 		// Each Column get Non-Perturbed (P1) and Perturbed (P2) end effector postion vector3s. 
-		Eigen::Vector3d P1 = endEffector_current;
+		Eigen::Vector3d P1 = glmToeig(endEffector_current);
 		Eigen::Vector3d P2 = glmToeig(perturb_positons[col_ind]);
 
 		// Split into Effector Positional components (x,y,z) form ((P2 - P1) / h) for each el. 
@@ -231,7 +237,11 @@ void IK_Solver::build_jacobian()
 
 		col_ind++;
 	}
+
+	print_jacobian();
 }
+
+
 
 // ===========================================================================================================
 //										Jacobian Inverse & Solve for Angle Delta
@@ -288,3 +298,26 @@ Eigen::Vector4d IK_Solver::glmToeig(const glm::dvec4 &vec)
 {
 	return Eigen::Vector4d(vec.x, vec.y, vec.z, vec.w);
 } 
+
+// ToDo : Add log output 
+void IK_Solver::print_jacobian()
+{
+	std::stringstream r0, r1, r2, out;
+	for (auto col : J->colwise())
+	{
+		r0 << col(0) << ", "; r1 << col(1) << ", "; r2 << col(2) << ", ";
+	}
+	out << "\n======== DEBUG::JACOBIAN_MATRIX::BEGIN ========\n"
+		<< "Frame = " << anim->anim_frame << "  Rows = " << J->rows() << " Cols = " << J->cols() << "\n"
+		<< "|" << r0.str() << "|\n" << "|" << r1.str() << "|\n" << "|" << r2.str() << "|\n";
+	out << "======== DEBUG::JACOBIAN_MATRIX::END ========\n\n";
+
+#if LOG_OUTPUT == 1
+	std::ofstream log("log.txt", std::ios::out | std::ios::app);
+	log << out.str();
+	log.close();
+#else
+	std::cout << out.str(); 
+#endif
+
+}
