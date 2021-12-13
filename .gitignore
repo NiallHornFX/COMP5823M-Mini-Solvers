@@ -6,6 +6,11 @@ Projects/Assignment_01_InverseKinematics/_bu/
 Projects/Assignment_01_InverseKinematics/build/intermediate/
 Projects/Assignment_01_InverseKinematics/ext/
 
+# Assignment_02 Ignore
+Projects/Assignment_02_ClothSimulation/.vs/
+Projects/Assignment_02_ClothSimulation/build/intermediate/
+
+
 # File types
 *.vc.db
 *.vc

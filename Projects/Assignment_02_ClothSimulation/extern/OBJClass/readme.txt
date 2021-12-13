@@ -1,2 +1,0 @@
-The class was written mainly to load/wrote obj files, having certain assumptions of the obj file.
-You won't be able to directly use it because it is extracted from a project where it depends on other libraries such as QT, log4cpp, boost and glm. However, if you read the code, there are some key functionalities that can be conveniently used for your tasks.
