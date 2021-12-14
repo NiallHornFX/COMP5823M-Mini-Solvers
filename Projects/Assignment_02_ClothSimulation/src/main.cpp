@@ -3,13 +3,19 @@
 // Project Headers
 #include "viewer.h"
 
+// Test
+#include "cloth_state.h"
+
 int main(int argc, char **argv)
 {
+	
+	
+	
 	// Create Viewer Application Instance
-	Viewer app(1024, 1024, "COMP5823M_A1 BVH Animation");
+	//Viewer app(1024, 1024, "COMP5823M_A1 BVH Animation");
 
 	// Exec
-	app.exec();
+	//app.exec();
 
 	return 0; 
 }

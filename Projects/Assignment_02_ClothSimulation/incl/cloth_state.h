@@ -27,6 +27,8 @@ public:
 
 	void build_cloth(); 
 
+	void reset_cloth();
+
 	void render(const glm::mat4x4 &view, const glm::mat4x4 &persp);
 
 private:
@@ -34,12 +36,16 @@ private:
 	// Obj Mesh
 	std::string file_path; 
 
+	// Mesh --> Particles Data
+	std::vector<glm::vec3>  v_p;
+	std::vector<glm::ivec3> tri_inds; 
+
 	// Cloth Sim Data
-	std::vector<Particle> *particles; 
-	std::vector<Spring>   *springs; 
+	std::vector<Particle> particles; 
+	std::vector<Spring>   springs; 
 
 	// Cloth Render Data
-	Mesh cloth_mesh; 
+	//Mesh cloth_mesh; 
 
 	friend class Cloth_Solver; 
 };
@@ -54,10 +60,13 @@ enum pt_state
 	FREE = 0, FIXED
 };
 
+// Particles map 1:1 to indexed vertices. 
 struct Particle
 {
+	Particle(const glm::vec3 &p)
+		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), N(glm::vec3(0.f)), state(pt_state::FREE), mass(1.f) {}
+
 	glm::vec3 P, V, F, N; 
-	std::size_t id; 
 	pt_state state; 
 	float mass; 
 };
