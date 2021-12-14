@@ -1,4 +1,4 @@
-// COMP5823M - A1 : Niall Horn - viewer.h
+// COMP5823M A2 : Niall Horn 201486968 - viewer.h
 #ifndef VIEWER_H
 #define VIEWER_H
 

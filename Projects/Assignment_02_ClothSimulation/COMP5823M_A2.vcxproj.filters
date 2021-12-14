@@ -49,6 +49,9 @@
     <ClCompile Include="src\ext\dearimgui\imgui_widgets.cpp">
       <Filter>Source\dearimgui</Filter>
     </ClCompile>
+    <ClCompile Include="src\cloth_state.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="incl\camera.h">
@@ -70,6 +73,9 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="incl\viewer.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="incl\cloth_state.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
