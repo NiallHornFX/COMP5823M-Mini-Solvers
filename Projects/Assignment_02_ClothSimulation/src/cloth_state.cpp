@@ -116,6 +116,30 @@ void Cloth_State::load_obj(std::ifstream &in)
 #endif
 }
 
+// Info : Compute Per particle array of glm::ivec3 (Triangle Indices) particle is part of. 
+//        This is a scatter approach, each tri index (particle) passes a ptr to its tri to that particles, tri list array.
+void Cloth_State::get_particle_trilist()
+{
+	// Reset per particle inner array tri list. 
+	pt_tris.resize(particles.size());
+	for (std::vector<glm::ivec3*> trilist : pt_tris) trilist.clear();
+
+	// Loop over tris 
+	for (glm::ivec3 &tri : tri_inds)
+	{
+		// Add tri ptr to each particle defined by tri indices tri list. 
+		for (std::size_t i = 0; i < 3; ++i)
+		{
+			int p_ind = tri[i];
+			pt_tris[p_ind].push_back(&tri);
+		}
+	}
+
+#ifdef DEBUG_LOG_PTTRIS
+	// Debug : validation
+	for (const Particle &p : particles) std::cout << "particle_" << p.id << " tri_count = " << pt_tris[p.id].size() << "\n";
+#endif
+}
 
 // Info : Built Cloth Spring State
 void Cloth_State::build_cloth()
@@ -162,29 +186,9 @@ void Cloth_State::build_cloth()
 	for (const Particle &p : particles) std::cout << "particle_" << p.id << " spring_count = " << p.spring_count << "\n";
 	std::cout << "Total Spring Count = " << springs.size() << "\n";
 #endif
+
+	// Cloth_Mesh Setup Calls [..]
 }
 
-// Info : Compute Per particle array of glm::ivec3 (Triangle Indices) particle is part of. 
-//        This is a scatter approach, each tri index (particle) passes a ptr to its tri to that particles, tri list array.
-void Cloth_State::get_particle_trilist()
-{
-	// Reset per particle inner array tri list. 
-	pt_tris.resize(particles.size());
-	for (std::vector<glm::ivec3*> trilist : pt_tris) trilist.clear();
 
-	// Loop over tris 
-	for (glm::ivec3 &tri : tri_inds)
-	{
-		// Add tri ptr to each particle defined by tri indices tri list. 
-		for (std::size_t i = 0; i < 3; ++i)
-		{
-			int p_ind = tri[i];
-			pt_tris[p_ind].push_back(&tri);
-		}
-	}
 
-#ifdef DEBUG_LOG_PTTRIS
-	// Debug : validation
-	for (const Particle &p : particles) std::cout << "particle_" << p.id << " tri_count = " << pt_tris[p.id].size() << "\n";
-#endif
-}

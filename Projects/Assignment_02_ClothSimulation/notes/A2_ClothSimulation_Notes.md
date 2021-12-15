@@ -49,6 +49,8 @@ We use the mesh class for rendering which I wrote initially to be a primitive th
 
 obj_loading both loads the vert position data and indices (to form unique particles per vertex position, see below) but also creates the particle data. So anytime a new obj is loaded this will be re-created, but most likely for this project the obj file will be the same, although would be cool to test with some other meshes, been careful of the hardcoded limitations / assumptions of it been a square piece of cloth tri mesh for this project. 
 
+Cloth_Mesh will be re-created for each new obj file (most likely that won't occur as the assignment only deals with a single 2D plane cloth mesh) could also define seperate cloth_meshes for difference simulation scenarios (pinned corners, freefalling etc and switch between them based on GUI, oppose to modifying state of a single instance each time).
+
 ##### render() :
 
 Calls render on cloth_mesh but also renders the visualizer primitives for springs and particles based on if enabled in gui. 
@@ -92,7 +94,46 @@ This seems to work as for a 2D plane we expect most particles will be part of 6 
 
 ###### Building Springs
 
-We will worry about duplicates / con hash checking in a bit, for now lets just get the spring creation working. 
+We will worry about duplicates / con hash checking in a bit, for now lets just get the spring creation working. Using similar approach to VerletClothMesh we loop over per particle tris (its part of), get each other particle at each tri index, check its not self and create spring between particle self and the other particle defined by the tri indices. 
+
+```c++
+// Cloth_State::build_cloth()
+// ============= Build Cloth Springs ==============
+	// For each particle
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		Particle &curPt = particles[p];
+
+		// For each tri, particle is part of
+		std::vector<glm::ivec3*> &triPts = pt_tris[p];
+		for (std::size_t t = 0; t < triPts.size(); ++t)
+		{
+			// For each tri index (Adjacent Particles)
+			for (std::size_t i = 0; i < 3; ++i)
+			{
+				std::size_t ind = (*triPts[t])[i];
+				assert(curPt.id == p); // Make sure iter index matches Pt_id. 
+				// Build Spring for particle pair
+				if (curPt.id != ind) // Make sure we dont make spring with self pt
+				{
+					// Get other particle defined by index
+					Particle &othPt = particles[ind];
+
+					// Compute Rest Length 
+					float rl = glm::length(curPt.P - othPt.P);
+
+					// Create Spring
+					springs.emplace_back(&curPt, &othPt, rl);
+
+					// Increment Cur and Oth Particle Spring Count
+					curPt.spring_count++, othPt.spring_count++;
+				}
+			}
+		}
+	}
+```
+
+
 
 ###### reset_cloth() :
 
@@ -133,6 +174,8 @@ ____
 
 As per the internal discussion above, we pass the cloth particles (which like my VerletClothSolver project are just defined as unique vertex positions) to this class, which then calculates the current normals (using neighbouring particles based on index information) this is then serialized into the Vertex Data array (VBO) the Indices only need to be set once to the EBO (when the cloth state is first built as we don't have changing cloth topology here).
 
+Primitive Derivate of new class (based on Primitive ?) : This class can be based on the current Primitive class (its code, not derived), but with optimized updated the positions and normal data and using indexed drawing per particle via tris indices. Or we could try and extend the primitive class via inheritance to define the cloth_mesh class, as its setup quite well to be extended, the render method is virtual so we can implemented indexed drawing, we can make the create_buffers() function virtual and both call the primitive version and then also create the EBOs here internally. We still need the VAO and VBO defined in Primitive anyway, then  can add our cloth specific attribute calculation member functions within this, worth a shot before creating a brand new class based off Primitive's code anyway for code reuse sake. I mean for perf sake we could just write a custom class with no runtime polymorphism / virtual at all, but will try this primitive derived class first. Actually, no I am going to create a custom class, because Primitive depends on passing Vert array to it, whereas we will be passing particles that then need to be serialized into the VAO so it makes more sense just to rewrite it for what we need. 
+
 
 
 
@@ -155,4 +198,4 @@ ____
 
 Has two components the simulation definition / calculation of the collisions based on some parametric shape, sphere in this primary case, and then the render mesh which needs to match the size based on the parameters passed and used for the collision detection. 
 
-Collision function will eval if some passed particle is within bounds of collider and if so return the signed distance and displacement vector to project out of. This would be a good class to use polymorphism with this as a virtual function we could support boxes and planes using the same parametric approach. Triangle Mesh based cloth collisions are not really a prio / required at all so probs will leave out for now as this would need acceleration and need parity between render and simulation representations (cannot use implicit or parametric functions to approximate collision bounds). Or could implement SDF Collisions if I had time, that would be fun ! But not gonna happen. 
+Collision function will eval if some passed particle is within bounds of collider and if so return the signed distance and displacement vector to project out of or the force or impulse to apply. This would be a good class to use polymorphism with this as a virtual function we could support boxes and planes using the same parametric approach. Triangle Mesh based cloth collisions are not really a prio / required at all so probs will leave out for now as this would need acceleration and need parity between render and simulation representations (cannot use implicit or parametric functions to approximate collision bounds). Or could implement SDF Collisions if I had time, that would be fun ! But not gonna happen. 
