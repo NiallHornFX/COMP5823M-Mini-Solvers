@@ -22,6 +22,17 @@ I wanted to be hip and add self collision based on my Verlet Cloth / PBD project
 
 Ideally we can switch between the desired simulation scenarios purposed (hanging cloth, falling cloth onto sphere, rotating sphere), surprised they asked for rotating sphere when there's no self collisions required, this will look ugly. Want to implement correct normal and tangential decomp friction...
 
+To get the shear spring on the diagonal (tri hyp) we could load in obj meshes as quads, and then triangulate them internally so we know which edge is the shear spring ? For now I'm just using my VerletCloth Workflow where I loop over particles, tris (based on indices) and form edges from these, but their is little control / way of defining where each type of spring should be, they are assume to all just be distance / struct springs. 
+
+As we see below I'm using the same approach as my VerletClothSolver project where each unique vert positions becomes a particle hence each vertex maps directly a a particle so particle and vertex is used synonymously but typically particle refers to the point for simulation and vertex for rendering but can be interchanged so note this. For rendering ofcourse each particle/vert is indexed via an EBO based on the per tri indices as each point is shared across multiple tris, hence my cloth_mesh class was written specifically for indexed drawing of the cloth particles with per-tick computed attributes. 
+
+Classes made for this project : 
+
+* Cloth_State 
+* Cloth_Solver
+* Cloth_Mesh
+* Cloth_Collider
+
 ____
 
 ##### Cloth_State Class
@@ -38,16 +49,50 @@ We use the mesh class for rendering which I wrote initially to be a primitive th
 
 obj_loading both loads the vert position data and indices (to form unique particles per vertex position, see below) but also creates the particle data. So anytime a new obj is loaded this will be re-created, but most likely for this project the obj file will be the same, although would be cool to test with some other meshes, been careful of the hardcoded limitations / assumptions of it been a square piece of cloth tri mesh for this project. 
 
-###### render() :
+##### render() :
 
-Calls render on cloth_mesh but also renders the visualizer pirmtives for springs and particles based on if enabled in gui. 
+Calls render on cloth_mesh but also renders the visualizer primitives for springs and particles based on if enabled in gui. 
 
-###### buildcloth() :
+##### buildcloth() :
 
 * Creates the springs based on particle pair edges of particles defined indices from resulting particle data from obj loading. 
 * Calculates spring  rest lengths. 
 
 As we ideally want all 3 types of springs you typically see in a mass-spring solver we need to make sure the indices are correct so have distance springs along the quad edges, shear springs along the tri hyp edges and then bend springs skipping over each adjacent particle (typically would be in face/tri centres as dihedral springs) bend/dihedral springs are not a prio for now. 
+
+The way I did this in VerletClothMesh was to pre-compute and store per particle (vert) tris they are a part of (remember tris are stored as vec3<int>s for each index), then from this per particle we loop over each tri and create a constraint along each edge, I also used a hash function and check to determine if two particles already had a constraint (eg for the same particle pair in the inverse direction). I could use this same approach but it makes determining where to add shear and bend springs hard, as we'd just typically treat each spring as distance, we could dot each edge against themselves to find the hyp but this is slow. 
+
+For now we will just assume all springs are struct / distance as shear springs use the same forces anyway the spring types were mainly for identification purposes, as long as their is springs along each edge (including all tri edges, ideally without reciprocal duplicates) then that itself implicitly defines struct and shear springs (all as the same spring type). Of course the quality of these springs depends on how clean the topology is of the mesh, but for the test case purposed in the assignment this won't be an issue. 
+
+###### Per Particle Triangle Array
+
+To pre-compute the per particle triangles (which tri is each particle (aka vertex)) a part of I use a basic scatter approach where we loop through each tri (which is just a glm::ivec3 with 3 vert/particle indices) for each index pass a ptr to this current tri to an 2D array which is a per particle array, array of triangle ptrs whom contain its index. Of course this only needs to be computed once per new cloth mesh : 
+
+```C++
+void Cloth_State::get_particle_trilist()
+{
+	// Reset per particle inner array tri list. 
+	pt_tris.resize(particles.size());
+	for (std::vector<glm::ivec3*> trilist : pt_tris) trilist.clear();
+    
+    // Loop over tris 
+    for (glm::ivec3 &tri : tri_inds)
+    {
+        // Add tri ptr to each particle defined by tri indices tri list array. 
+        for (std::size_t i = 0; i < 3; ++i)
+        {
+            int p_ind = tri[i];
+            pt_tris[p_ind].push_back(&tri);
+        }
+    }
+}    
+```
+
+This seems to work as for a 2D plane we expect most particles will be part of 6 tris, other than particles on the edges or at the corners whom will only be part of 1-4. 
+
+###### Building Springs
+
+We will worry about duplicates / con hash checking in a bit, for now lets just get the spring creation working. 
 
 ###### reset_cloth() :
 
@@ -78,13 +123,21 @@ So Obj loading we do the normal parsing, but we only store vert positions we can
 
 To make things easier as I don't think their gonna try loading arbitrary Obj files when marking I will just assume its using v//vn format. 
 
-Make sure we store a per particle array of the initial state positions so we can "reset to initial state". Also make sure to offset all indices by -1 to account for obj's 1 based indexing. Particles don't need to store an idx as their ID is their position within the particle array (thus based on the original obj unique vert pos indices).
+Make sure we store a per particle array of the initial state positions so we can "reset to initial state". Also make sure to offset all indices by -1 to account for obj's 1 based indexing. Particles don't need to store an idx as their ID is their position within the particle array (thus based on the original obj unique vert pos indices). We still store IDs because we need them when comparing against other particles, or accessing in alternate iteration orders. 
 
 To save another class we could just make cloth_mesh based within the cloth_state class although I'd be cleaner to separate for the OpenGL state sake, class will be based on primitive class, apart from optimized for updating cloth positions and normal attributes per frame and using indexed drawing based on the passed particles. (Which we then map to a internal indexed vertex array with the correct attribute layout using the calculated attributes per tick for the particles--> now indexed verts to render, using the per tri index list). We can also use the index list back in cloth_state to get edges. 
 
 ____
 
+##### Cloth_Mesh Class
+
 As per the internal discussion above, we pass the cloth particles (which like my VerletClothSolver project are just defined as unique vertex positions) to this class, which then calculates the current normals (using neighbouring particles based on index information) this is then serialized into the Vertex Data array (VBO) the Indices only need to be set once to the EBO (when the cloth state is first built as we don't have changing cloth topology here).
+
+
+
+
+
+
 
 ____
 
@@ -92,9 +145,13 @@ ____
 
 Springs-Eval will be similar to my original code, but oppose to it been within a Member function of the spring class, it will be within cloth_solver, the spring then directly modifies / adds the resulting force to its two particles which it references. 
 
+
+
+
+
 ____
 
-##### Collider Class
+##### Cloth_Collider Class
 
 Has two components the simulation definition / calculation of the collisions based on some parametric shape, sphere in this primary case, and then the render mesh which needs to match the size based on the parameters passed and used for the collision detection. 
 

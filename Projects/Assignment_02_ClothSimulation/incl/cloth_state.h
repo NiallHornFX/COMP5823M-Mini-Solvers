@@ -25,11 +25,13 @@ public:
 
 	void load_obj(std::ifstream &in);
 
-	//void build_cloth(); 
+	void build_cloth(); 
 
-	//void reset_cloth();
+	void reset_cloth();
 
-	//void render(const glm::mat4x4 &view, const glm::mat4x4 &persp);
+	void render(const glm::mat4x4 &view, const glm::mat4x4 &persp);
+
+	void get_particle_trilist(); 
 
 private:
 
@@ -43,6 +45,9 @@ private:
 	// Cloth Sim Data
 	std::vector<Particle> particles; 
 	std::vector<Spring>   springs; 
+
+	// Per Particle Tris
+	std::vector<std::vector<glm::ivec3*>> pt_tris; 
 
 	// Cloth Render Data
 	//Mesh cloth_mesh; 
@@ -68,11 +73,11 @@ enum pt_state
 struct Particle
 {
 	Particle(const glm::vec3 &p, std::size_t idx)
-		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), N(glm::vec3(0.f)), state(pt_state::FREE), mass(1.f) {}
+		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), spring_count(0), N(glm::vec3(0.f)), state(pt_state::FREE), mass(1.f) {}
 
 	glm::vec3 P, V, F, N; 
 	pt_state state; 
-	std::size_t id; 
+	std::size_t id, spring_count; 
 	float mass; 
 };
 
@@ -84,6 +89,8 @@ enum spring_type
 
 struct Spring
 {
+	Spring(Particle *P0, Particle *P1, float RL) :
+		pt_0(P0), pt_1(P1), rest(RL) {}
 	Particle *pt_0, *pt_1; // Two Particles / point masses of spring. 
 	spring_type type; 
 	float k, c;  // Stiffness and Damping coeffs
