@@ -8,7 +8,7 @@
 
 int main(int argc, char **argv)
 {
-	
+	Cloth_State test("clothgrid_a.obj");
 	
 	
 	// Create Viewer Application Instance

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <sstream>
 
+#define DEBUG_LOG
+
 // =================================== Cloth_State Implementation ===================================
 
 Cloth_State::Cloth_State(const char *path)
@@ -12,7 +14,7 @@ Cloth_State::Cloth_State(const char *path)
 {
 	// Check OBJ Filepath
 	std::ifstream obj_file(path);
-	if (!obj_file.is_open)
+	if (!obj_file.is_open())
 	{
 		std::cerr << "ERROR::File Path Not Valid : " << path << " !\n";
 		std::terminate();
@@ -22,10 +24,6 @@ Cloth_State::Cloth_State(const char *path)
 	load_obj(obj_file);
 }
 
-Cloth_State::~Cloth_State()
-{
-	// 
-}
 
 // Info : Parsing of .obj to tri-soup based verts.
 // We discard vertex attributes so we can define unqiue vertices (and thus particles/point masses) based on postions.
@@ -91,7 +89,8 @@ void Cloth_State::load_obj(std::ifstream &in)
 				glm::vec3 pos = v_p[idx];
 
 				// Append Particle
-				particles.emplace_back(pos);
+				particles.emplace_back(pos, particles.size());
+				dbg << "Particle : " << particles.size() << "P = " << pos.x << "," << pos.y << "," << pos.z << "\n";
 			}
 			// Append Triangle
 			tri_inds.push_back(std::move(tri));
