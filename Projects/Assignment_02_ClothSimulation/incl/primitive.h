@@ -1,4 +1,4 @@
-// COMP5823M - A1 : Niall Horn - primitive.h
+// COMP5823M - A2 : Niall Horn - primitive.h
 #ifndef PRIMITIVE_H
 #define PRIMITIVE_H
 
@@ -38,9 +38,7 @@ public:
 	virtual void render();
 	virtual void debug()       const;
 	virtual bool check_state() const;
-	// Core
-	void create_buffers();
-
+	virtual void create_buffers();
 
 	// Setters
 	void set_data_mesh(const std::vector<vert> &data);
