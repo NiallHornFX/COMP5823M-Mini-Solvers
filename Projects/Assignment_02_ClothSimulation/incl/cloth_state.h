@@ -13,9 +13,9 @@
 // Ext Headers
 #include "ext/glm/glm.hpp"
 
-// Struct FDs
-struct Particle;
-struct Spring; 
+// FDs
+class Primitive; 
+class Cloth_Mesh; 
 
 class Cloth_State
 {
@@ -25,7 +25,7 @@ public:
 
 	void load_obj(std::ifstream &in);
 
-	void build_cloth(); 
+	void build_cloth_springs(); 
 
 	void reset_cloth();
 
@@ -35,10 +35,8 @@ public:
 
 private:
 
-	// Obj Mesh
+	// Input Mesh Data
 	std::string file_path; 
-
-	// Mesh --> Particles Data
 	std::vector<glm::vec3>  v_p;
 	std::vector<glm::ivec3> tri_inds; 
 
@@ -47,16 +45,17 @@ private:
 	std::vector<Spring>   springs; 
 
 	// Per Particle Tris
-	std::vector<std::vector<glm::ivec3*>> pt_tris; 
+	ParticleTriList pt_tris;
 
 	// Cloth Render Data
-	//cloth_mesh *mesh; 
+	Cloth_Mesh *mesh; 
 
 	// Visualizer Data
 	std::vector<Primitive*> viz_springs; 
 	std::vector<Primitive*> viz_pts; 
 
 	friend class Cloth_Solver; 
+	friend class Cloth_Mesh;
 };
 
 

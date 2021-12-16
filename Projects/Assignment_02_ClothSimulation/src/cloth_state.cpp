@@ -6,9 +6,13 @@
 #include <sstream>
 #include <cassert>
 
-#define DEBUG_LOG_OBJMESH
-#define DEBUG_LOG_PTTRIS
-#define DEBUG_LOG_SPRINGS
+// Project Headers
+#include "cloth_mesh.h"
+
+// Debug Defines
+//#define DEBUG_LOG_OBJMESH
+//#define DEBUG_LOG_PTTRIS
+//#define DEBUG_LOG_SPRINGS
 
 // =================================== Cloth_State Implementation ===================================
 
@@ -27,7 +31,10 @@ Cloth_State::Cloth_State(const char *path)
 	load_obj(obj_file);
 
 	// Build Cloth State
-	build_cloth();
+	build_cloth_springs();
+
+	// Create Cloth_Mesh (Pass it references to our data arrays)
+	mesh = new Cloth_Mesh(particles, tri_inds, pt_tris);
 }
 
 
@@ -142,7 +149,7 @@ void Cloth_State::get_particle_trilist()
 }
 
 // Info : Built Cloth Spring State
-void Cloth_State::build_cloth()
+void Cloth_State::build_cloth_springs()
 {
 	// Get Per Particle Triangle List : 
 	get_particle_trilist();
@@ -186,9 +193,11 @@ void Cloth_State::build_cloth()
 	for (const Particle &p : particles) std::cout << "particle_" << p.id << " spring_count = " << p.spring_count << "\n";
 	std::cout << "Total Spring Count = " << springs.size() << "\n";
 #endif
-
-	// Cloth_Mesh Setup Calls [..]
 }
 
 
-
+// Call Cloth_Mesh Render and on any additonal visualizers. 
+void Cloth_State::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
+{
+	mesh->render();
+}

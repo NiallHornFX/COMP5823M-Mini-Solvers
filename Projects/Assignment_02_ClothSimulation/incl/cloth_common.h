@@ -38,4 +38,9 @@ struct Spring
 	float rest;  // Rest Length
 };
 
+
+// Typedefs 
+
+using ParticleTriList = std::vector<std::vector<glm::ivec3*>>;
+
 #endif

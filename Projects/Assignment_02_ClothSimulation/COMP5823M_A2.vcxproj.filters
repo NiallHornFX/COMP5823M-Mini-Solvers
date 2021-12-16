@@ -52,6 +52,9 @@
     <ClCompile Include="src\cloth_state.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="src\cloth_mesh.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="incl\camera.h">
@@ -76,6 +79,12 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="incl\cloth_state.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="incl\cloth_mesh.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="incl\cloth_common.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,4 +1,4 @@
-// COMP5823M - A1 : Niall Horn - primitive.cpp
+// COMP5823M - A2 : Niall Horn - primitive.cpp
 
 // Implements 
 #include "primitive.h"
@@ -16,7 +16,7 @@
 #include "ext/glm/glm.hpp"
 
 
-// =================== Primitive Implementation ===================
+// ================================== Primitive Class Implementation ==================================
 
 Primitive::Primitive(const char *Name)
 	: name(Name), vert_count(0), mode(Render_Mode::RENDER_POINTS)
@@ -163,6 +163,8 @@ void Primitive::create_buffers()
 	flags.buffers_set = true;
 }
 
+// These functions could be optimized to only update delta attribute regions of the buffer, layout would need to change.  
+
 // Only sets position of vertices (allows for updating positions per tick)
 void Primitive::update_data_position(const std::vector<glm::vec3> &posData)
 {
@@ -231,7 +233,7 @@ bool Primitive::check_state() const
 	return flags.buffers_set & flags.camTrs_set & flags.data_set & flags.shader_set;
 }
 
-
+// Model Matrix Transformations 
 void Primitive::translate(const glm::vec3 &offs)
 {
 	model = glm::translate(model, offs);
@@ -247,6 +249,7 @@ void Primitive::scale(const glm::vec3 &scale)
 	model = glm::scale(model, scale);
 }
 
+// Debug
 void Primitive::debug() const
 {
 	// Check for correct mesh_data size to vertex count with attributes. (11 * sizeof(float) per vert).
