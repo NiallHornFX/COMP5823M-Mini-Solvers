@@ -157,7 +157,7 @@ std::vector<glm::vec3> Cloth_Mesh::calc_normals()
 	return pt_normal;
 }
 
-// Assumes mesh is a uniform 2D Grid, uses 2D indexing to calculate UVs as such. 
+// Assumes mesh is a uniform 2D Grid, uses 2D indexing to calculate UVs as such. Won't work for any other mesh ofcourse. 
 std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
 {
 	// Defines single dimension size of grid. 

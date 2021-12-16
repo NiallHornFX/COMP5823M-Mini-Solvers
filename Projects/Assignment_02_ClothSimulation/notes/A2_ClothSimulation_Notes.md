@@ -94,6 +94,8 @@ This seems to work as for a 2D plane we expect most particles will be part of 6 
 
 ###### Building Springs
 
+Essentially we use the indices of the input mesh ie tris to define the springs along the edges of each unique vertex / particle this is a bonus of using tri meshes that we get a diagonal edge to use as an implicit shear spring. Indices ofcourse are just other particles so we form particle pairs, however we ideally should check if a spring already exists with the particle pair else we get duplicate and a possibly over constrained and thus unstable system with counteracting spring forces (that theoretically should cancel each other out, but most likely wouldn't).
+
 We will worry about duplicates / con hash checking in a bit, for now lets just get the spring creation working. Using similar approach to VerletClothMesh we loop over per particle tris (its part of), get each other particle at each tri index, check its not self and create spring between particle self and the other particle defined by the tri indices. 
 
 ```c++
@@ -153,7 +155,7 @@ For my test mesh (16^2 tri 2D Grid, this yields 800 springs, which correctly mat
 
 ###### reset_cloth() :
 
-will reset the cloth particle positions to their initial state and removes any set forces, velocities on them. 
+Will reset the cloth particle positions to their initial state and removes any set forces, velocities on them. 
 
 ____
 
@@ -194,7 +196,7 @@ Cloth Particles and Cloth tri indices are passed on construction to the cloth_me
 
 Hmm Oppose to passing all these arrays, we could just pass a ptr to the cloth_state class and give it friend access, will make more sense in this case. Then we can directly fetch Particles, Tri Indices, Particle-TriIndices so then update our internal serialized data for GLResources. However we then get a circular dependency of cloth_mesh->cloth_state->cloth_mesh includes so maybe not. We could just pass references of the Particles Array, Triangles (Indices) Array and Per Particle Tris Array on construction and then do the updates through these references, oppose to manually passing the same particle array to the update functions from cloth_state each tick, that makes more sense and it avoids the need to pass the whole cloth_state class reference and thus eliminates the circular dependency. 
 
- Could compute particle normals within cloth_state and then we don't have to pass the Particle-TriIndices array also to cloth_mesh, this makes sense as normals may be needed in simulation also (eg force along particle normals, most likely not but possibly if I try to implement extra features) Or we can just pass a reference of the Indices and PtTriIndices arrays on cloth_mesh construction and use these per tick to calc normals internally of cloth_mesh, yep lets do that as we probs dont need normals within particles for simulation sake. I've typedef the std::vector particles, ivec3 and vector of vector ivec3 (per particle tri list) to avoid typing out std::vector... each time only for the tri_index array and PtTriIndex array as they are slightly more ambiguous with using ivec3s to implicitly store triangles via indices. I'm already getting bogged down with design decisions which I should not be caring about. 
+ Could compute particle normals within cloth_state and then we don't have to pass the Particle-TriIndices array also to cloth_mesh, this makes sense as normals may be needed in simulation also (eg force along particle normals, most likely not but possibly if I try to implement extra features) Or we can just pass a reference of the Indices and PtTriIndices arrays on cloth_mesh construction and use these per tick to calc normals internally of cloth_mesh, yep lets do that as we probs dont need normals within particles for simulation sake. I've typedef the std::vector particles, ivec3 and vector of vector ivec3 (per particle tri list) to avoid typing out std::vector... each time only for the tri_index array and PtTriIndices array as they are slightly more ambiguous with using ivec3s to implicitly store triangles via indices. I'm already getting bogged down with design decisions which I should not be caring about. 
 
 Don't want to encap to much into the ctor as Primitive relies on external calls after construction to do its setup, so I still want that logic, but some of these calls will be needed in the ctor to pass the initial particle->vert data to primitive::vert_data and the VAO/VBO setup. I was going to be verbose and prefix all base class Primitive Calls with Primitive:: but that just looks amateur and only should use Primitive:: scope when calling a Primitive implementation of a virtual function. 
 
@@ -213,6 +215,81 @@ I'm actually going to store separate attribute arrays here for the cloth_mesh th
 I made the silly mistake again of trying to test my cloth_mesh code which contains OpenGL calls ofcourse when allocated within main() (without creating viewer application and doing OpenGL Context setup etc) hence non of the GL Calls will work ! To test any class that calls OpenGL Functions remember to actually create the instance within the scope where OpenGL context is initialized ! Otherwise you will get "Access violation executing location 0x00..." I.e. the function is not loaded as we're not within an OpenGL Context so there's no instruction to execute.  This is why it might make sense to make the OpenGLContext creation a separate call that's done within main() and then passed (glfw window) to the viewer state class (and thus we can use main to create classes whom contain gl calls themselves without using viewer) however for now as all OpenGL setup is done within Viewer, all tests of OpenGL based classes will have to be done in its Ctor after the OpenGL setup is complete, eg to test if cloth_state which allocates its cloth_state member construction is occurring correctly with its GL Calls.  For now this is fine just a test instance of cloth_state in viewer's ctor and don't call exec() just use the ctor (post OpenGL Setup) as the scope to test the cloth_state and thus cloth_mesh class construction (and thus its ensure its OpenGL operations are working correctly)
 
 In practice Viewer will contain a single instance members of Cloth_State and Cloth_Solver. Cloth_State then ofcourse contains its Cloth_Mesh instance and Cloth_Solver contains a Cloth_Collider instance (or array of them).
+
+##### Cloth_Mesh Calculating Attributes from Particles --> Verts
+
+###### Building Normals
+
+I thought this approach would be cheaper, but it fails on the edge particles (despite the fact they should still have neighbours via their tri indices). Ideas was to get the first tri the particle is part of (ie the first tri within its Particle_TriInd Array) and then use the other 2 verts that are not self to build basis to cross for normal : 
+
+```C++
+std::vector<glm::vec3> Cloth_Mesh::calc_normals()
+{
+	std::vector<glm::vec3> pt_normal(particles.size());
+
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		const Particle &curPt = particles[p];
+
+ // Get Particle neighbours via indices of first tri of its particle_tri list,
+ // who are not itsself. 
+		std::vector<Particle> neighbours; neighbours.reserve(2);
+		glm::ivec3 *first_tri = particle_tris[p][0];
+		for (std::size_t i = 0; i < 3; ++i) if ((*first_tri)[i] != p) neighbours.push_back(particles[(*first_tri)[i]]);
+
+		// From these form basis for normal. 
+		glm::vec3 tang   = neighbours[1].P - curPt.P;
+		glm::vec3 bitang = neighbours[0].P - curPt.P;
+		glm::vec3 normal = glm::cross(tang, bitang);
+
+		// Set Normal
+		pt_normal[p] = glm::normalize(normal); 
+
+	}
+	return pt_normal;
+}
+```
+
+I didn't want to need to do per face normals and then average each face the particle is part of to define particle normals, but that may be a better approach and I used it in VerletClothMesh. 
+
+###### Building UVs :
+
+If  we assume the input obj mesh is a uniform 2D grid, we can calculate the UVs by iterating over the particles / verts converting their indices (which means both the indices in terms of the array but also this equals the actual indices of the mesh, slightly confusing!) into 2D Index via a 1D->2D index lambda where we define m as the square root of the total particle/vert count. The 2D Indices are gotten via division and modulo against this, then we divide the resulting 2D indices that range from [0,M] (i,j) by float(M-1) to get [0.f, 1.f] (u,v) coordinates over the mesh. Code :
+
+```C++
+// Assumes mesh is a uniform 2D Grid, uses 2D indexing to calculate UVs as such. 
+std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
+{
+	// Defines single dimension size of grid. 
+	std::size_t m = std::sqrt(particles.size());
+	float m_r = 1.f / float(m-1);
+
+	auto idx_1dto2D = [](std::size_t i, std::size_t m) -> glm::ivec2
+	{
+		return glm::ivec2((i / m), (i % m));
+	};
+
+	// Approximate UV Coords over 2D grid.  
+	std::vector<glm::vec2> pt_uv(particles.size());
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		const Particle &curPt = particles[p];
+		glm::ivec2 ij = idx_1dto2D(p, m);
+
+		float u = float(ij[0]) * m_r; 
+		float v = float(ij[1]) * m_r; 
+		pt_uv[p] = std::move(glm::vec2(u, v));
+
+		// Debug
+		//std::cout << "particle_" << p << " UV = " << u << "," << v << "\n";
+	}
+	return pt_uv;
+}
+```
+
+This works great (assuming the input mesh is a 2D Grid, which for this assignment it will be). Make sure M is the particle/vert count not indices! Note I don't store Particles, Indices size into vars I just query their vector.size() member function each time, not great for perf but in this case its negligible. 
+
+We need to add textures to the cloth_mesh class, because its not based on mesh class which added texture support to Primitive class. Not a prio for now, but will be useful for having checker texture on cloth.
 
 
 
