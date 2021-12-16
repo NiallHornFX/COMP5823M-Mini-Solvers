@@ -8,6 +8,7 @@ layout (location = 3) in vec2 v_UV;
 
 // Output
 out vec3 colour; 
+out vec3 normal;
 
 // Uniforms
 uniform mat4 model; 
@@ -17,6 +18,7 @@ uniform mat4 proj;
 void main()
 {
 	colour = v_C; 
+	normal = v_N;
 	gl_Position = proj * view * model * vec4(v_P, 1.0); 
 }
 
