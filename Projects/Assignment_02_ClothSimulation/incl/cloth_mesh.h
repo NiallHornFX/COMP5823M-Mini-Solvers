@@ -32,7 +32,7 @@ public:
 
 private:
 	// Serailzied Data
-	std::vector<std::size_t> indices; 
+	std::vector<uint> indices; 
 	// Primitive::vert_data
 
 	// Reference Cloth_State Data Arrays : Particles, Indices and per particle tris arrays. 

@@ -239,3 +239,5 @@ ____
 ##### Bugs List 
 
 Primitive Flags struct was using int8_t which meant the bit field of 1 bit was using the sign bit which did work, but this is not good, should be uint8_t so that we get a clean 0|1 value to use as a flag. Need to fix this in the IK project also. 
+
+Using std::size_t for indices instead of uint, this led to the mesh now drawing correctly (all triangles originated at vertex 0) this is a stupid mistake as std::size_t has to hold the maximum addressable memory address on the platform so is most likely a 64bit uint, whereas indices are typically 32 bit uints, so just use standard C++ uints which for most cases will always be 32bit uints. 
