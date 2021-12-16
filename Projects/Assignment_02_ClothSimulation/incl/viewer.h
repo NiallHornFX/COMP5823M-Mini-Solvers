@@ -10,6 +10,7 @@
 #include "primitive.h"
 #include "ground.h"
 #include "mesh.h"
+#include "cloth_state.h"
 
 // Ext Headers
 #include "ext/glm/glm.hpp"

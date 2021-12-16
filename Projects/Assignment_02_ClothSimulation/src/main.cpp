@@ -8,11 +8,8 @@
 
 int main(int argc, char **argv)
 {
-	Cloth_State test("clothgrid_a.obj");
-	
-	
 	// Create Viewer Application Instance
-	//Viewer app(1024, 1024, "COMP5823M_A1 BVH Animation");
+	Viewer app(1024, 1024, "COMP5823M_A2 Cloth Solver");
 
 	// Exec
 	//app.exec();
