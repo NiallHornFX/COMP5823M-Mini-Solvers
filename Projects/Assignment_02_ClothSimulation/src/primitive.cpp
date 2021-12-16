@@ -21,10 +21,10 @@
 Primitive::Primitive(const char *Name)
 	: name(Name), vert_count(0), mode(Render_Mode::RENDER_POINTS)
 {
-	flags.buffers_set  = false;
-	flags.camTrs_set   = false;
-	flags.data_set     = false; 
-	flags.shader_set   = false;
+	flags.buffers_set  = 0;
+	flags.camTrs_set   = 0;
+	flags.data_set     = 0; 
+	flags.shader_set   = 0;
 
 	// Init World to ident
 	model = glm::mat4(1);
@@ -107,21 +107,21 @@ void Primitive::set_data_mesh(const std::vector<vert> &data)
 		vert_data.push_back(vert.uv.x),  vert_data.push_back(vert.uv.y);
 	}
 
-	flags.data_set = true;
+	flags.data_set = 1;
 
 	// Setup Buffers
 	create_buffers();
 }
 void Primitive::set_data_mesh(const float *data, std::size_t vert_n)
 {
-	flags.data_set = false; 
+	flags.data_set = 0; 
 	// Copy Mesh Data
 	vert_data.clear();
 	vert_data.resize(vert_n * 11);
 	vert_count = vert_n;
 	std::memcpy(vert_data.data(), data, (vert_n * 11 * sizeof(float)));
 
-	flags.data_set = true; 
+	flags.data_set = 1; 
 
 	// Setup Buffers
 	create_buffers();
@@ -160,7 +160,7 @@ void Primitive::create_buffers()
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	flags.buffers_set = true;
+	flags.buffers_set = 1;
 }
 
 // These functions could be optimized to only update delta attribute regions of the buffer, layout would need to change.  
@@ -216,7 +216,7 @@ void Primitive::set_shader(const char *vert_path, const char *frag_path)
 
 	// Set Model Matrix
 	shader.setMat4("model", model);
-	if (shader.valid_state) flags.shader_set = true; 
+	if (shader.valid_state) flags.shader_set = 1; 
 }
 
 void Primitive::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &persp)
@@ -224,7 +224,7 @@ void Primitive::set_cameraTransform(const glm::mat4x4 &view, const glm::mat4x4 &
 	if (!flags.shader_set) return; 
 	shader.setMat4("view", view);
 	shader.setMat4("proj", persp);
-	flags.camTrs_set = true;
+	flags.camTrs_set = 1;
 }
 
 // Flags that need to be set for rendering to be valid

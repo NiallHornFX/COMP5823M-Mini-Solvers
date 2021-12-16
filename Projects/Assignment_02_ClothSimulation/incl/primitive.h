@@ -79,10 +79,10 @@ public:
 	// Required for rendering
 	struct
 	{
-		int8_t data_set : 1;
-		int8_t buffers_set : 1;
-		int8_t shader_set : 1;
-		int8_t camTrs_set : 1;
+		uint8_t data_set : 1;
+		uint8_t buffers_set : 1;
+		uint8_t shader_set : 1;
+		uint8_t camTrs_set : 1;
 	} flags;
 };
 

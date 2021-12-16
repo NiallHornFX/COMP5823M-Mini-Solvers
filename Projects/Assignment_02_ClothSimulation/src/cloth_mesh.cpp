@@ -106,7 +106,7 @@ void Cloth_Mesh::render()
 		case (RENDER_MESH): // Indexed Cloth Mesh 
 		{
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			glDrawElements(GL_TRIANGLES, 0, indices.size(), 0);
+			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 			break;
 		}
 	}
@@ -146,10 +146,10 @@ std::vector<glm::vec3> Cloth_Mesh::calc_normals()
 		// From these form basis for normal. 
 		glm::vec3 tang   = neighbours[0].P - curPt.P;
 		glm::vec3 bitang = neighbours[1].P - curPt.P;
-		glm::vec3 normal = glm::cross(glm::normalize(tang), glm::normalize(bitang));
+		glm::vec3 normal = glm::cross(tang, bitang);
 
 		// Set Normal
-		pt_normal[p] = normal; 
+		pt_normal[p] = glm::normalize(normal); 
 
 		// Debug
 		//std::cout << "particle_" << p << " ID = " << curPt.id << " Normal = " << normal.x << "," << normal.y << "," << normal.z << "\n";

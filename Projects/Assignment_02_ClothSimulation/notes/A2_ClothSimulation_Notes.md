@@ -233,3 +233,9 @@ ____
 Has two components the simulation definition / calculation of the collisions based on some parametric shape, sphere in this primary case, and then the render mesh which needs to match the size based on the parameters passed and used for the collision detection. 
 
 Collision function will eval if some passed particle is within bounds of collider and if so return the signed distance and displacement vector to project out of or the force or impulse to apply. This would be a good class to use polymorphism with this as a virtual function we could support boxes and planes using the same parametric approach. Triangle Mesh based cloth collisions are not really a prio / required at all so probs will leave out for now as this would need acceleration and need parity between render and simulation representations (cannot use implicit or parametric functions to approximate collision bounds). Or could implement SDF Collisions if I had time, that would be fun ! But not gonna happen. 
+
+____
+
+##### Bugs List 
+
+Primitive Flags struct was using int8_t which meant the bit field of 1 bit was using the sign bit which did work, but this is not good, should be uint8_t so that we get a clean 0|1 value to use as a flag. Need to fix this in the IK project also. 
