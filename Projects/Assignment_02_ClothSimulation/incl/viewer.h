@@ -77,7 +77,9 @@ private:
 	const byte *render_device;
 	const byte *version;
 
-	// Cloth Solver
+	// Cloth Simulation
+	Cloth_State *cloth; 
+	//Cloth_Solver *cloth_solver;
 
 	// Camera 
 	Camera camera; 

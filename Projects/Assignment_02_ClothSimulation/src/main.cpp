@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 	Viewer app(1024, 1024, "COMP5823M_A2 Cloth Solver");
 
 	// Exec
-	//app.exec();
+	app.exec();
 
 	return 0; 
 }

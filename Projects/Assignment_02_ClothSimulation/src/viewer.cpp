@@ -54,8 +54,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	extensions_load();
 
 	// ============= Cloth State =============
-	// Test cloth_state and cloth_mesh construction
-	Cloth_State test_cloth ("clothgrid_a.obj");
+	cloth = new Cloth_State("clothgrid_a.obj");
 
 	// ============= Camera =============
 	#if USE_FREE_CAMERA == 0
@@ -252,8 +251,11 @@ void Viewer::render()
 	}
 
 	// ==================== Render Cloth ====================
-	// Tick Cloth
-	// Render Cloth
+	// Tick Cloth Solver 
+
+	// Render Cloth 
+	cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+
 	// ==================== Render GUI ====================
 	gui_render();
 
