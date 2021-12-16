@@ -133,7 +133,23 @@ We will worry about duplicates / con hash checking in a bit, for now lets just g
 	}
 ```
 
+Update I did add the test condition for duplicate springs (checking for both commutative pairs of curPt and othPt) : 
 
+```C++
+// Cloth_State::build_cloth()
+// [..]
+bool is_dupe = false;
+for (std::size_t s = 0; s < springs.size(); ++s)
+{
+std::size_t s_p0 = springs[s].pt_0->id, s_p1 = springs[s].pt_1->id;
+if ((s_p0 == curPt.id && s_p1 == othPt.id) || (s_p0 == othPt.id && s_p1 == curPt.id)) is_dupe |= true; 
+}
+// Build Spring for particle pair (if othPt not curPt and Spring is not duplicate)
+if (curPt.id != othPt.id && !is_dupe) 
+// [..]				
+```
+
+For my test mesh (16^2 tri 2D Grid, this yields 800 springs, which correctly matches the number of edges on the mesh). Of course this means we have 4 nested loops not, but its only ran once (on cloth_state construction).
 
 ###### reset_cloth() :
 

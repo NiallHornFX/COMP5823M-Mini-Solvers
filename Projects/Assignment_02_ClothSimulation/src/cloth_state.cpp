@@ -12,7 +12,7 @@
 // Debug Defines
 //#define DEBUG_LOG_OBJMESH
 //#define DEBUG_LOG_PTTRIS
-//#define DEBUG_LOG_SPRINGS
+#define DEBUG_LOG_SPRINGS
 
 // =================================== Cloth_State Implementation ===================================
 
@@ -149,6 +149,7 @@ void Cloth_State::get_particle_trilist()
 }
 
 // Info : Built Cloth Spring State
+// While this is a slow function due to getting neighbour particles and checking for existing cons, its only ran once (on construction). 
 void Cloth_State::build_cloth_springs()
 {
 	// Get Per Particle Triangle List : 
@@ -169,12 +170,19 @@ void Cloth_State::build_cloth_springs()
 			{
 				std::size_t ind = (*triPts[t])[i];
 				assert(curPt.id == p); // Make sure iter index matches Pt_id. 
-				// Build Spring for particle pair
-				if (curPt.id != ind) // Make sure we dont make spring with self pt
-				{
-					// Get other particle defined by index
-					Particle &othPt = particles[ind];
 
+				// Get other particle defined by index
+				Particle &othPt = particles[ind];
+				// Check Spring of these two particles (curPt, othPt) does not already exist 
+				bool is_dupe = false;
+				for (std::size_t s = 0; s < springs.size(); ++s)
+				{
+					std::size_t s_p0 = springs[s].pt_0->id, s_p1 = springs[s].pt_1->id;
+					if ((s_p0 == curPt.id && s_p1 == othPt.id) || (s_p0 == othPt.id && s_p1 == curPt.id)) is_dupe |= true; 
+				}
+				// Build Spring for particle pair (if othPt not curPt and Spring is not duplicate)
+				if (curPt.id != othPt.id && !is_dupe) 
+				{
 					// Compute Rest Length 
 					float rl = glm::length(curPt.P - othPt.P);
 

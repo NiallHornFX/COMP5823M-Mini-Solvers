@@ -152,7 +152,7 @@ std::vector<glm::vec3> Cloth_Mesh::calc_normals()
 		pt_normal[p] = normal; 
 
 		// Debug
-		std::cout << "particle_" << p << " ID = " << curPt.id << " Normal = " << normal.x << "," << normal.y << "," << normal.z << "\n";
+		//std::cout << "particle_" << p << " ID = " << curPt.id << " Normal = " << normal.x << "," << normal.y << "," << normal.z << "\n";
 	}
 	return pt_normal;
 }
@@ -162,7 +162,7 @@ std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
 {
 	// Defines single dimension size of grid. 
 	std::size_t m = std::sqrt(particles.size());
-	float m_r = 1.f / float(m);
+	float m_r = 1.f / float(m-1);
 
 	auto idx_1dto2D = [](std::size_t i, std::size_t m) -> glm::ivec2
 	{
@@ -180,7 +180,8 @@ std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
 		float v = float(ij[1]) * m_r; 
 		pt_uv[p] = std::move(glm::vec2(u, v));
 
-		std::cout << "particle_" << p << " UV = " << u << "," << v << "\n";
+		// Debug
+		//std::cout << "particle_" << p << " UV = " << u << "," << v << "\n";
 	}
 	return pt_uv;
 }
