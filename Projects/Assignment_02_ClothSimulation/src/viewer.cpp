@@ -54,7 +54,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	extensions_load();
 
 	// ============= Cloth State =============
-	cloth = new Cloth_State("clothgrid_a.obj");
+	cloth = new Cloth_State("clothtest.obj");
 
 	// ============= Camera =============
 	#if USE_FREE_CAMERA == 0

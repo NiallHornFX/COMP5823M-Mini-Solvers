@@ -15,7 +15,7 @@ Cloth_Mesh::Cloth_Mesh(const std::vector<Particle> &array_particles, const std::
 {
 	// ========== Primitive Setup Cals ==========
 	set_shader("../../shaders/cloth.vert", "../../shaders/cloth.frag");
-	mode = Render_Mode::RENDER_MESH;
+	mode = Render_Mode::RENDER_LINES;
 	
 	// ========== Calc Attributes from Particles for Vert Data ==========
 	// Calculate Normals Per Particle-Vert
@@ -100,7 +100,7 @@ void Cloth_Mesh::render()
 		case (RENDER_LINES): // Indexed Cloth Wireframe
 		{
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			glDrawElements(GL_LINES, 0, indices.size(), 0);
+			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 			break;
 		}
 		case (RENDER_MESH): // Indexed Cloth Mesh 
