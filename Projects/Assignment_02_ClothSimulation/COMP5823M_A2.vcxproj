@@ -108,6 +108,7 @@
     <ClInclude Include="incl\camera.h" />
     <ClInclude Include="incl\cloth_common.h" />
     <ClInclude Include="incl\cloth_mesh.h" />
+    <ClInclude Include="incl\cloth_solver.h" />
     <ClInclude Include="incl\cloth_state.h" />
     <ClInclude Include="incl\ground.h" />
     <ClInclude Include="incl\mesh.h" />

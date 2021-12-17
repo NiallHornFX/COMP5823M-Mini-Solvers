@@ -14,9 +14,9 @@ enum pt_state
 struct Particle
 {
 	Particle(const glm::vec3 &p, std::size_t idx)
-		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), spring_count(0), N(glm::vec3(0.f)), state(pt_state::FREE), mass(1.f) {}
+		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), spring_count(0), state(pt_state::FREE), mass(1.f) {}
 
-	glm::vec3 P, V, F, N;
+	glm::vec3 P, V, F;
 	pt_state state;
 	std::size_t id, spring_count;
 	float mass;

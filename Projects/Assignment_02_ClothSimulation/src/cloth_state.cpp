@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include <cassert>
+#include <cmath>
 
 // Project Headers
 #include "cloth_mesh.h"
@@ -203,11 +204,32 @@ void Cloth_State::build_cloth_springs()
 #endif
 }
 
+// Info : Reset Cloth to Inital State (Rest Position) and Zero Forces and Velocity. 
+void Cloth_State::reset_cloth()
+{
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		Particle &curPt = particles[p];
+		curPt.P = v_p[p];
+		curPt.V.x = 0.f, curPt.V.y = 0.f, curPt.V.z = 0.f; 
+		curPt.F.x = 0.f, curPt.F.y = 0.f, curPt.F.z = 0.f;
+	}
+}
 
-// Call Cloth_Mesh Render and on any additonal visualizers. 
+
+// Info : Updates Cloth_Mesh, and call Cloth_Mesh Render. Also will render any additonal visualizers if implemented. 
 void Cloth_State::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
 	mesh->update_fromParticles();           // Update Mesh 
 	mesh->set_cameraTransform(view, persp); // Forward Camera Matrices
 	mesh->render();
+}
+
+// Info : Assuming cloth is a 2D Grid, fix corner points. 
+void Cloth_State::set_fixed_corners()
+{
+	// Get dim size
+	std::size_t M = static_cast<std::size_t>(std::sqrt(particles.size())); 
+	// Set Corner Pts Fixed
+	particles[0].state = pt_state::FIXED, particles[M].state = pt_state::FIXED;
 }

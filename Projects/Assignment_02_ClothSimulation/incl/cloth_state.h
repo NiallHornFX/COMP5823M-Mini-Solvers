@@ -23,6 +23,7 @@ public:
 	Cloth_State(const char *path); 
 	~Cloth_State() = default;
 
+	// ======= Operations =======
 	void load_obj(std::ifstream &in);
 
 	void build_cloth_springs(); 
@@ -31,7 +32,10 @@ public:
 
 	void render(const glm::mat4x4 &view, const glm::mat4x4 &persp);
 
+	// ======= Util =======
 	void get_particle_trilist(); 
+
+	void set_fixed_corners(); 
 
 private:
 

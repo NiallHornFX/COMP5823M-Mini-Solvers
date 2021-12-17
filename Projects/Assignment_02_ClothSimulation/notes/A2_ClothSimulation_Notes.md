@@ -340,6 +340,8 @@ ____
 
 ##### Cloth_Solver Class
 
+We take in a reference to the Cloth_State class whom we have friend access to, so we can ofcourse modify the particles and access the springs data etc. The Solver class will also have its own time state for simulation frames (which ofcourse can be reset by user interaction) so that this is decoupled from the viewer time state (total time of application).
+
 Springs-Eval will be similar to my original code, but oppose to it been within a Member function of the spring class, it will be within cloth_solver, the spring then directly modifies / adds the resulting force to its two particles which it references. 
 
 

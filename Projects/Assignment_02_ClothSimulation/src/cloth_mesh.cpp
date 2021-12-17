@@ -189,7 +189,7 @@ std::vector<glm::vec3> Cloth_Mesh::calc_normals()
 std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
 {
 	// Defines single dimension size of grid. 
-	std::size_t m = std::sqrt(particles.size());
+	std::size_t m = static_cast<std::size_t>(std::sqrt(particles.size()));
 	float m_r = 1.f / float(m-1);
 
 	auto idx_1dto2D = [](std::size_t i, std::size_t m) -> glm::ivec2

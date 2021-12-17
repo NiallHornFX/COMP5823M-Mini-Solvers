@@ -87,6 +87,9 @@
     <ClInclude Include="incl\cloth_common.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="incl\cloth_solver.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Headers">
