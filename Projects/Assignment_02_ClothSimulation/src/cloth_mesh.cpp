@@ -120,10 +120,38 @@ void Cloth_Mesh::render()
 // ==============================================================================================
 //                              Particle - Vertex Update Functions 
 // ==============================================================================================
-// Info :  Update per tick particle data via cloth_state particle array reference. 
+// Info :  Update per tick particle data via cloth_state particle array reference. (Oppose to using Primitive::update methods)
+// Attrib Layout : Px,Py,Pz | Nx,Ny,Nz | Cr,Cg,Cb | U,V |  (11 x 4Byte fp32)
+//                 0  1  2    3  4  5    6  7  8    9 10         
 void Cloth_Mesh::update_fromParticles()
 {
+	if (!vert_data.size()) return; // Inital Cloth Vert Data must be set first. 
 
+	// Get Updated Normals
+	std::vector<glm::vec3> normals = calc_normals();
+
+	// Update Particle-Vert Positions and Normals within Primitive::vert_data array. 
+	// Attrib Layout (P,N,C,UV) C and UV are left unchanged. 
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		const Particle &curPt = particles[p];
+		// Get Attrib start indices 
+		// Vert Index, Position. (|a_P, a_P+1, a_P+2| (Nxyz)...)
+		std::size_t a_P = p * 11;    
+		// Vert Index, Normal. ((Pxyz) |a_N, a_N+1, a_N+2| (Crgb)...)
+		std::size_t a_N = 3 + p * 11; 
+
+		// Update Position Data
+		vert_data[a_P++] = curPt.P.x, vert_data[a_P++] = curPt.P.y, vert_data[a_P] = curPt.P.z;
+		// Update Normal Data 
+		const glm::vec3 &N = normals[p];
+		vert_data[a_N++] = N.x, vert_data[a_N++] = N.y, vert_data[a_N] = N.z;
+	}
+
+	// Refill Buffer (not ideal)
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 // ==============================================================================================

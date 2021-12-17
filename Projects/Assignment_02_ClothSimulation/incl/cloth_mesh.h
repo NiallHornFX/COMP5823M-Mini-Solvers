@@ -43,6 +43,7 @@ private:
 	// GL Data
 	GLuint EBO; 
 	std::size_t indices_count;
+
 };
 
 

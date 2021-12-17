@@ -9,7 +9,6 @@
 
 // #define DEBUG_LOG
 
-
 // =================== Mesh Implementation ===================
 
 Mesh::Mesh(const char *name, const char *filePath)

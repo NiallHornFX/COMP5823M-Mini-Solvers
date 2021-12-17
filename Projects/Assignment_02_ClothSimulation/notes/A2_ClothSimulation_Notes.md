@@ -287,11 +287,54 @@ std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
 }
 ```
 
-This works great (assuming the input mesh is a 2D Grid, which for this assignment it will be). Make sure M is the particle/vert count not indices! Note I don't store Particles, Indices size into vars I just query their vector.size() member function each time, not great for perf but in this case its negligible. 
+This works great (assuming the input mesh is a 2D Grid, which for this assignment it will be). Technically the V (i) should be flipped by 1s complement so iteration is bottom up (in cartesian uv space) the V axis but it doesn't matter for now especially as cloth is a plane on XZ anyway so UV orientation is not a big deal. 
+
+Side Note Make sure M is the particle/vert count not indices! Note I don't store Particles, Indices size into vars, I just query their vector.size() member function each time, not great for perf but in this case its negligible.  
 
 We need to add textures to the cloth_mesh class, because its not based on mesh class which added texture support to Primitive class. Not a prio for now, but will be useful for having checker texture on cloth.
 
+###### Update Vert Data from Particles
 
+Oppose to calling the Primitive::update_data_position() function which i'd need to implement an equivalent for normals, i'm going to do a custom function within cloth_mesh to directly update the positions and normals for the serialized vert_data array without any Primitive:: base class calls. Will still use the same method and will still need to re-allocate the glBufferData sadly (for now). Because we are just fetching the particle state from the particle array reference passed on cloth_mesh construction from the cloth_state instance, we could multithread the normal update call (to produce the new per particle normal array) along with the extraction of the particle positions. This is the slow-ish part that we have to loop through the particles each time, extract each position member, put it into an array, get the updated normals from these new positions (via the particle array reference cloth_state also) then combine them back into a serialized vert_data float array (along with the unchanged colour and uv attributes) and then update / realloc the data onto the GPU via the VBO update. 
+
+Ideally we have some check to see if we need to update the normals based on if the cloth particles have moved (not checked per particle but as a whole for the cloth) for now its just updating normals every time `Cloth_Mesh::update_fromParticles()` is called. 
+
+Implementation is pretty compact for now, we update both positions and normals within the serialized base Primitive::vert_data float array in the same loop by getting the attrib index locations taking into account the known attrib stride based on attrib layout: 
+
+```C++
+void Cloth_Mesh::update_fromParticles()
+{
+	if (!vert_data.size()) return; // Inital Cloth -->Prim Vert Data must be set first. 
+
+	// Get Updated Normals
+	std::vector<glm::vec3> normals = calc_normals();
+
+	// Update Particle-Vert Positions and Normals within Primitive::vert_data array. 
+	// Attrib Layout (P,N,C,UV) C and UV are left unchanged. 
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		const Particle &curPt = particles[p];
+		// Get Attrib start indices 
+		// Vert Index, Position. (|a_P, a_P+1, a_P+2| (Nxyz)...)
+		std::size_t a_P = p * 11;    
+		// Vert Index, Normal. ((Pxyz) |a_N, a_N+1, a_N+2| (Crgb)...)
+		std::size_t a_N = 3 + p * 11; 
+
+		// Update Position Data
+		vert_data[a_P++] = curPt.P.x, vert_data[a_P++] = curPt.P.y, vert_data[a_P] = curPt.P.z;
+		// Update Normal Data 
+		const glm::vec3 &N = normals[p];
+		vert_data[a_N++] = N.x, vert_data[a_N++] = N.y, vert_data[a_N] = N.z;
+	}
+
+	// Refill Buffer (not ideal)
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+```
+
+This function for now is called within `Cloth_State::render()` so ideally we will only need to call `Cloth_Solver::step()` and then `Cloth_State::Render()` from the Viewer Render Loop, to update the solve and then update the cloth mesh and render it. 
 
 ____
 

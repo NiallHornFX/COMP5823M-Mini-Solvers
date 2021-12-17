@@ -207,6 +207,7 @@ void Cloth_State::build_cloth_springs()
 // Call Cloth_Mesh Render and on any additonal visualizers. 
 void Cloth_State::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
+	mesh->update_fromParticles();           // Update Mesh 
 	mesh->set_cameraTransform(view, persp); // Forward Camera Matrices
 	mesh->render();
 }

@@ -187,7 +187,7 @@ void Primitive::update_data_colour(const std::vector<glm::vec3> &colData)
 {
 	for (std::size_t v = 0; v < vert_count; ++v)
 	{
-		std::size_t i = 6 + v * 11; // Vert Index, Position. 
+		std::size_t i = 6 + v * 11; // Vert Index, Colour. 
 		vert_data[i++] = colData[v].r;
 		vert_data[i++] = colData[v].g;
 		vert_data[i++] = colData[v].b;
