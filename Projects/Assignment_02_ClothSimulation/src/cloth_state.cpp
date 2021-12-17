@@ -18,7 +18,7 @@
 // =================================== Cloth_State Implementation ===================================
 
 Cloth_State::Cloth_State(const char *path)
-	: file_path(path)
+	: file_path(path), built_state(false)
 {
 	// Check OBJ Filepath
 	std::ifstream obj_file(path);
@@ -36,6 +36,8 @@ Cloth_State::Cloth_State(const char *path)
 
 	// Create Cloth_Mesh (Pass it references to our data arrays)
 	mesh = new Cloth_Mesh(particles, tri_inds, pt_tris);
+
+	built_state = true; 
 }
 
 

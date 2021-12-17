@@ -340,9 +340,50 @@ ____
 
 ##### Cloth_Solver Class
 
-We take in a reference to the Cloth_State class whom we have friend access to, so we can ofcourse modify the particles and access the springs data etc. The Solver class will also have its own time state for simulation frames (which ofcourse can be reset by user interaction) so that this is decoupled from the viewer time state (total time of application).
+We take in a reference (not sure why i've gone with references instead of ptrs for this project, but oh well) to the Cloth_State class whom we have friend access to, so we can ofcourse modify the particles and access the springs data etc. The Solver class will also have its own time state for simulation frames (which ofcourse can be reset by user interaction) so that this is decoupled from the viewer time state (total time of application).
 
 Springs-Eval will be similar to my original code, but oppose to it been within a Member function of the spring class, it will be within cloth_solver, the spring then directly modifies / adds the resulting force to its two particles which it references. 
+
+The Spring Stiffness and Damping coeffs were originally set per spring as members, but for this project I might just make them single coefficients within the solver, because I can't see the need to have per spring stiffness and damping coefficients. 
+
+Because a lot of members need to be accessible from viewer via the GUI i've just made the whole class public as it makes sense in this case. 
+
+###### Timestepping 
+
+For time stepping, I'm going to use the approach to what I did for VerletClothMesh where we accumulate time based on the game thread (in this case the viewer Application) Dt and divide it with a fixed physics timestep so the physics timestep is fixed while still be stepped relative to the Dt of the viewer application using an accumulated delta time like approach this is based on Glenn Fiedler's work and is what everyone uses now as oppose to locking physics timestep completely to the viewer/game timestep or using a purely fixed physics timestep completely decoupled from the viewer/game timestep this is a hybrid approach using the best of both. 
+
+So we will have a separate function for tick() and step() step is a single solve step, while tick is what we call from viewer which ticks the solver for some number of steps based on the viewer Dt we pass in. 
+
+tick() thus is a single frame (of n number of timesteps).
+
+Implementation can be defined as : 
+
+```C++
+// Info : Tick Simulation for number of timesteps determined by viewer Dt.
+// Uses Hybrid Timestepping approach purposed by Glenn Fiedler : Physics Dt is constant // while using Viewer Dt as input.
+void Cloth_Solver::tick(float viewer_Dt)
+{
+	if (simulate && clothData.built_state)
+	{
+		at += viewer_Dt;
+
+		// Subdivide Accumulated Viewer Timestep into Solver Substeps
+		while (at > dt)
+		{
+			step();
+			at -= dt; 
+			timestep++;
+		}
+		frame++;
+	}
+}
+```
+
+Note I use `dt` as the simulation timestep (fixed) the "game thread" ie in this case the viewer application delta time is passed in directly as `viewer_Dt` thus `at` is the accumulated timestep.
+
+Issue with this is because the Dt is measured before the cloth state is constructed we get a large amount of time added to the accumulated time before the solver is even constructed and first ticked so we need to handle this, one way could be to have the solver not tick by default and require user to enable in in GUI so only when state is setup will it actually begin to accumulate viewer Dt and then run the subdivided solver steps.  
+
+
 
 
 

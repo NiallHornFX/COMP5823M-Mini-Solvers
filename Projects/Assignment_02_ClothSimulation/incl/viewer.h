@@ -11,6 +11,7 @@
 #include "ground.h"
 #include "mesh.h"
 #include "cloth_state.h"
+#include "cloth_solver.h"
 
 // Ext Headers
 #include "ext/glm/glm.hpp"
@@ -79,7 +80,7 @@ private:
 
 	// Cloth Simulation
 	Cloth_State *cloth; 
-	//Cloth_Solver *cloth_solver;
+	Cloth_Solver *cloth_solver;
 
 	// Camera 
 	Camera camera; 

@@ -58,6 +58,8 @@ private:
 	std::vector<Primitive*> viz_springs; 
 	std::vector<Primitive*> viz_pts; 
 
+	bool built_state; 
+
 	friend class Cloth_Solver; 
 	friend class Cloth_Mesh;
 };

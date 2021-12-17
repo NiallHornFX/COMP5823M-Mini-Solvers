@@ -87,6 +87,7 @@
   <ItemGroup>
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\cloth_mesh.cpp" />
+    <ClCompile Include="src\cloth_solver.cpp" />
     <ClCompile Include="src\cloth_state.cpp" />
     <ClCompile Include="src\ext.cpp" />
     <ClCompile Include="src\ext\dearimgui\imgui.cpp" />

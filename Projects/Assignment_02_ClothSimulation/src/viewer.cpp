@@ -53,8 +53,9 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// Load OpenGL Extensions
 	extensions_load();
 
-	// ============= Cloth State =============
+	// ============= Cloth Setup =============
 	cloth = new Cloth_State("clothgrid_a.obj");
+	cloth_solver = new Cloth_Solver(*cloth, (1.f / 60.f));
 
 	// ============= Camera =============
 	#if USE_FREE_CAMERA == 0
@@ -105,6 +106,9 @@ void Viewer::tick()
 	update_camera();
 
 	// ============= Input Query =============
+
+	// ============= Simulation =============
+	cloth_solver->tick(dt);
 
 	// ============= Render =============
 	render();
@@ -251,9 +255,6 @@ void Viewer::render()
 	}
 
 	// ==================== Render Cloth ====================
-	// Tick Cloth Solver 
-
-	// Render Cloth 
 	cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 	// ==================== Render GUI ====================
@@ -359,23 +360,30 @@ void Viewer::gui_render()
 
 	// ============= Imgui layout =============
 	{
-		ImGui::Begin("Animation Controls");
+		ImGui::Begin("Simulation Controls");
 
 		// Text
-		ImGui::Text("Simulation Frame = %d", 0);
+		ImGui::Text("Simulation Frame = %d", cloth_solver->frame);
+
+		// ==== Solver State ====
 
 		// Anim Loop Play Pause
-		if (ImGui::Button("Start"))
+		if (ImGui::Button("Start/Stop"))
 		{
-			//anim.anim_loop = !anim.anim_loop;
-			//std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			cloth_solver->simulate = !cloth_solver->simulate;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		// Reset
-		if (ImGui::Button("Stop"))
+		if (ImGui::Button("Reset"))
 		{
-			//anim.anim_frame = 0;
-			//std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			cloth_solver->reset();
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
+
+		// ==== Solver Controls ====
+		ImGui::SliderFloat("Force Coefficient", &cloth_solver->coeff_force, 0.0f, 10.f);
+
+		// ==== Viewer State ====
 
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))
@@ -389,7 +397,7 @@ void Viewer::gui_render()
 			draw_grid = !draw_grid;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		ImGui::SliderFloat("Gravity Scale", &tmp, 0.0001f, 0.2f);
+		
 
 		ImGui::End();
 	}

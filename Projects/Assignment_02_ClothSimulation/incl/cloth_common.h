@@ -34,8 +34,9 @@ struct Spring
 		pt_0(P0), pt_1(P1), type(spring_type::STRUCT), rest(RL) {}
 	Particle *pt_0, *pt_1; // Two Particles / point masses of spring. 
 	spring_type type;
-	float k, c;  // Stiffness and Damping coeffs
 	float rest;  // Rest Length
+
+	//float k, c;  // Stiffness and Damping coeffs Defined in solver for now.
 };
 
 
