@@ -12,7 +12,7 @@ Cloth_Solver::Cloth_Solver(Cloth_State &ClothState, float Sim_Dt)
 	: clothData(ClothState), dt(Sim_Dt), at(0.f)
 {
 	// Init 
-	gravity = -2.5f;
+	gravity = -1.0f;
 	wind = glm::vec3(0.f);
 	K_s = 10.f, K_c = 1.f; 
 	coeff_force = 1.f; 
@@ -80,7 +80,7 @@ void Cloth_Solver::integrate_euler()
 {
 	for (Particle &curPt : clothData.particles)
 	{
-		glm::vec3 forces = (curPt.F + wind) * coeff_force;
+		glm::vec3 forces = curPt.F + wind;
 		// if Particle Mass is 1.0 we need not do A = F / M. 
 		glm::vec3 accel = forces / curPt.mass; 
 		// Gravity invaraint to mass.

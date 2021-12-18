@@ -353,9 +353,11 @@ void Viewer::gui_render()
 
 	//ImGui::SetWindowSize(ImVec2(100, 200));
 
+	// Solver State Text
+	std::string state; 
+	if (cloth_solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
+
 	// Should be member vars.
-	static char bvh_input_path[100]{ "../../assets/bvh/02_01.bvh" };
-	static char bvh_output_path[100];
 	float tmp = 0.f; 
 
 	// ============= Imgui layout =============
@@ -363,7 +365,10 @@ void Viewer::gui_render()
 		ImGui::Begin("Simulation Controls");
 
 		// Text
+		if (cloth_solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+		ImGui::Text(state.c_str());
 		ImGui::Text("Simulation Frame = %d", cloth_solver->frame);
+		ImGui::PopStyleColor();
 
 		// ==== Solver State ====
 
@@ -381,7 +386,7 @@ void Viewer::gui_render()
 		}
 
 		// ==== Solver Controls ====
-		ImGui::SliderFloat("Force Coefficient", &cloth_solver->coeff_force, 0.0f, 10.f);
+		ImGui::SliderFloat("Gravity", &cloth_solver->gravity, -50.f, 50.f);
 
 		// ==== Viewer State ====
 
