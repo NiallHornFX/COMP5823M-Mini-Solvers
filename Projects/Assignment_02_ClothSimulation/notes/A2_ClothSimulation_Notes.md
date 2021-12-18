@@ -389,7 +389,11 @@ Issue with this is because the Dt is measured before the cloth state is construc
 
 Note Cloth_Solver is ticked within `Viewer::tick()` but rendering of the cloth_state instance is called within `Viewer::render()` which itself is called within `Viewer::tick()` I just wanted nicer separation of solve operations and render operations. 
 
-###### Spring Eval
+###### Cloth_Solver::eval_springs()
+
+One silly mistake I made was the spring forces on particles were not been reset per frame, ofcourse particle forces should be reset per frame/step as they are only a product of the current step, gravity and wind are added atop of this to integrate to vel which then is integrated to position of course.
+
+Different variations of derivation of the Spring,Damper (Spring+Damper) forces. 
 
 Make sure you get the Particle Order and the Equal Opposite Application to particles the correct way round  (p0-p1) --> +P0, -P1 (p1-p0) --> -P0, +P1.
 
@@ -397,7 +401,26 @@ Different sources use different operation orders some use neg coeffs watch out f
 $$
 -K_s (L_c - L_r) = K_s(L_r - L_c)
 $$
+The differences are
 
+* Order of Particles $(P1-P0) \:\:vs.\:\: (P0-P1)$
+* Order of Spring Lengths (and thus $K_s$ sign) $(L_c - L_r)\:\: vs.\:\: (L_r - L_c)$ 
+* Sign of resulting forces $(+P0, -P1) \:\: vs. \:\: (-P0, +P1)$
+
+The sign of the resulting forces depends on the order (and thus direction) of the particle delta along the spring. The sign of the coefficients also define the resulting force signs (-Coeffs means -pt0 +pt1). 
+
+And then also if the spring and damping forces are calculated separately and added together, or if using the combined (single force equation with spring and damping calculated together).
+
+```
+//glm::vec3 spring = 1000.f * (length - s.rest) * p1p0_n; (+P0, -P1)
+//glm::vec3 spring = -1000.f * (length - s.rest) * p1p0_n; (-P0, +P1)
+```
+
+
+
+###### Integration - Explicit Euler
+
+Sometimes referred to as Semi-Implicit Euler (Hamiltonian Mechanics) as its a 2-step Explicit Euler process of integrating acceleration to velocity and velocity to position. 
 
 ____
 

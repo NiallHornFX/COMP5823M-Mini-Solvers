@@ -41,6 +41,9 @@ public:
 	glm::vec3 wind; 
 	float gravity; 
 
+	// Cloth Colliders
+
+
 	// Coeffs
 	float K_s, K_c; // Stiffness and Damping Coeffs
 	float coeff_force; 

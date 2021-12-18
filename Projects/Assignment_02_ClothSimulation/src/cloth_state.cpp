@@ -256,11 +256,12 @@ void Cloth_State::set_rest_offset(const glm::vec3 &offset)
 void Cloth_State::set_fixed_corners(bool state)
 {
 	// Get dim size
-	std::size_t M = static_cast<std::size_t>(std::sqrt(particles.size())) - 1;
+	std::size_t M = static_cast<std::size_t>(std::sqrt(particles.size()));
 	if (state)
 	{
 		// Set Corner Pts Fixed
-		particles[0].state = pt_state::FIXED, particles[M].state = pt_state::FIXED;
+		//particles[0].state = pt_state::FIXED, particles[M].state = pt_state::FIXED;
+		for (std::size_t i = 0; i < M; ++i) particles[i].state = pt_state::FIXED;
 	}
 	else
 	{

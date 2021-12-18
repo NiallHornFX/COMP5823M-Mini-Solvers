@@ -351,26 +351,20 @@ void Viewer::gui_render()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	//ImGui::SetWindowSize(ImVec2(100, 200));
-
 	// Solver State Text
 	std::string state; 
 	if (cloth_solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
-
-	// Should be member vars.
-	float tmp = 0.f; 
 
 	// ============= Imgui layout =============
 	{
 		ImGui::Begin("Simulation Controls");
 
-		// Text
+		// ==== Solver State ====
+		// Labels
 		if (cloth_solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 		ImGui::Text(state.c_str());
 		ImGui::Text("Simulation Frame = %d", cloth_solver->frame);
 		ImGui::PopStyleColor();
-
-		// ==== Solver State ====
 
 		// Anim Loop Play Pause
 		if (ImGui::Button("Start/Stop"))
@@ -386,12 +380,11 @@ void Viewer::gui_render()
 		}
 
 		// ==== Solver Controls ====
-		ImGui::SliderFloat("K_stiff", &cloth_solver->K_s, 0.f, 10.f);
+		ImGui::SliderFloat("K_stiff", &cloth_solver->K_s, 0.f, 1000.f);
 		ImGui::SliderFloat("K_damp",  &cloth_solver->K_c, 0.f, 10.f);
 		ImGui::SliderFloat("Gravity", &cloth_solver->gravity, -10.f, 10.f);
 
 		// ==== Viewer State ====
-
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))
 		{
@@ -405,7 +398,6 @@ void Viewer::gui_render()
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		
-
 		ImGui::End();
 	}
 
