@@ -42,7 +42,7 @@ public:
 	float gravity; 
 
 	// Coeffs
-	float k, c; // Stiffness and Damping Coeffs
+	float K_s, K_c; // Stiffness and Damping Coeffs
 	float coeff_force; 
 	float coeff_fric; 
 

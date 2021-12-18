@@ -37,6 +37,8 @@ public:
 
 	void set_fixed_corners(); 
 
+	void set_rest_offset(const glm::vec3 &offset);
+
 private:
 
 	// Input Mesh Data
@@ -59,6 +61,7 @@ private:
 	std::vector<Primitive*> viz_pts; 
 
 	bool built_state; 
+	glm::vec3 rest_offset;
 
 	friend class Cloth_Solver; 
 	friend class Cloth_Mesh;

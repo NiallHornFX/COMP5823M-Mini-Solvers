@@ -18,7 +18,7 @@
 // =================================== Cloth_State Implementation ===================================
 
 Cloth_State::Cloth_State(const char *path)
-	: file_path(path), built_state(false)
+	: file_path(path), built_state(false), rest_offset(0.f)
 {
 	// Check OBJ Filepath
 	std::ifstream obj_file(path);
@@ -30,6 +30,9 @@ Cloth_State::Cloth_State(const char *path)
 
 	// Load OBJ Mesh
 	load_obj(obj_file);
+
+	// Set Rest Offset
+	set_rest_offset(glm::vec3(0.f, 2.f, 0.f));
 
 	// Build Cloth State
 	build_cloth_springs();
@@ -206,6 +209,14 @@ void Cloth_State::build_cloth_springs()
 #endif
 }
 
+// Info : Updates Cloth_Mesh, and call Cloth_Mesh Render. Also will render any additonal visualizers if implemented. 
+void Cloth_State::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
+{
+	mesh->update_fromParticles();           // Update Mesh (cloth_state --> cloth_mesh)
+	mesh->set_cameraTransform(view, persp); // Forward Camera Matrices to cloth_mesh
+	mesh->render(); 
+}
+
 // Info : Reset Cloth to Inital State (Rest Position) and Zero Forces and Velocity. 
 void Cloth_State::reset_cloth()
 {
@@ -218,14 +229,28 @@ void Cloth_State::reset_cloth()
 	}
 }
 
-
-// Info : Updates Cloth_Mesh, and call Cloth_Mesh Render. Also will render any additonal visualizers if implemented. 
-void Cloth_State::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
+// Info : Set Rest Position Offset 
+void Cloth_State::set_rest_offset(const glm::vec3 &offset)
 {
-	mesh->update_fromParticles();           // Update Mesh 
-	mesh->set_cameraTransform(view, persp); // Forward Camera Matrices
-	mesh->render();
+	if (offset == rest_offset) return; 
+
+	// Set on both orginal Rest Position array and particle Positions.
+	// Remove old rest_offset first
+
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		particles[p].P -= rest_offset;
+		particles[p].P += offset; 
+		v_p[p] -= rest_offset;
+		v_p[p] += offset;
+	}
+
+	// Store new offset
+	rest_offset = offset; 
 }
+
+
+
 
 // Info : Assuming cloth is a 2D Grid, fix corner points. 
 void Cloth_State::set_fixed_corners()

@@ -336,6 +336,8 @@ void Cloth_Mesh::update_fromParticles()
 
 This function for now is called within `Cloth_State::render()` so ideally we will only need to call `Cloth_Solver::step()` and then `Cloth_State::Render()` from the Viewer Render Loop, to update the solve and then update the cloth mesh and render it. 
 
+If I implement a viewer_scale option like I did in IK, remember to scale down the whole scene ie Cloth + Colliders (via scaling model matrices).
+
 ____
 
 ##### Cloth_Solver Class
@@ -381,11 +383,11 @@ void Cloth_Solver::tick(float viewer_Dt)
 
 Note I use `dt` as the simulation timestep (fixed) the "game thread" ie in this case the viewer application delta time is passed in directly as `viewer_Dt` thus `at` is the accumulated timestep.
 
-Issue with this is because the Dt is measured before the cloth state is constructed we get a large amount of time added to the accumulated time before the solver is even constructed and first ticked so we need to handle this, one way could be to have the solver not tick by default and require user to enable in in GUI so only when state is setup will it actually begin to accumulate viewer Dt and then run the subdivided solver steps.  
+Issue with this is because the Dt is measured before the cloth state is constructed we get a large amount of time added to the accumulated time before the solver is even constructed and first ticked so we need to handle this, one way could be to have the solver not tick by default and require user to enable in in GUI so only when state is setup will it actually begin to accumulate viewer Dt and then run the subdivided solver steps.   
 
 
 
-
+Note Cloth_Solver is ticked within `Viewer::tick()` but rendering of the cloth_state instance is called within `Viewer::render()` which itself is called within `Viewer::tick()` I just wanted nicer separation of solve operations and render operations. 
 
 
 
