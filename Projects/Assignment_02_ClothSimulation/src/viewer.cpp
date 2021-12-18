@@ -55,7 +55,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Cloth Setup =============
 	cloth = new Cloth_State("clothgrid_a.obj");
-	cloth_solver = new Cloth_Solver(*cloth, (1.f / 60.f));
+	cloth_solver = new Cloth_Solver(*cloth, (1.f / 90.f));
 
 	// ============= Camera =============
 	#if USE_FREE_CAMERA == 0
@@ -386,6 +386,8 @@ void Viewer::gui_render()
 		}
 
 		// ==== Solver Controls ====
+		ImGui::SliderFloat("K_stiff", &cloth_solver->K_s, -10.f, 10.f);
+		ImGui::SliderFloat("K_damp",  &cloth_solver->K_c, -10.f, 10.f);
 		ImGui::SliderFloat("Gravity", &cloth_solver->gravity, -50.f, 50.f);
 
 		// ==== Viewer State ====

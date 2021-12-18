@@ -389,7 +389,9 @@ Issue with this is because the Dt is measured before the cloth state is construc
 
 Note Cloth_Solver is ticked within `Viewer::tick()` but rendering of the cloth_state instance is called within `Viewer::render()` which itself is called within `Viewer::tick()` I just wanted nicer separation of solve operations and render operations. 
 
+###### Spring Eval
 
+Make sure you get the Particle Order and the Equal Opposite Application to particles the correct way round  (p0-p1) --> +P0, -P1 (p1-p0) --> -P0, +P1.
 
 ____
 

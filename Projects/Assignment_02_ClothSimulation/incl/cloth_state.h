@@ -35,7 +35,7 @@ public:
 	// ======= Util =======
 	void get_particle_trilist(); 
 
-	void set_fixed_corners(); 
+	void set_fixed_corners(bool state); 
 
 	void set_rest_offset(const glm::vec3 &offset);
 

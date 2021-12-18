@@ -34,6 +34,9 @@ Cloth_State::Cloth_State(const char *path)
 	// Set Rest Offset
 	set_rest_offset(glm::vec3(0.f, 2.f, 0.f));
 
+	// Pin Corners (test)
+	set_fixed_corners(true);
+
 	// Build Cloth State
 	build_cloth_springs();
 
@@ -249,14 +252,18 @@ void Cloth_State::set_rest_offset(const glm::vec3 &offset)
 	rest_offset = offset; 
 }
 
-
-
-
 // Info : Assuming cloth is a 2D Grid, fix corner points. 
-void Cloth_State::set_fixed_corners()
+void Cloth_State::set_fixed_corners(bool state)
 {
 	// Get dim size
-	std::size_t M = static_cast<std::size_t>(std::sqrt(particles.size())); 
-	// Set Corner Pts Fixed
-	particles[0].state = pt_state::FIXED, particles[M].state = pt_state::FIXED;
+	std::size_t M = static_cast<std::size_t>(std::sqrt(particles.size())) - 1;
+	if (state)
+	{
+		// Set Corner Pts Fixed
+		particles[0].state = pt_state::FIXED, particles[M].state = pt_state::FIXED;
+	}
+	else
+	{
+		particles[0].state = pt_state::FREE, particles[M].state = pt_state::FREE;
+	}
 }
