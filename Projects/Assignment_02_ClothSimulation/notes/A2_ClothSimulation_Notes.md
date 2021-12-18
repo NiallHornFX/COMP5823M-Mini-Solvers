@@ -393,6 +393,12 @@ Note Cloth_Solver is ticked within `Viewer::tick()` but rendering of the cloth_s
 
 Make sure you get the Particle Order and the Equal Opposite Application to particles the correct way round  (p0-p1) --> +P0, -P1 (p1-p0) --> -P0, +P1.
 
+Different sources use different operation orders some use neg coeffs watch out for this...
+$$
+-K_s (L_c - L_r) = K_s(L_r - L_c)
+$$
+
+
 ____
 
 ##### Cloth_Collider Class

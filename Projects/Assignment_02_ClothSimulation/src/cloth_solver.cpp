@@ -59,17 +59,23 @@ void Cloth_Solver::eval_springs()
 {
 	for (Spring &s : clothData.springs)
 	{
-		glm::vec3 p1p0 = s.pt_0->P - s.pt_1->P;
-		glm::vec3 p1p0_n = glm::normalize(p1p0);
-		glm::vec3 v1v0 = s.pt_0->V - s.pt_1->V;
+		// (Dx)
+		glm::vec3 p1p0 = s.pt_0->P - s.pt_1->P, p1p0_n = glm::normalize(p1p0);
 		float cl = glm::length(p1p0);
-
-		// Spring Force (-K_s * (||p1-p0|| - rest) * (p1-p0 / ||p1-p0||))
+		// (Dv)
+		glm::vec3 v1v0 = s.pt_0->V - s.pt_1->V;
+	
+		// Spring Force 
+		//glm::vec3 spring = (-K_s) * (cl - s.rest) * p1p0_n;
 		glm::vec3 spring = (-K_s) * (cl - s.rest) * p1p0_n;
 		// Damper Force 
 		glm::vec3 damper = (-K_c) * glm::dot(v1v0, p1p0_n) * p1p0_n;
 
-		glm::vec3 sprdmp = spring + damper; 
+		//glm::vec3 sprdmp = spring;
+
+		//glm::vec3 sprdmp = (-K_s * (cl - s.rest) * p1p0_n) + (-K_c * v1v0);
+
+		glm::vec3 sprdmp = (K_s * (s.rest - cl) * p1p0_n) + (-K_c * v1v0);
 
 		//glm::vec3 comb = glm::dot((K_s*(s.rest - glm::length(p1p0)) - K_c * v1v0), p1p0_n) * p1p0_n; 
 
@@ -93,16 +99,16 @@ void Cloth_Solver::integrate_euler()
 
 		// ==== Integrate (Semi-Implicit Euler) ====
 		// v_(n+1) = v(n) + a(n) * dt; 
-		curPt.V = curPt.V + accel * dt;
+		curPt.V += accel * dt;
 		// x_(n+1) = x(n) + v(n) * dt; 
-		curPt.P = curPt.P + curPt.V * dt;
+		curPt.P += curPt.V * dt;
 	}
 }
 
 // Info : Single Simulation Timestep of Solver 
 void Cloth_Solver::step()
 {
-	eval_springs();
-
 	integrate_euler();
+
+	eval_springs();
 }

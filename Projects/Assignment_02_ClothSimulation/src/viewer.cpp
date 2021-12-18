@@ -386,9 +386,9 @@ void Viewer::gui_render()
 		}
 
 		// ==== Solver Controls ====
-		ImGui::SliderFloat("K_stiff", &cloth_solver->K_s, -10.f, 10.f);
-		ImGui::SliderFloat("K_damp",  &cloth_solver->K_c, -10.f, 10.f);
-		ImGui::SliderFloat("Gravity", &cloth_solver->gravity, -50.f, 50.f);
+		ImGui::SliderFloat("K_stiff", &cloth_solver->K_s, 0.f, 10.f);
+		ImGui::SliderFloat("K_damp",  &cloth_solver->K_c, 0.f, 10.f);
+		ImGui::SliderFloat("Gravity", &cloth_solver->gravity, -10.f, 10.f);
 
 		// ==== Viewer State ====
 
