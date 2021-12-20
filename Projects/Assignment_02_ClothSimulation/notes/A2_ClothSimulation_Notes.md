@@ -384,6 +384,55 @@ Where `pt_tris = std::vector<std::vector<glm::ivec4>>` Per particle array of glm
 
 Iterating over triangles is still the same (0-2 indices are still the vert/particle indices, with the 3rd index been the triangles own index within the triangle array within Cloth_State). Also we can implicitly cast back to ivec3 keeping the first 3 components ie just the triangles vert/particle indices for times when we don't need the triangles own index as ivec3 and ivec4 has implicit conversion operators implemented. 
 
+With this, we can now easily calculate per triangle normals, and then per particle get each triangle index to lookup the calculated normal for that tri, and accumulate and average per particle, for each particles/vert triangles its part of :
+
+```C++
+// Info : Better normal calculation approach, calc normals per tri, then per particle average its triangles normals. 
+std::vector<glm::vec3> Cloth_Mesh::calc_normals_b()
+{
+	// First Calc Normals Per Tri
+	std::vector<glm::vec3> tri_normals(tri_indices.size());
+	for (std::size_t t = 0; t < tri_indices.size(); ++t)
+	{
+		glm::vec3 v0 = particles[tri_indices[t][0]].P;
+		glm::vec3 v1 = particles[tri_indices[t][1]].P;
+		glm::vec3 v2 = particles[tri_indices[t][2]].P;
+
+		glm::vec3 tang   = glm::normalize(v1 - v0);
+		glm::vec3 bitang = glm::normalize(v2 - v0);
+		glm::vec3 normal = glm::normalize(glm::cross(tang, bitang));
+		
+		tri_normals[t] = std::move(normal);
+	}
+
+	// Per Particle Average Normals of faces its part of.
+	std::vector<glm::vec3> normals(particles.size());
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		const Particle &curPt = particles[p];
+		glm::vec3 normal(0.f);
+
+		// Get Per Particle Triangles, Accumulate Normals of each tri. 
+		std::vector<glm::ivec4> ptTris = particle_tris[p];
+		for (std::size_t t = 0; t < ptTris.size(); ++t)
+		{
+			int tri_idx = particle_tris[p][t].w;
+			normal += tri_normals[tri_idx];
+		}
+		// Average resulting Normal by PtTri Count
+		normal /= float(ptTris.size());
+		normals[p] = std::move(normal);
+
+		// Debug
+		//std::cout << "particle_" << p << " ID = " << curPt.id << " Normal = " 
+        // << normal.x << "," << normal.y << "," << normal.z << "\n";
+	}
+	return normals; 
+}
+```
+
+Of course this is more costly as it means calculating normals per face then doing a nested lookup and average per particle (with divisions, we could pre-calc per particle reciprocals 1 / tri count but not worth it for now), but the normals we get are correct and very accurate per particle / vert normals for rendering and obj export.  We don't  need to use Gram-Schmidt because it doesn't matter if the basis is orthogonal or not, as long as the normal itself is orthogonal (which it is), we don't care about the tangent + bitangent after normal is computed. 
+
 This might be a bit confusing to people so I will have to explain this in the readme. They may wonder why I didn't just make a tri struct within its own array but what's the point just to store indices to particles (derived from the input meshes unique vertices). I suppose it could store ptrs to each particle instead of indices and then it'd have its own index, and then for per particle tris we could just store an index to the tri within the array as oppose to a copy of the tri vert/particle indices + the tri index itself but oh well this will do.
 
 I need to stop writing vert/particle, we should know by now vert/particles are the same (for simulation) and are 1:1 mapped in terms of Indices. And that indices for drawing refers to the actual per triangle indices of the unique verts/particles themselves. 

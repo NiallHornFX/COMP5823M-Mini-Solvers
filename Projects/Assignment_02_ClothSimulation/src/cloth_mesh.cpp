@@ -19,7 +19,7 @@ Cloth_Mesh::Cloth_Mesh(const std::vector<Particle> &array_particles, const std::
 	
 	// ========== Calc Attributes from Particles for Vert Data ==========
 	// Calculate Normals Per Particle-Vert
-	std::vector<glm::vec3> normals = calc_normals_b();
+	std::vector<glm::vec3> normals = calc_normals();
 	// Get Inital UVs (assumes mesh is 2D Grid) 
 	std::vector<glm::vec2> uv = calc_uvs();
 
@@ -133,7 +133,7 @@ void Cloth_Mesh::update_fromParticles()
 	if (!vert_data.size()) return; // Inital Cloth Vert Data must be set first. 
 
 	// Get Updated Normals
-	std::vector<glm::vec3> normals = calc_normals_b();
+	std::vector<glm::vec3> normals = calc_normals();
 
 	// Update Particle-Vert Positions and Normals within Primitive::vert_data array. 
 	// Attrib Layout (P,N,C,UV) C and UV are left unchanged. 
@@ -162,36 +162,9 @@ void Cloth_Mesh::update_fromParticles()
 // ==============================================================================================
 //                              Attribute Setup Functions
 // ==============================================================================================
-// Info : Calc per Particle->Vertex Normals, Using per particle neighbours from tri indices. 
-std::vector<glm::vec3> Cloth_Mesh::calc_normals()
-{
-	std::vector<glm::vec3> pt_normal(particles.size());
-
-	for (std::size_t p = 0; p < particles.size(); ++p)
-	{
-		const Particle &curPt = particles[p];
-
-		// Get Particle neighbours via indices of first tri of its particle_tri list, who are not itsself. 
-		std::vector<Particle> neighbours; neighbours.reserve(2);
-		glm::ivec3 first_tri = particle_tris[p][0];
-		for (std::size_t i = 0; i < 3; ++i) if (first_tri[i] != p) neighbours.push_back(particles[first_tri[i]]);
-
-		// From these form basis for normal. 
-		glm::vec3 tang   = glm::normalize(neighbours[1].P - curPt.P);
-		glm::vec3 bitang = glm::normalize(neighbours[0].P - curPt.P);
-		glm::vec3 normal = glm::cross(tang, bitang);
-
-		// Set Normal
-		pt_normal[p] = glm::normalize(normal); 
-
-		// Debug
-		//std::cout << "particle_" << p << " ID = " << curPt.id << " Normal = " << normal.x << "," << normal.y << "," << normal.z << "\n";
-	}
-	return pt_normal;
-}
 
 // Info : Better normal calculation approach, calc normals per tri, then per particle average its triangles normals. 
-std::vector<glm::vec3> Cloth_Mesh::calc_normals_b()
+std::vector<glm::vec3> Cloth_Mesh::calc_normals()
 {
 	// First Calc Normals Per Tri
 	std::vector<glm::vec3> tri_normals(tri_indices.size());
