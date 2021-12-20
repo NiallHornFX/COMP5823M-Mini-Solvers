@@ -41,7 +41,6 @@ struct Spring
 
 
 // Typedefs 
-
 using ParticleTriList = std::vector<std::vector<glm::ivec3*>>;
 
 #endif

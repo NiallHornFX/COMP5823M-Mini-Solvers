@@ -192,6 +192,40 @@ std::vector<glm::vec3> Cloth_Mesh::calc_normals()
 	return pt_normal;
 }
 
+std::vector<glm::vec3> Cloth_Mesh::calc_normals_b()
+{
+	// First Calc Normals Per Face
+	std::vector<glm::vec3> face_normals(tri_indices.size());
+	for (std::size_t t = 0; t < tri_indices.size(); ++t)
+	{
+		glm::vec3 v0 = particles[tri_indices[t][0]].P;
+		glm::vec3 v1 = particles[tri_indices[t][1]].P;
+		glm::vec3 v2 = particles[tri_indices[t][2]].P;
+
+		glm::vec3 tang   = glm::normalize(v2 - v0);
+		glm::vec3 bitang = glm::normalize(v1 - v0);
+		glm::vec3 normal = glm::normalize(glm::cross(tang, bitang));
+		
+		face_normals[t] = std::move(normal); 
+	}
+
+	// Per Particle Average Normals of Tris.
+	std::vector<glm::vec3> normals(particles.size());
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		const Particle &curPt = particles[p];
+		glm::vec3 norm (0.f);
+		std::vector<glm::ivec3*> ptTris = particle_tris[p];
+
+		for (std::size_t t = 0; t < ptTris.size(); ++t)
+		{
+			// Get First Triangle Vert Index Particle Tris
+			int first = (*(ptTris[t]))[0];
+			// Convert to Tri Index
+		}
+	}
+}
+
 // Assumes mesh is a uniform 2D Grid, uses 2D indexing to calculate UVs as such. Won't work for any other mesh ofcourse. 
 std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
 {
