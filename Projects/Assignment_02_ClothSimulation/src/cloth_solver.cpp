@@ -14,20 +14,19 @@ Cloth_Solver::Cloth_Solver(Cloth_State &ClothState, float Sim_Dt)
 	// Init 
 	gravity = -1.0f;
 	wind = glm::vec3(0.f);
-	K_s = 1000.f, K_c = 10.f; 
-	coeff_force = 1.f; 
+	K_s = 1000.f, K_c = 10.f, K_v = 0.5f; 
 	coeff_fric  = 1.f; 
 	frame = 0, timestep = 0; 
 	simulate = false; 
 }
 
-// Info : Tick Simulation for number of timesteps determined by viewer Dt.
-// Uses Hybrid Timestepping approach purposed by Glenn Fiedler : Physics Dt is constant while using Viewer Dt as input.
+// Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler
+// Physics Dt is constant (based on UI value), while using Viewer app Dt to define number of solve substeps.
 void Cloth_Solver::tick(float viewer_Dt)
 {
 	if (!simulate || !clothData.built_state) return; 
 
-	// Reset Timestep counter (per tick)
+	// Reset Timestep (solvestep) counter (per tick)
 	timestep = 0; 
 
 	// Subdivide Accumulated Viewer Timestep into Solver Substeps
@@ -68,9 +67,9 @@ void Cloth_Solver::eval_springs()
 		glm::vec3 v1v0   = s.pt_1->V - s.pt_0->V;
 		float length = glm::length(p1p0);
 
-		// Spring
+		// Spring : (-K_s * (||p1-p0||-rest) * (p1-p0 / ||p1-p0||)
 		glm::vec3 f_spring = -K_s * (length - s.rest) * p1p0_n;
-		// Damp
+		// Damp   : (-K_c * ((v1-v0) dot (p1-p0/||p1-p0||)) * (p1-p0 / ||p1-p0||)
 		glm::vec3 f_damper = -K_c * glm::dot(v1v0, p1p0_n) * p1p0_n;
 		// Combined
 		glm::vec3 sprdamp = f_spring + f_damper;
@@ -87,18 +86,18 @@ void Cloth_Solver::integrate_euler()
 	{
 		if (curPt.state == pt_state::FIXED) continue; // Skip Fixed Particles 
 
-		//glm::vec3 forces = curPt.F + wind;
-		// if Particle Mass is 1.0 we need not do A = F / M. 
-		//glm::vec3 accel = forces / curPt.mass; 
-		// Gravity invaraint to mass.
-		//accel += glm::vec3(0.f, gravity, 0.f);
+		// Particle Spring Forces + Wind
+		glm::vec3 forces = curPt.F + wind;
+		// Add Air Visocity Force 
+		forces += -K_v * curPt.V; 
 
-		glm::vec3 accel = curPt.F + glm::vec3(0.f, gravity, 0.f);
+		// A = F/M (assuming mass != 1) 
+		glm::vec3 accel = (forces / curPt.mass) + glm::vec3(0.f, gravity, 0.f);
 
 		// ==== Integrate (Semi-Implicit Euler) ====
 		// v_(n+1) = v(n) + a(n) * dt; 
 		curPt.V += accel * dt;
-		// x_(n+1) = x(n) + v(n) * dt; 
+		// x_(n+1) = x(n) + v(n+1) * dt; 
 		curPt.P += curPt.V * dt;
 	}
 }
@@ -109,4 +108,12 @@ void Cloth_Solver::step()
 	integrate_euler();
 
 	eval_springs();
+}
+
+
+// Info : Set timestep from passed "steps per second" count. 
+void Cloth_Solver::set_timestep(std::size_t count)
+{
+	if (count <= 10) return; 
+	dt = 1.f / float(count);
 }

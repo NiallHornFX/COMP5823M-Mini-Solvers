@@ -32,7 +32,7 @@ class Primitive
 public:
 	Primitive() = delete; 
 	Primitive(const char *Name);
-	~Primitive();
+	virtual ~Primitive();
 
 	// Virtual Methods 
 	virtual void render();
@@ -58,7 +58,6 @@ public:
 	void translate(const glm::vec3 &offs);
 	void rotate(float d_ang, const glm::vec3 &axis);
 
-
 public:
 	// Intrinsics
 	std::string name;
@@ -72,11 +71,12 @@ public:
 	std::vector<float> vert_data; 
 	std::size_t vert_count;
 
+	// GL Resources
 	GLuint VBO, VAO; 
 
 	// State
 	Render_Mode mode;
-	// Required for rendering
+	// Required state for rendering
 	struct
 	{
 		uint8_t data_set : 1;

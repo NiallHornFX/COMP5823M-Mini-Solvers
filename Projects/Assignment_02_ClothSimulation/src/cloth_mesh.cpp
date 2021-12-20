@@ -57,6 +57,11 @@ Cloth_Mesh::Cloth_Mesh(const std::vector<Particle> &array_particles, const std::
 	create_buffers();
 }
 
+Cloth_Mesh::~Cloth_Mesh()
+{
+	if (EBO) glDeleteBuffers(1, &EBO);
+}
+
 // ==============================================================================================
 //                              Primitive Virtual Overloads
 // ==============================================================================================
@@ -172,9 +177,11 @@ std::vector<glm::vec3> Cloth_Mesh::calc_normals()
 		for (std::size_t i = 0; i < 3; ++i) if ((*first_tri)[i] != p) neighbours.push_back(particles[(*first_tri)[i]]);
 
 		// From these form basis for normal. 
-		glm::vec3 tang   = neighbours[1].P - curPt.P;
-		glm::vec3 bitang = neighbours[0].P - curPt.P;
+		glm::vec3 tang   = glm::normalize(neighbours[1].P - curPt.P);
+		glm::vec3 bitang = glm::normalize(neighbours[0].P - curPt.P);
 		glm::vec3 normal = glm::cross(tang, bitang);
+
+		// Gram-Shcmidt ...
 
 		// Set Normal
 		pt_normal[p] = glm::normalize(normal); 

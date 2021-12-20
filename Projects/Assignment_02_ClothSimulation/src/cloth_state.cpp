@@ -6,6 +6,8 @@
 #include <sstream>
 #include <cassert>
 #include <cmath>
+#include <fstream>
+#include <iomanip>
 
 // Project Headers
 #include "cloth_mesh.h"
@@ -46,6 +48,10 @@ Cloth_State::Cloth_State(const char *path)
 	built_state = true; 
 }
 
+Cloth_State::~Cloth_State()
+{
+	delete mesh; 
+}
 
 // Info : Parsing of .obj to tri-soup based verts.
 // We discard vertex attributes so we can define unqiue vertices (and thus particles/point masses) based on postions.
@@ -260,11 +266,49 @@ void Cloth_State::set_fixed_corners(bool state)
 	if (state)
 	{
 		// Set Corner Pts Fixed
-		//particles[0].state = pt_state::FIXED, particles[M].state = pt_state::FIXED;
-		for (std::size_t i = 0; i < M; ++i) particles[i].state = pt_state::FIXED;
+		particles[0].state = pt_state::FIXED, particles[M-1].state = pt_state::FIXED;
+		//for (std::size_t i = 0; i < M; ++i) particles[i].state = pt_state::FIXED;
 	}
 	else
 	{
 		particles[0].state = pt_state::FREE, particles[M].state = pt_state::FREE;
 	}
+}
+
+// Info : Exports Cloth to Obj Mesh in its current state (single frame), Using Particles-->Vertices mapping, with orginal Indices. 
+void Cloth_State::export_mesh(const char *export_path)
+{
+	std::ofstream out_mesh(export_path);
+	if (!out_mesh.is_open())
+	{
+		std::cerr << "ERROR::Export File Path Not Valid : " << export_path << " !\n";
+		return;
+	}
+
+	// Write Vertices Section using Particles 
+	out_mesh << "# Cloth Mesh Created by COMP5823M Cloth Solver, Student : Niall Horn\n";
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		const Particle &curPt = particles[p];
+		out_mesh << "v " << std::fixed << std::setprecision(6) << curPt.P.x << " " << curPt.P.y << " " << curPt.P.z << "\n";
+	}
+
+	// Write Normals (Assume each particle-->vert normal is unique)  	
+	std::vector<glm::vec3> normals = mesh->calc_normals(); // Fetch Normals from Cloth_Mesh
+	for (const glm::vec3 &N : normals) out_mesh << "vn " << std::fixed << std::setprecision(6) << N.x << " " << N.y << " " << N.z << "\n";
+
+	// Write Face Indices
+	for (std::size_t t = 0; t < tri_inds.size(); ++t)
+	{
+		out_mesh << "f ";
+		// Format = V_i//N_i
+		const glm::ivec3 &tri = tri_inds[t];
+		for (std::size_t ti = 0; ti < 3; ++ti)
+		{
+			out_mesh << tri[ti]+1 << "//" << tri[ti]+1 << " ";
+		}
+		out_mesh << "\n";
+	}
+
+	out_mesh.close();
 }

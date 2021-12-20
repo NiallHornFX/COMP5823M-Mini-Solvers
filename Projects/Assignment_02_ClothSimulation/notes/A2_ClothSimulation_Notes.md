@@ -352,7 +352,7 @@ The Spring Stiffness and Damping coeffs were originally set per spring as member
 
 Because a lot of members need to be accessible from viewer via the GUI i've just made the whole class public as it makes sense in this case. 
 
-###### Timestepping 
+###### Cloth_Solver::tick() - Timestepping 
 
 For time stepping, I'm going to use the approach to what I did for VerletClothMesh where we accumulate time based on the game thread (in this case the viewer Application) Dt and divide it with a fixed physics timestep so the physics timestep is fixed while still be stepped relative to the Dt of the viewer application using an accumulated delta time like approach this is based on Glenn Fiedler's work and is what everyone uses now as oppose to locking physics timestep completely to the viewer/game timestep or using a purely fixed physics timestep completely decoupled from the viewer/game timestep this is a hybrid approach using the best of both. 
 
@@ -383,7 +383,7 @@ void Cloth_Solver::tick(float viewer_Dt)
 }
 ```
 
-Note I use `dt` as the simulation timestep (fixed) the "game thread" ie in this case the viewer application delta time is passed in directly as `viewer_Dt` thus `at` is the accumulated timestep.
+Note I use `dt` as the simulation timestep (fixed) the "game thread" ie in this case the viewer application delta time is passed in directly as `viewer_Dt` thus `at` is the accumulated timestep. Bit confusing that I use timestep as the substep count per tick (frame), perhaps should of named this substep but oh well. 
 
 Issue with this is because the Dt is measured before the cloth state is constructed we get a large amount of time added to the accumulated time before the solver is even constructed and first ticked so we need to handle this, one way could be to have the solver not tick by default and require user to enable in in GUI so only when state is setup will it actually begin to accumulate viewer Dt and then run the subdivided solver steps.   This works but means the application will start with no solving, but that probably makes more sense so the user has time to enable the solve first. 
 
@@ -407,20 +407,108 @@ The differences are
 * Order of Spring Lengths (and thus $K_s$ sign) $(L_c - L_r)\:\: vs.\:\: (L_r - L_c)$ 
 * Sign of resulting forces $(+P0, -P1) \:\: vs. \:\: (-P0, +P1)$
 
-The sign of the resulting forces depends on the order (and thus direction) of the particle delta along the spring. The sign of the coefficients also define the resulting force signs (-Coeffs means -pt0 +pt1). 
+The sign of the resulting forces depends on the order (and thus direction) of the particle delta along the spring. The sign of the coefficients also define the resulting force signs (-Coefficients means -pt0 +pt1). 
 
 And then also if the spring and damping forces are calculated separately and added together, or if using the combined (single force equation with spring and damping calculated together).
 
 ```
-//glm::vec3 spring = 1000.f * (length - s.rest) * p1p0_n; (+P0, -P1)
-//glm::vec3 spring = -1000.f * (length - s.rest) * p1p0_n; (-P0, +P1)
+glm::vec3 spring = 1000.f * (length - s.rest) * p1p0_n; (+P0, -P1)
+glm::vec3 spring = -1000.f * (length - s.rest) * p1p0_n; (-P0, +P1)
 ```
 
+The combined force from the textbook doesn't seem to work for me currently, trying to debug where I'm going wrong, but the separate spring + damper force works correctly and I validated it with an Implementation in VEX to check if it was my solvers spring setup been the issue. 
 
+The final forces I calculate per spring and apply to each spring particles are : 
+$$
+\hat{d} = (p_1 - p_0) \\
+F_s = -K_s (||p_1 - p_0|| - rest) \: \hat{d} \\
+F_d = (-K_c (v1 - v0) \cdot \hat{d}) \: \hat{d} \\
+F_{sd} = F_s + F_d
+$$
+Because I use the $p_1-p_0$ order the coefficients are negated and the forces applied to each of the spring particles signs are $-p_1 \:|\: +p_2$. 
 
-###### Integration - Explicit Euler
+The Function is thus very simple and code is implemented as : 
 
-Sometimes referred to as Semi-Implicit Euler (Hamiltonian Mechanics) as its a 2-step Explicit Euler process of integrating acceleration to velocity and velocity to position. 
+```C++
+// Info : Eval Springs and apply the resulting forces to their particles. 
+void Cloth_Solver::eval_springs()
+{
+	// Clear prev particle forces. 
+	for (Particle &p : clothData.particles) p.F.x = 0.f, p.F.y = 0.f, p.F.z = 0.f;
+
+	for (Spring &s : clothData.springs)
+	{
+		// Fetch Deltas
+		glm::vec3 p1p0   = s.pt_1->P - s.pt_0->P;
+		glm::vec3 p1p0_n = glm::normalize(p1p0);
+		glm::vec3 v1v0   = s.pt_1->V - s.pt_0->V;
+		float length = glm::length(p1p0);
+
+		// Spring : (-K_s * (||p1-p0||-rest) * (p1-p0 / ||p1-p0||)
+		glm::vec3 f_spring = -K_s * (length - s.rest) * p1p0_n;
+		// Damp   : (-K_c * ((v1-v0) dot (p1-p0/||p1-p0||)) * (p1-p0 / ||p1-p0||)
+		glm::vec3 f_damper = -K_c * glm::dot(v1v0, p1p0_n) * p1p0_n;
+		// Combined
+		glm::vec3 sprdamp = f_spring + f_damper;
+
+		// Apply equal opposite forces to particles of spring
+		s.pt_0->F -= sprdamp, s.pt_1->F += sprdamp;
+	}
+}
+```
+
+###### Integration - Semi Implicit Euler
+
+I'm using what is referred to as the Semi-Implicit Euler (Hamiltonian Mechanics) as its a 2-step Explicit Euler process of integrating acceleration on RHS of eq 1 to velocity and velocity to position where the position is integrated using the newly computed $\dot{x}_{n+1}$ as oppose to standard Forward Euler which would use the current $\dot{x}_n$ :
+$$
+\dot{x}_{n+1} = \dot{x}_{n} + \Delta t \:\ddot{x}_{n+1} \\
+x_{n+1} = x_n + \Delta t \: \dot{x}_{n+1}
+$$
+Where Acceleration $\ddot{x} = A$  (assuming particle masses are not equal to 1, in which case we can skip the division needed for $A = F/M$) is defined as : 
+$$
+A = ((F_s + F_d + F_w) / M) + g
+$$
+Where $F_s, F_d$ are the spring damper forces (which are concatenated as stored within each particles `F` vec3 member (which are a result of multiple spring forces of whom they are connected to)). $F_w$ is a user controlled wind force and $g$ is the gravity force constant which is of course invariant to mass $M$. 
+
+The integration only runs on particles whom state is free (not fixed eg corner points for the corner fixed cloth configuration required by the assignment). The code is implemented as : 
+
+```C++
+// Info : Using Semi Implicit Forward Euler, Integrate forces to particle positions for (n+1)
+void Cloth_Solver::integrate_euler()
+{
+	for (Particle &curPt : clothData.particles)
+	{
+		if (curPt.state == pt_state::FIXED) continue; // Skip Fixed Particles 
+
+		glm::vec3 forces = curPt.F + wind;
+		glm::vec3 accel = (forces / curPt.mass) + glm::vec3(0.f, gravity, 0.f);
+
+		//glm::vec3 accel = curPt.F + glm::vec3(0.f, gravity, 0.f);
+
+		// ==== Integrate (Semi-Implicit Euler) ====
+		// v_(n+1) = v(n) + a(n) * dt; 
+		curPt.V += accel * dt;
+		// x_(n+1) = x(n) + v(n+1) * dt; 
+		curPt.P += curPt.V * dt;
+	}
+}
+```
+
+Of course while this has some advantage over standard Explicit Euler it will still explode at higher stiffness forces (typically over 1000). If I get time I will implement RK2 or RK4 where the RHS acceleration is evaluated at multiple fractional timesteps to derive the final acceleration to integrate to velocity. Or the Leapfrog method which uses a similar approach. 
+
+Implicit Integration is not part of the assignment as it's not really viable for real-time use due to the linear system needing to be solved within a newton solve. 
+
+###### Cloth_Solver::air_damping()
+
+This is a crude approximation of what is sometimes referred to as "Air Viscosity" within the textbook and other sources, which is essentially a global damping force to, proportional to the velocity scaled by some damping coefficient. Its kind of like applying the inverse velocity as a force (that is then integrated to the new $(n+1)$ viscosity) its a crude approximation but works quite well, assuming the air is of a constant density.
+$$
+F_v = -K_v\:\ddot{x}
+$$
+A alternative naïve approach of damping could be done by modifying the velocity itself, scaled by some coefficient.
+$$
+\ddot{x} = 0.99 \cdot \ddot{x}
+$$
+Meaning that for each simulation step the velocity is gradually multiplied down, and eventually when the cloth springs come to an equilibrium and forces stop contributing to the velocities beyond the gravity and wind constant the cloth will come to a heavily damped state quite quickly, which is not ideal nor realistic but its a gross approximation of velocity "dissipation". Hence the force based approach is used instead. 
 
 ____
 
@@ -429,6 +517,80 @@ ____
 Has two components the simulation definition / calculation of the collisions based on some parametric shape, sphere in this primary case, and then the render mesh which needs to match the size based on the parameters passed and used for the collision detection. 
 
 Collision function will eval if some passed particle is within bounds of collider and if so return the signed distance and displacement vector to project out of or the force or impulse to apply. This would be a good class to use polymorphism with this as a virtual function we could support boxes and planes using the same parametric approach. Triangle Mesh based cloth collisions are not really a prio / required at all so probs will leave out for now as this would need acceleration and need parity between render and simulation representations (cannot use implicit or parametric functions to approximate collision bounds). Or could implement SDF Collisions if I had time, that would be fun ! But not gonna happen. 
+
+So for starters I will impalement a class that has a virtual method for taking in the particle array, evaluating the collision detection and applying the response directly to the particle positions. The class also then has a Primitive or Mesh member for rendering this collision shape (which will be rendered via Viewer->Render, so Cloth Colliders will be stored within Viewer Members and then passed as references to cloth_solver whom will call their virtual eval_collision() member function passing in the particle array of Cloth_State(via Cloth_Solvers reference to its Cloth_State instance)). 
+
+
+
+For Collision response I'm planning to use a Position based approach because of the stability of it over impulse or force based responses. So it will be similar to PBD in the fact that we either using the Plane equation or the distance delta of Sphere intersection to then project the particles back to the surface.
+
+For all Collision calculations we can just assume the particle has no radius ie its a point, or more correctly we define its radius using a user defined constant so it can sit on the surface of the collider more correctly (and thus avoid numerical error). Of course any non zero mass point must have some radius. 
+
+
+
+For Plane derivative of the class the equation is an inequality to satisfy is just
+$$
+((p-q) \cdot \hat{n}) \geq 0
+$$
+ Where $p$ is the particle and $q$ is some point on the plane. For this case we assume the normal is just $(0,1,0)$.  We use the result of $((p-q) \cdot \hat{n})$ as the signed distance the particle is within (on the other side of the plane) to then negate and project back to the surface (directly via position). 
+
+
+
+For the Sphere case
+
+$(p-c)^2 \geq r^2$  
+
+
+
+
+
+##### Collision Friction
+
+Uses the same approach I used for VerletCloth (PBD approach) when we decompose into Normal and Tangential components and then scale them to define the amount of friction tangential to the colliding object. 
+
+
+
+___
+
+##### Rotating Sphere Cloth
+
+One of the Simulations required is cloth on a rotating sphere which I guess is to test the friction implementation, although it's going to look a bit naff without self collisions. Anyway I need to figure out how to implement this because using a standard sphere collision test won't work (ie using a centre and Radius) because we need to have surface points to transform/rotate around the Y Axis.
+
+
+
+____
+
+##### Misc Notes
+
+Because they may test using an arbitrary obj file I might add a check in to test for this an disable the UV calc and fixed corners function (as these rely on the mesh been a square grid / plane ofc). Then I will need to switch to different shader etc, so this is not a big prio for now as I doubt they will even test loading other meshes given that the program specifies all the test cases use a 2D Plane / Grid to define the cloth (which makes me question why they made us implement an obj loader but as we know the assignments are bonkers generally so not really a surprise). 
+
+We also need OBJ Export (obj export is worth more points than part of the solver code, what the ...) Anyway its just a single frame, I will do this via Cloth_Mesh class seen as the normal calc is done within here. Ideally I wanted this for rendering code only, but it doesn't really matter. Unless we do it within Cloth_State and fetch the vert_data, it doesn't really matter either way though. 
+
+As stated before instead of calling reset and clearing buffers on the current cloth_state instance, for user inputting a new obj cloth mesh file, I am just going to delete the current cloth_mesh in the viewer app and reallocate a new one, not super efficient but for this case its ok. This will be done within the GUI Loop within Viewer scope ofcourse. Because I chose to use references to store the Cloth_State within the Cloth_Solver class i cannot just replace the reference easily, so I also have to delete the current Cloth_Solver and re-create it , which is not ideal, but for this project is ok. 
+
+Will Implement Blinn-Phong Shading and Wireframe rendering (atop the mesh, use this as Spring viz to save creating a separate primitive to render springs when we know they are just the mesh edges (assuming the spring creation func is working correctly)). Ideally need a way to be able to switch shaders more easily so can switch based on GUI shading mode. Eg could have velocity based shading via Vel-->Colour but not a prio. 
+
+Still need to fix the edge normals signs. Might need to also implement Gram-Schmidt to ensure resulting normal basis is orthogonal. 
+
+
+
+____
+
+##### OBJ Export
+
+Good thing is we already have a list of unique vertices ie particles (so we don't need to re-do this operation on the resulting serialized verts in Cloth_Mesh to get unique vertices, we just use particles as is), We also have tri indices within Cloth_State which are the same as from the input mesh, we can also fetch normals from Cloth_Mesh (not I am implementing this within Cloth_State now).
+
+For the Normals technically we should only write the unique normals and index them, but as I assume all normals will be unique (which they may well not be, eg if cloth is in rest state there would only be one unique normals for the 2D plane case (0,1,0)) we can just assign each particle-->vertex the index directly to its normal as calculated within cloth_mesh.  Note `Cloth_Mesh::calc_normals()` is done per particle (before then serializing into the float vert_data array so this is great as we can extract them per particle without needing to deserialize them). So both the Vert Position and Normal Index are the same (as the particle and thus normal arrays are ofc indices that map 1:1 with the original input mesh vertices) so if we have per particle-->vertex normals, the indices of the normals are the same as the indices of the vertices/particles that map to their position in the normals array. 
+
+We could loop through each particle check if its normal is unique and store index to it, but then we'd need a separate array for the unique normals to push back etc. 
+
+The output face format will be `VertexPos_Index // Normal_Index` Not going to output texture coords as we can't be sure they won't try and load another obj mesh and I don't want to risk using the 2D Grid UVs as output. 
+
+Remember to offset indices by 1.
+
+Need to fix the normals really (face normal then average per particle)
+
+
 
 ____
 

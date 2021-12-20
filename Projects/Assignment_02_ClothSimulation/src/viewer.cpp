@@ -355,6 +355,18 @@ void Viewer::gui_render()
 	std::string state; 
 	if (cloth_solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
 
+	// Cloth Mesh Path
+	static char obj_mesh_input[256]{ "../../assets/mesh/clothgrid_a.obj" };
+	static char obj_mesh_output[256]{ "export.obj" };
+
+	// Wind Force
+	static float wind[3] = { 0.f, 0.f, 0.f };
+	cloth_solver->wind.x = wind[0], cloth_solver->wind.y = wind[1], cloth_solver->wind.z = wind[2];
+
+	// Get Dt 1/n. 
+	float n = 1.f / cloth_solver->dt;
+	static int tmp_count = 90;
+
 	// ============= Imgui layout =============
 	{
 		ImGui::Begin("Simulation Controls");
@@ -363,7 +375,8 @@ void Viewer::gui_render()
 		// Labels
 		if (cloth_solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 		ImGui::Text(state.c_str());
-		ImGui::Text("Simulation Frame = %d", cloth_solver->frame);
+		ImGui::Text("Simulation Frame = %d, Substep = %d", cloth_solver->frame, cloth_solver->timestep);
+		ImGui::Text("Dt = 1/%d", std::size_t(n));
 		ImGui::PopStyleColor();
 
 		// Anim Loop Play Pause
@@ -379,12 +392,45 @@ void Viewer::gui_render()
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 
+		// Physics Timestep
+		if (ImGui::InputInt("Timestep 1/x", &tmp_count))
+		{
+			cloth_solver->set_timestep(tmp_count);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		} 
+
+		// ==== Cloth State Controls ====
+		ImGui::Text("Cloth State Controls");
+		ImGui::InputText("Obj Mesh Input", obj_mesh_input, 256);
+		if (ImGui::Button("Load Cloth Mesh"))
+		{
+			delete cloth;
+			cloth = new Cloth_State(obj_mesh_input);
+			delete cloth_solver; 
+			cloth_solver = new Cloth_Solver(*cloth, 1.f / 90.f);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+
+		ImGui::InputText("Obj Mesh Export", obj_mesh_output, 256);
+		if (ImGui::Button("Export Cloth Mesh"))
+		{
+			cloth_solver->simulate = false; 
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			cloth->export_mesh(obj_mesh_output);
+		}
+
+
 		// ==== Solver Controls ====
+		ImGui::Text("Solver Controls");
 		ImGui::SliderFloat("K_stiff", &cloth_solver->K_s, 0.f, 1000.f);
 		ImGui::SliderFloat("K_damp",  &cloth_solver->K_c, 0.f, 10.f);
+		ImGui::SliderFloat("K_visc",  &cloth_solver->K_v, 0.f, 2.f);
 		ImGui::SliderFloat("Gravity", &cloth_solver->gravity, -10.f, 10.f);
+		ImGui::SliderFloat3("Wind", wind, 0.f, 5.f);
+
 
 		// ==== Viewer State ====
+		ImGui::Text("Viewer Controls");
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))
 		{

@@ -21,7 +21,7 @@ class Cloth_State
 {
 public:
 	Cloth_State(const char *path); 
-	~Cloth_State() = default;
+	~Cloth_State();
 
 	// ======= Operations =======
 	void load_obj(std::ifstream &in);
@@ -31,6 +31,8 @@ public:
 	void reset_cloth();
 
 	void render(const glm::mat4x4 &view, const glm::mat4x4 &persp);
+
+	void export_mesh(const char *export_path);
 
 	// ======= Util =======
 	void get_particle_trilist(); 

@@ -16,7 +16,7 @@ public:
 	// Setup inital atrrib and buffer state from passed pts. 
 	Cloth_Mesh(const std::vector<Particle> &array_particles, const std::vector<glm::ivec3> &array_triInds, const ParticleTriList &array_ptTris);
 	Cloth_Mesh() = delete;
-	~Cloth_Mesh() = default; 
+	virtual ~Cloth_Mesh() override; 
 
 	virtual void render()         override; 
 	virtual void create_buffers() override; 
@@ -33,7 +33,7 @@ public:
 private:
 	// Serailzied Data
 	std::vector<uint> indices; 
-	// Primitive::vert_data
+	// vertices are within : Primitive::vert_data
 
 	// Reference Cloth_State Data Arrays : Particles, Indices and per particle tris arrays. 
 	const std::vector<Particle> &particles;
@@ -43,7 +43,6 @@ private:
 	// GL Data
 	GLuint EBO; 
 	std::size_t indices_count;
-
 };
 
 

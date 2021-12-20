@@ -31,6 +31,9 @@ public:
 
 	// Collide 
 
+	// ======= Util =======
+	void set_timestep(std::size_t count);
+
 public:
 	// Solver Intrinsics
 	bool simulate; 
@@ -44,9 +47,9 @@ public:
 	// Cloth Colliders
 
 
-	// Coeffs
-	float K_s, K_c; // Stiffness and Damping Coeffs
-	float coeff_force; 
+	// Stiffness, Damping, Air Viscosity Coeffs. 
+	float K_s, K_c, K_v; 
+	// Collision Friction Coeff
 	float coeff_fric; 
 
 	// Cloth_State Ref
