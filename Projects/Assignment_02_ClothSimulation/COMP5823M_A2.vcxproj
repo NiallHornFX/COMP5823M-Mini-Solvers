@@ -86,6 +86,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\cloth_collider.cpp" />
     <ClCompile Include="src\cloth_mesh.cpp" />
     <ClCompile Include="src\cloth_solver.cpp" />
     <ClCompile Include="src\cloth_state.cpp" />
@@ -107,6 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="incl\camera.h" />
+    <ClInclude Include="incl\cloth_collider.h" />
     <ClInclude Include="incl\cloth_common.h" />
     <ClInclude Include="incl\cloth_mesh.h" />
     <ClInclude Include="incl\cloth_solver.h" />

@@ -58,6 +58,9 @@
     <ClCompile Include="src\cloth_solver.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="src\cloth_collider.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="incl\camera.h">
@@ -91,6 +94,9 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="incl\cloth_solver.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="incl\cloth_collider.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

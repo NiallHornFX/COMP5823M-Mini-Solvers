@@ -741,9 +741,7 @@ Hmm ok, so it seems you need to use :
 float error = std::sqrt(sqr_rad) - std::sqrt(sqr_dist);
 ```
 
-As oppose to having them sqrt'd together. I swear I remember implementing this before using this methodology and using a single sqrt for the inner dist computation. Also checked precision not an issue either. 
-
-We shouldn't need separate square roots. For example in my original Verlet Cloth Mesh code, before I split the building and solving constraints (ie constraints for particle pairs were built inline) I had the code : 
+As oppose to having them sqrt'd together. Also checked precision not an issue either.  We shouldn't need separate square roots. For example in my original Verlet Cloth Mesh code, before I split the building and solving constraints (ie constraints for particle pairs were built and then projected inline within a single loop) I had the code : 
 
 ```C++
 // If Less than 2PRsqrd, project particles away to minimize intersection distance. 
@@ -753,6 +751,62 @@ float inter_dist = FMath::Sqrt(pr2sqr - dist_sqr);
 ```
 
 The only difference I been I had 2 particle radii squared (radius for each particle) but the logic is the exact same, I wonder why my sqrt's here oscillate / jitter when using this. Anyway I will just use the original non squared version shown above and square-root regardless if particle violates inequality or not, I hope to debug this later as its going to drive me insane now. 
+
+###### Back to Cloth_Collider
+
+Ok so despite the fact it might be easier to embed the plane collision in the Cloth_Solver class, because the sphere is a collider and that will be a separate class, so I can couple its Sphere Collision test (inequality test) with the render mesh, I don't want to mix colliders within the solver and colliders that are separate classes. So I have a super basic set of classes that are polymorphic (yeah again Virtual calls not ideal, but for this project it doesn't matter, they also want us to follow good design patterns ie so this type of thing makes sense to be polymorphic) The Header is pretty simple : 
+
+```C++
+class Cloth_Collider
+{
+public:	
+	Cloth_Collider(const char *Name, const char *renderMesh_path);
+	virtual ~Cloth_Collider(); 
+
+	virtual void eval_collision(std::vector<Particle> &particles) = 0; 
+
+public:
+	std::string name; 
+	Mesh *render_mesh; 
+	bool render; 
+};
+
+// Plane Collider 
+
+class Cloth_Collider_Plane : public Cloth_Collider
+{
+public:
+	Cloth_Collider_Plane(const glm::vec3 &Normal);
+
+	virtual void eval_collision(std::vector<Particle> &particles) override final;
+
+private:
+	glm::vec3 N; 
+};
+
+// Sphere Collider
+class Cloth_Collider_Sphere : public Cloth_Collider
+{
+public:
+	Cloth_Collider_Sphere(const glm::vec3 &Cent, float Radius);
+
+	virtual void eval_collision(std::vector<Particle> &particles) override final; 
+
+	// Setters (with render_mesh update) 
+	void set_radius(float radius);
+
+	void set_centre(const glm::vec3 &cent);
+
+private:
+	glm::vec3 centre; 
+	float radius; 
+
+};
+```
+
+Then we will have an array of Cloth_Collider* ptrs in Cloth_Solver or Viewer (most likely the latter so we can call render on the mesh members more easily without having this called within Cloth_Solver or using a getter to call it). We pass the array of collider primitives to the cloth solver. Also will have some state based on GUI whether to use them or not. 
+
+Or we could just ditch this class idea completely and store a Mesh object in Viewer for  the Collision Sphere and just update it based on Centre and Radius changes along with the Solver Collision condition parameters, but this decoupled state is messy. 
 
 
 

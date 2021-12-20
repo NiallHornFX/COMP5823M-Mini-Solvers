@@ -58,8 +58,10 @@ void Cloth_Solver::step()
 
 	eval_springs();
 
+	eval_colliders();
+
 	//collide_plane();
-	collide_sphere();
+	//collide_sphere();
 }
 
 // Info : Eval Springs and apply the resulting forces to their particles. 
@@ -111,6 +113,18 @@ void Cloth_Solver::integrate_euler()
 	}
 }
 
+// Info : Evaulate Collisions using passed colliders
+void Cloth_Solver::eval_colliders()
+{
+	if (!colliders.size()) return; 
+
+	for (Cloth_Collider *col : colliders)
+	{
+		col->eval_collision(clothData.particles);
+	}
+}
+
+/*
 void Cloth_Solver::collide_plane()
 {
 	for (Particle &curPt : clothData.particles)
@@ -122,7 +136,6 @@ void Cloth_Solver::collide_plane()
 		}
 	}
 }
-
 
 void Cloth_Solver::collide_sphere()
 {
@@ -141,7 +154,7 @@ void Cloth_Solver::collide_sphere()
 		}
 	}
 }
-
+*/
 
 
 // Info : Set timestep from passed "steps per second" count. 

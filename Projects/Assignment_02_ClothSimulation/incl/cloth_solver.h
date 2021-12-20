@@ -9,6 +9,7 @@
 
 // Project Headers
 #include "cloth_state.h"
+#include "cloth_collider.h"
 
 
 class Cloth_Solver
@@ -30,9 +31,10 @@ public:
 	void integrate_euler();
 
 	// Collide 
-	void collide_plane();
+	//void collide_plane();
+	//void collide_sphere();
 
-	void collide_sphere();
+	void eval_colliders();
 
 	// ======= Util =======
 	void set_timestep(std::size_t count);
@@ -48,7 +50,7 @@ public:
 	float gravity; 
 
 	// Cloth Colliders
-
+	std::vector<Cloth_Collider*> colliders; 
 
 	// Stiffness, Damping, Air Viscosity Coeffs. 
 	float K_s, K_c, K_v; 

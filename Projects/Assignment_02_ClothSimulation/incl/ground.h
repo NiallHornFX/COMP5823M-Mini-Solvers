@@ -1,4 +1,4 @@
-// COMP5823M - A1 : Niall Horn - ground.h
+// COMP5823M - A2 : Niall Horn - ground.h
 #ifndef GROUND_H
 #define GROUND_H
 

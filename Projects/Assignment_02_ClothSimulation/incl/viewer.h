@@ -79,8 +79,9 @@ private:
 	const byte *version;
 
 	// Cloth Simulation
-	Cloth_State *cloth; 
-	Cloth_Solver *cloth_solver;
+	Cloth_State    *cloth; 
+	Cloth_Solver   *cloth_solver;
+	Cloth_Collider *collision_plane, *collision_sphere; 
 
 	// Camera 
 	Camera camera; 

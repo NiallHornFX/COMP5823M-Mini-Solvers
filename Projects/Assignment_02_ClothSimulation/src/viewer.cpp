@@ -54,8 +54,16 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	extensions_load();
 
 	// ============= Cloth Setup =============
+	// Cloth State 
 	cloth = new Cloth_State("clothgrid_a.obj");
+	// Cloth Solver 
 	cloth_solver = new Cloth_Solver(*cloth, (1.f / 90.f));
+	// Collider Primtives
+	collision_plane = new Cloth_Collider_Plane(glm::vec3(0.f, 1.f, 0.f));
+	collision_sphere = new Cloth_Collider_Sphere(glm::vec3(0.f, 0.f, 0.f), 1.f);
+	// Pass Colliders to Solver
+	cloth_solver->colliders.push_back(collision_plane);
+	cloth_solver->colliders.push_back(collision_sphere);
 
 	// ============= Camera =============
 	#if USE_FREE_CAMERA == 0
@@ -253,6 +261,10 @@ void Viewer::render()
 			p->render();
 		}
 	}
+
+	//  ==================== Render Cloth Colldiers ====================
+	collision_sphere->render_mesh->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+	collision_sphere->render_mesh->render();
 
 	// ==================== Render Cloth ====================
 	cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
