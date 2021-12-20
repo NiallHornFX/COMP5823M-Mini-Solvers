@@ -14,7 +14,7 @@ class Cloth_Mesh : public Primitive
 {
 public:
 	// Setup inital atrrib and buffer state from passed pts. 
-	Cloth_Mesh(const std::vector<Particle> &array_particles, const std::vector<glm::ivec3> &array_triInds, const ParticleTriList &array_ptTris);
+	Cloth_Mesh(const std::vector<Particle> &array_particles, const std::vector<glm::ivec3> &array_tris, const ParticleTriList &array_ptTris);
 	Cloth_Mesh() = delete;
 	virtual ~Cloth_Mesh() override; 
 

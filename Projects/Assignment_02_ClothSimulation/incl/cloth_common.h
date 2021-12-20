@@ -41,6 +41,7 @@ struct Spring
 
 
 // Typedefs 
-using ParticleTriList = std::vector<std::vector<glm::ivec3*>>;
+// Array of per particle, array of Triangle Vert/Pt Indices(x,y,z) and the triangle index itself (w)
+using ParticleTriList = std::vector<std::vector<glm::ivec4>>;
 
 #endif

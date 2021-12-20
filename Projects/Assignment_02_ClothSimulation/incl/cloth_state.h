@@ -46,14 +46,12 @@ private:
 	// Input Mesh Data
 	std::string file_path; 
 	std::vector<glm::vec3>  v_p;
-	std::vector<glm::ivec3> tri_inds; 
+	std::vector<glm::ivec3> tris; 
 
 	// Cloth Sim Data
 	std::vector<Particle> particles; 
 	std::vector<Spring>   springs; 
-
-	// Per Particle Tris
-	ParticleTriList pt_tris;
+	ParticleTriList       pt_tris; // Per Particle Array of triangles.
 
 	// Cloth Render Data
 	Cloth_Mesh *mesh; 

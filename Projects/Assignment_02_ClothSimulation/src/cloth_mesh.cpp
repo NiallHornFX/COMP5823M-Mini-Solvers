@@ -10,8 +10,8 @@
 
 // Info : Construction of Cloth_Mesh, Pass Refereces to Cloth_State instances : particle and index data arrays. 
 // Initalize Base Primtiive, Calc Inital Attributes of Particle-Verts and indices.
-Cloth_Mesh::Cloth_Mesh(const std::vector<Particle> &array_particles, const std::vector<glm::ivec3> &array_triInds, const ParticleTriList &array_ptTris)
-	: Primitive("Cloth_Mesh"), particles(array_particles), tri_indices(array_triInds), particle_tris(array_ptTris)
+Cloth_Mesh::Cloth_Mesh(const std::vector<Particle> &array_particles, const std::vector<glm::ivec3> &array_tris, const ParticleTriList &array_ptTris)
+	: Primitive("Cloth_Mesh"), particles(array_particles), tri_indices(array_tris), particle_tris(array_ptTris)
 {
 	// ========== Primitive Setup Cals ==========
 	set_shader("../../shaders/cloth.vert", "../../shaders/cloth.frag");
@@ -19,7 +19,7 @@ Cloth_Mesh::Cloth_Mesh(const std::vector<Particle> &array_particles, const std::
 	
 	// ========== Calc Attributes from Particles for Vert Data ==========
 	// Calculate Normals Per Particle-Vert
-	std::vector<glm::vec3> normals = calc_normals();
+	std::vector<glm::vec3> normals = calc_normals_b();
 	// Get Inital UVs (assumes mesh is 2D Grid) 
 	std::vector<glm::vec2> uv = calc_uvs();
 
@@ -133,7 +133,7 @@ void Cloth_Mesh::update_fromParticles()
 	if (!vert_data.size()) return; // Inital Cloth Vert Data must be set first. 
 
 	// Get Updated Normals
-	std::vector<glm::vec3> normals = calc_normals();
+	std::vector<glm::vec3> normals = calc_normals_b();
 
 	// Update Particle-Vert Positions and Normals within Primitive::vert_data array. 
 	// Attrib Layout (P,N,C,UV) C and UV are left unchanged. 
@@ -173,15 +173,13 @@ std::vector<glm::vec3> Cloth_Mesh::calc_normals()
 
 		// Get Particle neighbours via indices of first tri of its particle_tri list, who are not itsself. 
 		std::vector<Particle> neighbours; neighbours.reserve(2);
-		glm::ivec3 *first_tri = particle_tris[p][0];
-		for (std::size_t i = 0; i < 3; ++i) if ((*first_tri)[i] != p) neighbours.push_back(particles[(*first_tri)[i]]);
+		glm::ivec3 first_tri = particle_tris[p][0];
+		for (std::size_t i = 0; i < 3; ++i) if (first_tri[i] != p) neighbours.push_back(particles[first_tri[i]]);
 
 		// From these form basis for normal. 
 		glm::vec3 tang   = glm::normalize(neighbours[1].P - curPt.P);
 		glm::vec3 bitang = glm::normalize(neighbours[0].P - curPt.P);
 		glm::vec3 normal = glm::cross(tang, bitang);
-
-		// Gram-Shcmidt ...
 
 		// Set Normal
 		pt_normal[p] = glm::normalize(normal); 
@@ -192,38 +190,46 @@ std::vector<glm::vec3> Cloth_Mesh::calc_normals()
 	return pt_normal;
 }
 
+// Info : Better normal calculation approach, calc normals per tri, then per particle average its triangles normals. 
 std::vector<glm::vec3> Cloth_Mesh::calc_normals_b()
 {
-	// First Calc Normals Per Face
-	std::vector<glm::vec3> face_normals(tri_indices.size());
+	// First Calc Normals Per Tri
+	std::vector<glm::vec3> tri_normals(tri_indices.size());
 	for (std::size_t t = 0; t < tri_indices.size(); ++t)
 	{
 		glm::vec3 v0 = particles[tri_indices[t][0]].P;
 		glm::vec3 v1 = particles[tri_indices[t][1]].P;
 		glm::vec3 v2 = particles[tri_indices[t][2]].P;
 
-		glm::vec3 tang   = glm::normalize(v2 - v0);
-		glm::vec3 bitang = glm::normalize(v1 - v0);
+		glm::vec3 tang   = glm::normalize(v1 - v0);
+		glm::vec3 bitang = glm::normalize(v2 - v0);
 		glm::vec3 normal = glm::normalize(glm::cross(tang, bitang));
 		
-		face_normals[t] = std::move(normal); 
+		tri_normals[t] = std::move(normal);
 	}
 
-	// Per Particle Average Normals of Tris.
+	// Per Particle Average Normals of faces its part of.
 	std::vector<glm::vec3> normals(particles.size());
 	for (std::size_t p = 0; p < particles.size(); ++p)
 	{
 		const Particle &curPt = particles[p];
-		glm::vec3 norm (0.f);
-		std::vector<glm::ivec3*> ptTris = particle_tris[p];
+		glm::vec3 normal(0.f);
 
+		// Get Per Particle Triangles, Accumulate Normals of each tri. 
+		std::vector<glm::ivec4> ptTris = particle_tris[p];
 		for (std::size_t t = 0; t < ptTris.size(); ++t)
 		{
-			// Get First Triangle Vert Index Particle Tris
-			int first = (*(ptTris[t]))[0];
-			// Convert to Tri Index
+			int tri_idx = particle_tris[p][t].w;
+			normal += tri_normals[tri_idx];
 		}
+		// Average resulting Normal by PtTri Count
+		normal /= float(ptTris.size());
+		normals[p] = std::move(normal);
+
+		// Debug
+		//std::cout << "particle_" << p << " ID = " << curPt.id << " Normal = " << normal.x << "," << normal.y << "," << normal.z << "\n";
 	}
+	return normals; 
 }
 
 // Assumes mesh is a uniform 2D Grid, uses 2D indexing to calculate UVs as such. Won't work for any other mesh ofcourse. 

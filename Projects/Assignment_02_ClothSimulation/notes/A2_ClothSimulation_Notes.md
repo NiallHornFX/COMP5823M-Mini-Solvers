@@ -340,13 +340,53 @@ If I implement a viewer_scale option like I did in IK, remember to scale down th
 
 Good thing about Cloth_State and Cloth_Solver both been members of Viewer is I have direct access to their members to hook up to ImGUI to set and call on both of them (via Friend or Public Access).
 
-###### Better Normals Calc
+____
+
+##### Better Normals Calc
 
 Need to fix the normals really (face normal then average per particle) within Cloth_State.  Problem is we only know per particle tri indices as a glm::ivec3, ie each particle has an array of tri-vertex indices but we need indices of the tris themselves, not the vert indices within them. We can just add a second array that as well as storing per particle `std::vector<glm::ivec3>` we also store a `std::vector<std::size_t>` which is the index of that ivec3. I think I should of just had a single array like I did for VerletClothMesh that stores Index offsets to the triangle array (the triangle array itself is glm::ivec3 for the per tri particle/vert indices) as oppose to storing pointers for per particle triangles (glm::ivec3) as we then use the indices to lookup the triangles in the original triangle array. So I'll have to change Cloth_State::Pt_tris to be a `std::vector<std::vector<std::size_t>>` ie per particle array of triangle indices, as oppose to directly referencing/pointing to the glm::ivec3 indices themselves, that way we get the actual triangle indices and not just pointers directly. However this also means we now will have to pass the triangle array from Cloth_State into Cloth_Mesh by reference aswell (so 4 arrays in total, Particles, Indices, Triangles, Per Particle Triangles). 
+
+###### Changing the Per Particle Triangle Index logic : 
 
 Also note here by Per Particle Triangle Indices, Indices refers to the actual indices of the elements in the Triangles (glm::ivec3) array, not indices of the verts that make up the tris. Ofc we can get the vert/particle indices themselves by looking up the triangle in the triangle array and getting the 3 components of the ivec3 which are its 3 vert/particle indices (indices in this context is infact the indices of the mesh verts now particles). So don't get confused with the term indices two meanings here ! 
 
 To avoid passing a 4th array (not we are doing this array reference passing design pattern to avoid circular dependency of the Cloth_Mesh and Cloth_State class) we could store Pt_Tri Indices as a ivec4 and embed in the 4th component the triangles own index, this could work. Then we don't need to pass the ivec3 tri array as we can still keep the current design of the Pt_Tri array been per particle array of glm::ivec4 ptrs that make up each triangles vertex index (x,y,z) + the triangles own index in the w component, however these would no longer need to be ptrs, as they don't point to the triangle ivec3's anymore they'd copy the triangle ivec3 indices into ivec4s. 
+
+So `Cloth_State::get_particle_trilist()` would now look like this : 
+
+```C++
+void Cloth_State::get_particle_trilist()
+{
+	// Reset per particle inner array tri list. 
+	pt_tris.resize(particles.size());
+	for (std::vector<glm::ivec4> trilist : pt_tris) trilist.clear();
+
+	// Loop over tris 
+	for (std::size_t t = 0; t < tris.size(); ++t)
+	{
+		glm::ivec3 &tri = tris[t];
+		// Add tri ptr to each particle defined by tri indices tri list. 
+		for (std::size_t i = 0; i < 3; ++i)
+		{
+			int p_ind = tri[i];
+			// Tri (vi_0, vi_1, vi_2, t_i) 
+			glm::ivec4 tri_ind (tri.x, tri.y, tri.z, t);
+			pt_tris[p_ind].push_back(std::move(tri_ind));
+		}
+	}
+}
+
+```
+
+So we loop over each tri, for each vertex index (aka particle index) we create a ivec4 to which we store this tris vertex indices (of which each particle is one of these indices) along with the index of the triangle itself within the tris array. Note "tris" is the new name for the old tri_inds array which is confusing. We know we are using glm::ivec3 to implicitly store triangles as indices so no need to denote this in the naming, we can just refer to these as tris. So now each particle within the pt_tris array has its array of ivec4s which store each triangle vert/particle index (of which they are one of the three) and the triangle index itself within the tris array, of all the triangles the particle is part of. 
+
+Where `pt_tris = std::vector<std::vector<glm::ivec4>>` Per particle array of glm::ivec4 where (x,y,z) = vert_index_0, vert_index_1, vert_index_2 and (w) = triangle_index. (vert_index also denotes particle index of course). Typically I use standard C arrays for outer arrays of (array of arrays) but in this case a std vector of vectors is fine.
+
+Iterating over triangles is still the same (0-2 indices are still the vert/particle indices, with the 3rd index been the triangles own index within the triangle array within Cloth_State). Also we can implicitly cast back to ivec3 keeping the first 3 components ie just the triangles vert/particle indices for times when we don't need the triangles own index as ivec3 and ivec4 has implicit conversion operators implemented. 
+
+This might be a bit confusing to people so I will have to explain this in the readme. They may wonder why I didn't just make a tri struct within its own array but what's the point just to store indices to particles (derived from the input meshes unique vertices). I suppose it could store ptrs to each particle instead of indices and then it'd have its own index, and then for per particle tris we could just store an index to the tri within the array as oppose to a copy of the tri vert/particle indices + the tri index itself but oh well this will do.
+
+I need to stop writing vert/particle, we should know by now vert/particles are the same (for simulation) and are 1:1 mapped in terms of Indices. And that indices for drawing refers to the actual per triangle indices of the unique verts/particles themselves. 
 
 ____
 

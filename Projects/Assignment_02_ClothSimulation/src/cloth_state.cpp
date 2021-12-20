@@ -43,7 +43,7 @@ Cloth_State::Cloth_State(const char *path)
 	build_cloth_springs();
 
 	// Create Cloth_Mesh (Pass it references to our data arrays)
-	mesh = new Cloth_Mesh(particles, tri_inds, pt_tris);
+	mesh = new Cloth_Mesh(particles, tris, pt_tris);
 
 	built_state = true; 
 }
@@ -120,9 +120,9 @@ void Cloth_State::load_obj(std::ifstream &in)
 				std::size_t idx = i_vp - 1;
 				tri[i] = idx; // Tri Ind
 			}
-			dbg << "Tri_" << tri_inds.size() << " :: " << tri[0] << "," << tri[1] << "," << tri[2] << "\n";
+			dbg << "Tri_" << tris.size() << " :: " << tri[0] << "," << tri[1] << "," << tri[2] << "\n";
 			// Append Triangle
-			tri_inds.push_back(std::move(tri));
+			tris.push_back(std::move(tri));
 		}
 	} 
 
@@ -139,21 +139,24 @@ void Cloth_State::load_obj(std::ifstream &in)
 }
 
 // Info : Compute Per particle array of glm::ivec3 (Triangle Indices) particle is part of. 
-//        This is a scatter approach, each tri index (particle) passes a ptr to its tri to that particles, tri list array.
+// This is a scatter approach, each tri index (particle) stores a copy of the tri vert indices and tri index, to per particle tri array.
 void Cloth_State::get_particle_trilist()
 {
 	// Reset per particle inner array tri list. 
 	pt_tris.resize(particles.size());
-	for (std::vector<glm::ivec3*> trilist : pt_tris) trilist.clear();
+	for (std::vector<glm::ivec4> trilist : pt_tris) trilist.clear();
 
 	// Loop over tris 
-	for (glm::ivec3 &tri : tri_inds)
+	for (std::size_t t = 0; t < tris.size(); ++t)
 	{
+		glm::ivec3 &tri = tris[t];
 		// Add tri ptr to each particle defined by tri indices tri list. 
 		for (std::size_t i = 0; i < 3; ++i)
 		{
 			int p_ind = tri[i];
-			pt_tris[p_ind].push_back(&tri);
+			// Note we store a copy of the tris vert/particle indices + the tris own index into the ivec4. 
+			// Tri (x = vi_0, y = vi_1, z = vi_2, w = t_i) 
+			pt_tris[p_ind].emplace_back(tri.x, tri.y, tri.z, t);
 		}
 	}
 
@@ -177,13 +180,13 @@ void Cloth_State::build_cloth_springs()
 		Particle &curPt = particles[p];
 
 		// For each tri, particle is part of
-		std::vector<glm::ivec3*> &triPts = pt_tris[p];
+		std::vector<glm::ivec4> &triPts = pt_tris[p];
 		for (std::size_t t = 0; t < triPts.size(); ++t)
 		{
 			// For each tri index (Adjacent Particles)
 			for (std::size_t i = 0; i < 3; ++i)
 			{
-				std::size_t ind = (*triPts[t])[i];
+				std::size_t ind = triPts[t][i];
 				assert(curPt.id == p); // Make sure iter index matches Pt_id. 
 
 				// Get other particle defined by index
@@ -298,11 +301,11 @@ void Cloth_State::export_mesh(const char *export_path)
 	for (const glm::vec3 &N : normals) out_mesh << "vn " << std::fixed << std::setprecision(6) << N.x << " " << N.y << " " << N.z << "\n";
 
 	// Write Face Indices
-	for (std::size_t t = 0; t < tri_inds.size(); ++t)
+	for (std::size_t t = 0; t < tris.size(); ++t)
 	{
 		out_mesh << "f ";
 		// Format = V_i//N_i
-		const glm::ivec3 &tri = tri_inds[t];
+		const glm::ivec3 &tri = tris[t];
 		for (std::size_t ti = 0; ti < 3; ++ti)
 		{
 			out_mesh << tri[ti]+1 << "//" << tri[ti]+1 << " ";
