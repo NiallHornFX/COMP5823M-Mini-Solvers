@@ -59,9 +59,6 @@ void Cloth_Solver::step()
 	eval_springs();
 
 	eval_colliders();
-
-	//collide_plane();
-	//collide_sphere();
 }
 
 // Info : Eval Springs and apply the resulting forces to their particles. 
