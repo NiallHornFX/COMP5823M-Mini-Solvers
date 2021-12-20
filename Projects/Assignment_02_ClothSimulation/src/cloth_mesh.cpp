@@ -145,7 +145,6 @@ void Cloth_Mesh::update_fromParticles()
 		std::size_t a_P = p * 11;    
 		// Vert Index, Normal. ((Pxyz) |a_N, a_N+1, a_N+2| (Crgb)...)
 		std::size_t a_N = 3 + p * 11; 
-
 		// Update Position Data
 		vert_data[a_P++] = curPt.P.x, vert_data[a_P++] = curPt.P.y, vert_data[a_P] = curPt.P.z;
 		// Update Normal Data 

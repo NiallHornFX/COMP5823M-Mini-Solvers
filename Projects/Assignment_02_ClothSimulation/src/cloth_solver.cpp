@@ -38,9 +38,6 @@ void Cloth_Solver::tick(float viewer_Dt)
 		timestep++;
 	}
 	frame++;
-
-	// Debug
-	std::cout << "DEBUG::ClothSolver::Frame_" << frame << " Number of SolveSteps = " << timestep << "\n";
 }
 
 // Info : Reset Cloth_State and Solver Time State
@@ -51,6 +48,18 @@ void Cloth_Solver::reset()
 
 	// Reset Cloth_State
 	clothData.reset_cloth();
+}
+
+
+// Info : Single Simulation Step of Cloth Solver 
+void Cloth_Solver::step()
+{
+	integrate_euler();
+
+	eval_springs();
+
+	//collide_plane();
+	collide_sphere();
 }
 
 // Info : Eval Springs and apply the resulting forces to their particles. 
@@ -102,13 +111,37 @@ void Cloth_Solver::integrate_euler()
 	}
 }
 
-// Info : Single Simulation Timestep of Solver 
-void Cloth_Solver::step()
+void Cloth_Solver::collide_plane()
 {
-	integrate_euler();
-
-	eval_springs();
+	for (Particle &curPt : clothData.particles)
+	{
+		float sd = glm::dot(curPt.P, glm::vec3(0.f, 1.f, 0.f));
+		if (sd <= 0.001f)
+		{
+			curPt.P += glm::vec3(0.f, -sd, 0.f);
+		}
+	}
 }
+
+
+void Cloth_Solver::collide_sphere()
+{
+	glm::vec3 cent(0.f, 0.5f, 0.f);
+	float rad = 1.f;
+
+	for (Particle &curPt : clothData.particles)
+	{
+		glm::vec3 vec = curPt.P - cent;
+		float dist = glm::length(vec);
+
+		if (dist < rad)
+		{
+			float error = rad - dist;
+			curPt.P += error * vec;
+		}
+	}
+}
+
 
 
 // Info : Set timestep from passed "steps per second" count. 

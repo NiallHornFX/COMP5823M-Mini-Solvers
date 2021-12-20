@@ -30,6 +30,9 @@ public:
 	void integrate_euler();
 
 	// Collide 
+	void collide_plane();
+
+	void collide_sphere();
 
 	// ======= Util =======
 	void set_timestep(std::size_t count);

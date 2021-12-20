@@ -314,4 +314,5 @@ void Cloth_State::export_mesh(const char *export_path)
 	}
 
 	out_mesh.close();
+	std::cout << "DEBUG::Cloth Mesh Sucessfuly Exported ::" << export_path << " !\n";
 }

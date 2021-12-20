@@ -486,6 +486,8 @@ Issue with this is because the Dt is measured before the cloth state is construc
 
 Note Cloth_Solver is ticked within `Viewer::tick()` but rendering of the cloth_state instance is called within `Viewer::render()` which itself is called within `Viewer::tick()` I just wanted nicer separation of solve operations and render operations. 
 
+Note that Viewer ideally should have its own tick rate defined by the program oppose to relying on monitor refresh rate as the target, but for now this works ok and if I impose a explicit tick rate on using thread pauses if code is ran on a lower spec machine it may underperform using a locked frame rate/tick rate so using default settings where glfw targets monitor refresh rate as as the upper limit makes sense and not imposing my own tick rate limits. 
+
 ###### Cloth_Solver::eval_springs()
 
 One silly mistake I made was the spring forces on particles were not been reset per frame, ofcourse particle forces should be reset per frame/step as they are only a product of the current step, gravity and wind are added atop of this to integrate to vel which then is integrated to position of course.
@@ -615,29 +617,142 @@ Has two components the simulation definition / calculation of the collisions bas
 
 Collision function will eval if some passed particle is within bounds of collider and if so return the signed distance and displacement vector to project out of or the force or impulse to apply. This would be a good class to use polymorphism with this as a virtual function we could support boxes and planes using the same parametric approach. Triangle Mesh based cloth collisions are not really a prio / required at all so probs will leave out for now as this would need acceleration and need parity between render and simulation representations (cannot use implicit or parametric functions to approximate collision bounds). Or could implement SDF Collisions if I had time, that would be fun ! But not gonna happen. 
 
-So for starters I will impalement a class that has a virtual method for taking in the particle array, evaluating the collision detection and applying the response directly to the particle positions. The class also then has a Primitive or Mesh member for rendering this collision shape (which will be rendered via Viewer->Render, so Cloth Colliders will be stored within Viewer Members and then passed as references to cloth_solver whom will call their virtual eval_collision() member function passing in the particle array of Cloth_State(via Cloth_Solvers reference to its Cloth_State instance)). 
+So for starters I will impalement a class that has a virtual method for taking in the particle array, evaluating the collision detection and applying the response directly to the particle positions. The class also then has a Primitive or Mesh member for rendering this collision shape (which will be rendered via Viewer->Render, so Cloth Colliders will be stored within Viewer Members and then passed as references to cloth_solver whom will call their virtual eval_collision() member function passing in the particle array of Cloth_State(via Cloth_Solvers reference to its Cloth_State instance)). We Will have a base Cloth_Collider class (ABC) with two derivative classes (Cloth_Collider_Sphere and Cloth_Collider_Plane), note plane doesn't need any visualizer as we can just use the grid/ground plane from viewer, as the plane is the same as this so its render_mesh can just be null. 
 
+For Collision response I'm planning to use a Position based approach because of the stability of it over impulse or force based responses. So it will be similar to PBD in the fact that we either using the Plane equation or the distance delta of Sphere intersection to then project the particles back to the surface.       For all Collision calculations we can just assume the particle has no radius ie its a point, or more correctly we define its radius using a user defined constant so it can sit on the surface of the collider more correctly (and thus avoid numerical error). Of course any non zero mass point must have some radius. 
 
+###### Implement Plane Collision Directly in Solver : 
 
-For Collision response I'm planning to use a Position based approach because of the stability of it over impulse or force based responses. So it will be similar to PBD in the fact that we either using the Plane equation or the distance delta of Sphere intersection to then project the particles back to the surface.
-
-For all Collision calculations we can just assume the particle has no radius ie its a point, or more correctly we define its radius using a user defined constant so it can sit on the surface of the collider more correctly (and thus avoid numerical error). Of course any non zero mass point must have some radius. 
-
-
-
-For Plane derivative of the class the equation is an inequality to satisfy is just
+For Plane equation is an inequality to satisfy is just
 $$
 ((p-q) \cdot \hat{n}) \geq 0
 $$
  Where $p$ is the particle and $q$ is some point on the plane. For this case we assume the normal is just $(0,1,0)$.  We use the result of $((p-q) \cdot \hat{n})$ as the signed distance the particle is within (on the other side of the plane) to then negate and project back to the surface (directly via position). 
 
+Hmm Well for the Plane Collision its so simple I might just not bother using the Cloth_Collider class for this as it can be implemented within Cloth_Solver with just : 
+
+```C++
+void Cloth_Solver::collide_plane()
+{
+	for (Particle &curPt : clothData.particles)
+	{
+		float sd = glm::dot(curPt.P, glm::vec3(0.f, 1.f, 0.f));
+		if (sd <= 0.001f)
+		{
+			curPt.P += glm::vec3(0.f, -sd, 0.f);
+		}
+	}
+}
+```
+
+As we know the plane is at origin we can just neglect the q term and do $p \cdot n$ to get the signed distance and push it back along Y/normal direction. Pretty simple and it works (although the normals seem to flicker but this is most likely due to the self collision occurring and the faces sat atop of each other).
+
+###### Sphere Collision
+
+For sphere collisions we can compute them parametrically like a plane but we specify a Centre and a Radius for the sphere, and we have the inequality to satisfy : 
+
+$||(p-c)|| - r \geq 0$
+
+Sometimes denoted as $||(p-c)|| > r$ same thing, but the above is the correct inequality version. If this amounts to be above zero the particle must be outside the sphere as the distance to the centre is larger than the radius 0 would mean the particle is on the surface, but due to our case having no radius of the particle and numerical error this is unlikely to occur. Note that as per above, for now we assume the particles have zero radius themselves, so this is not a pure Sphere2Sphere inequality like I did for my Point2Point Collisions in my Vertlet/PBD Cloth Solver (which is more correct), for now we assume the particle is just a point with no radius. 
+
+```C++
+void Cloth_Solver::collide_sphere()
+{
+	glm::vec3 cent(0.f, 0.5f, 0.f);
+	float rad = 1.f; 
+
+	for (Particle &curPt : clothData.particles)
+	{
+		glm::vec3 vec = curPt.P - cent;
+		float dist = glm::length(vec);
+
+		if (dist < rad) 
+		{
+			float error = rad - dist; 
+			curPt.P += error * vec; 
+		}
+	}
+}
+```
+
+If Distance to sphere centre is less than radius particle must be within sphere, so we calculate the error / intersection distance as Radius - Distance, and then project the particle onto the surface along the vector by this distance. 
 
 
-For the Sphere case
 
-$(p-c)^2 \geq r^2$  
+Could also use the squared variant so we do the inequality based on square distances and only do the square root for the projection distance if the particle actually violates the inequality.  So the inequality becomes : 
 
+$(p-c)^2 - r^2 \geq 0$  
 
+Previously for this I'd of used square distance calculation ie distance vector calc without the sqrt, but you could also just do normal vector subtraction and then dot the result to get $(p-c)^2$. Both should yield the same result. And allow us to do the inequality test on square distance with square radius but then only do the square root for particles that violate the inequality to get the projection distance. 
+
+So I tried using square distance : 
+
+```C++
+
+void Cloth_Solver::collide_sphere()
+{
+auto square_dist = [](const glm::vec3 &a, const glm::vec3 &b) -> float
+{
+return std::powf((a.x - b.x),2.f) + std::powf((a.y - b.y), 2.f) + std::powf((a.z - b.z), 2.f);
+};
+	glm::vec3 cent(0.f, 0.5f, 0.f);
+	float sqr_rad = 1.f;
+	
+	for (Particle &curPt : clothData.particles)
+	{
+		glm::vec3 vec = curPt.P - cent;
+		//float sqr_dist = glm::dot(vec, vec);
+		float sqr_dist = square_dist(curPt.P, cent);
+
+		if (sqr_dist < sqr_rad)
+		{
+			float error = glm::sqrt(sqr_rad - sqr_dist);
+			curPt.P += error * vec;
+		}
+	}
+}
+```
+
+And using dot product of (p-c) : 
+
+```C++
+void Cloth_Solver::collide_sphere()
+{
+	glm::vec3 cent(0.f, 0.5f, 0.f);
+	float sqr_rad = 1.f;
+	for (Particle &curPt : clothData.particles)
+	{
+		glm::vec3 vec = curPt.P - cent;
+		float sqr_dist = glm::dot(vec, vec);
+		if (sqr_dist < sqr_rad)
+		{
+			float error = glm::sqrt(sqr_rad - sqr_dist);
+			curPt.P += error * vec;
+		}
+	}
+}
+```
+
+And they both yield the same result, but for some reason the particles become very glitchy and unstable in both cases. This should be equivalent to the case where we do the inequality test using non square distances but it doesn't seem to be. 
+
+Hmm ok, so it seems you need to use : 
+
+```
+float error = std::sqrt(sqr_rad) - std::sqrt(sqr_dist);
+```
+
+As oppose to having them sqrt'd together. I swear I remember implementing this before using this methodology and using a single sqrt for the inner dist computation. Also checked precision not an issue either. 
+
+We shouldn't need separate square roots. For example in my original Verlet Cloth Mesh code, before I split the building and solving constraints (ie constraints for particle pairs were built inline) I had the code : 
+
+```C++
+// If Less than 2PRsqrd, project particles away to minimize intersection distance. 
+if (dist_sqr < pr2sqr)
+float inter_dist = FMath::Sqrt(pr2sqr - dist_sqr);
+// [..]
+```
+
+The only difference I been I had 2 particle radii squared (radius for each particle) but the logic is the exact same, I wonder why my sqrt's here oscillate / jitter when using this. Anyway I will just use the original non squared version shown above and square-root regardless if particle violates inequality or not, I hope to debug this later as its going to drive me insane now. 
 
 
 
