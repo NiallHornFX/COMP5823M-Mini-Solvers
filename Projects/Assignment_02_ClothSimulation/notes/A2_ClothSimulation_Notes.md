@@ -806,7 +806,45 @@ private:
 
 Then we will have an array of Cloth_Collider* ptrs in Cloth_Solver or Viewer (most likely the latter so we can call render on the mesh members more easily without having this called within Cloth_Solver or using a getter to call it). We pass the array of collider primitives to the cloth solver. Also will have some state based on GUI whether to use them or not. 
 
-Or we could just ditch this class idea completely and store a Mesh object in Viewer for  the Collision Sphere and just update it based on Centre and Radius changes along with the Solver Collision condition parameters, but this decoupled state is messy. 
+Yep so we just pass the colliders directly to a Cloth_Collider array within Cloth_Solver as so : 
+
+```C++
+// Viewer::Viewer()
+//[..]
+// ============= Cloth Setup =============
+// Cloth State 
+cloth = new Cloth_State("clothgrid_a.obj");
+// Cloth Solver 
+cloth_solver = new Cloth_Solver(*cloth, (1.f / 90.f));
+// Collider Primtives
+collision_plane = new Cloth_Collider_Plane(glm::vec3(0.f, 1.f, 0.f));
+collision_sphere = new Cloth_Collider_Sphere(glm::vec3(0.f, 0.f, 0.f), 1.f);
+// Pass Colliders to Solver
+cloth_solver->colliders.push_back(collision_plane);
+cloth_solver->colliders.push_back(collision_sphere);
+// [..]
+```
+
+Then within Viewer::Render() we only call render on the collision_sphere via its Mesh Member directly (didn't abstract this into a member function as no need, public access etc) we first pass the Cam Matrices as we do for all Primitive/Mesh objects. 
+
+Then within Cloth_Solver we have a `Cloth_Solver::eval_colliders()` member function which just loops the array and calls the virtual Cloth_Collider::Eval_Collision() member function passing in the particle array (via the Cloth_State reference) : 
+
+```C++
+// Info : Evaulate Collisions using passed colliders
+void Cloth_Solver::eval_colliders()
+{
+	if (!colliders.size()) return; 
+
+	for (Cloth_Collider *col : colliders)
+	{
+		col->eval_collision(clothData.particles);
+	}
+}
+```
+
+Now one issue we could say is that for adjusting the Sphere Radius and Centre, we need to downcast the Cloth_Collider ptr but this only needs to be done within Viewer and not within the Solver as Cloth_Collider::eval_collision() is virtual from the base class ofc. 
+
+Note for changing the centre and radius, because Primitive class Translate,Scale,Rotate functions just call their GLM counterparts, they don't remove the current transformations first (they are additive/multiplicative) so we first remove the current model transform based on the current radius and centre (inverse to origin) then apply the new one. This should mean the meshes correctly align to the parametric collision primitive / inequality func. Note for the Sphere mesh I just have a unit sphere obj file with smooth normals (from Blender) that's loaded and then scaled and translated Model Matrix based on the radius and centre as above. 
 
 
 
@@ -835,8 +873,6 @@ We also need OBJ Export (obj export is worth more points than part of the solver
 As stated before instead of calling reset and clearing buffers on the current cloth_state instance, for user inputting a new obj cloth mesh file, I am just going to delete the current cloth_mesh in the viewer app and reallocate a new one, not super efficient but for this case its ok. This will be done within the GUI Loop within Viewer scope ofcourse. Because I chose to use references to store the Cloth_State within the Cloth_Solver class i cannot just replace the reference easily, so I also have to delete the current Cloth_Solver and re-create it , which is not ideal, but for this project is ok. 
 
 Will Implement Blinn-Phong Shading and Wireframe rendering (atop the mesh, use this as Spring viz to save creating a separate primitive to render springs when we know they are just the mesh edges (assuming the spring creation func is working correctly)). Ideally need a way to be able to switch shaders more easily so can switch based on GUI shading mode. Eg could have velocity based shading via Vel-->Colour but not a prio. 
-
-Still need to fix the edge normals signs. Might need to also implement Gram-Schmidt to ensure resulting normal basis is orthogonal. 
 
 
 

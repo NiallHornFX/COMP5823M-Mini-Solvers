@@ -30,10 +30,6 @@ public:
 
 	void integrate_euler();
 
-	// Collide 
-	//void collide_plane();
-	//void collide_sphere();
-
 	void eval_colliders();
 
 	// ======= Util =======

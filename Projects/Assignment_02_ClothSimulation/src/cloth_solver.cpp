@@ -113,7 +113,7 @@ void Cloth_Solver::integrate_euler()
 	}
 }
 
-// Info : Evaulate Collisions using passed colliders
+// Info : Evaulate Collisions using passed colliders.
 void Cloth_Solver::eval_colliders()
 {
 	if (!colliders.size()) return; 
@@ -123,39 +123,6 @@ void Cloth_Solver::eval_colliders()
 		col->eval_collision(clothData.particles);
 	}
 }
-
-/*
-void Cloth_Solver::collide_plane()
-{
-	for (Particle &curPt : clothData.particles)
-	{
-		float sd = glm::dot(curPt.P, glm::vec3(0.f, 1.f, 0.f));
-		if (sd <= 0.001f)
-		{
-			curPt.P += glm::vec3(0.f, -sd, 0.f);
-		}
-	}
-}
-
-void Cloth_Solver::collide_sphere()
-{
-	glm::vec3 cent(0.f, 0.5f, 0.f);
-	float rad = 1.f;
-
-	for (Particle &curPt : clothData.particles)
-	{
-		glm::vec3 vec = curPt.P - cent;
-		float dist = glm::length(vec);
-
-		if (dist < rad)
-		{
-			float error = rad - dist;
-			curPt.P += error * vec;
-		}
-	}
-}
-*/
-
 
 // Info : Set timestep from passed "steps per second" count. 
 void Cloth_Solver::set_timestep(std::size_t count)
