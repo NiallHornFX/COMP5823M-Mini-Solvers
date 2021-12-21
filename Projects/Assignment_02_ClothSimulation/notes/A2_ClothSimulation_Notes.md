@@ -858,13 +858,21 @@ Zeroing velocity post projection causes oscillations / jittering.  It might just
 
 Its actually way more stable when using force based collisions ie something like : 
 
-```
+```C++
 float inter_dist = radius - dist;
 //curPt.P += inter_dist * glm::normalize(vec);
 curPt.F += inter_dist * vec * 1000.f; 
 ```
 
 I guess because of the springs and air visc been force based using direct position projection for mass spring does make less sense and may be behind the error. But then how to we define the force scale, 1000.f was found by arbitrary guesses, it won't scale for all cases/sphere radii etc. 
+
+We can add additional damping force on top like : 
+
+```C++
+curPt.F += -curPt.V * inter_dist * 100.f;
+```
+
+But then this is going to hinder the Collision Friction below. Although we could use this as friction in a way. But its not the way I want to do friction (this is just damping force like air visc proportional to velocity).
 
 Applying to velocity (impulse based) also kind of works but is jittery.
 
@@ -885,6 +893,8 @@ void Cloth_Solver::step()
 Integration last causes incorrect collisions as springs are not evaluated correctly as a result of colliders, order of eval_spring and eval_colliders is the same result I think. You'd think eval_springs after colliders makes more sense, but it seems to yield the same result because all particles that are collided are projected together so there is no delta on the springs from before collision projection.
 
 Added epsilon of 1e-01 to the Sphere inequality as expected this is needed (not the source of the issue though).
+
+Fix issue where radius + centre changed model matrix is incorrect. 
 
 ##### Collision Friction
 
@@ -911,6 +921,12 @@ We also need OBJ Export (obj export is worth more points than part of the solver
 As stated before instead of calling reset and clearing buffers on the current cloth_state instance, for user inputting a new obj cloth mesh file, I am just going to delete the current cloth_mesh in the viewer app and reallocate a new one, not super efficient but for this case its ok. This will be done within the GUI Loop within Viewer scope ofcourse. Because I chose to use references to store the Cloth_State within the Cloth_Solver class i cannot just replace the reference easily, so I also have to delete the current Cloth_Solver and re-create it , which is not ideal, but for this project is ok. 
 
 Will Implement Blinn-Phong Shading and Wireframe rendering (atop the mesh, use this as Spring viz to save creating a separate primitive to render springs when we know they are just the mesh edges (assuming the spring creation func is working correctly)). Ideally need a way to be able to switch shaders more easily so can switch based on GUI shading mode. Eg could have velocity based shading via Vel-->Colour but not a prio. 
+
+Need uniforms for light pos and control. If time make light primtive to view its pos. 
+
+Need normal viz on off 
+
+Need wireframe on off.
 
 
 

@@ -19,11 +19,10 @@ public:
 	virtual ~Cloth_Mesh() override; 
 
 	virtual void render()         override; 
+
 	virtual void create_buffers() override; 
 
-	// Update Functions 
-	// Only update positions from particles --> vert data
-	// Also computes particle-vert normals. 
+	// Update / Attrib Calc Functions 
 	void update_fromParticles();
 
 	std::vector<glm::vec3> calc_normals();

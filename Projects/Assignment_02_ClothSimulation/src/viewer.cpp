@@ -482,12 +482,12 @@ void Viewer::gui_render()
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		if (ImGui::SliderFloat("Sphere Radius", &s_rad, 0.1f, 3.f))
+		if (ImGui::SliderFloat("Sphere Radius", &s_rad, 0.25f, 2.5f))
 		{
 			static_cast<Cloth_Collider_Sphere*>(collision_sphere)->set_radius(s_rad);
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
-		if (ImGui::SliderFloat3("Sphere Centre", s_cent, 0.f, 10.f))
+		if (ImGui::SliderFloat3("Sphere Centre", s_cent, -5.f, 5.f))
 		{
 			static_cast<Cloth_Collider_Sphere*>(collision_sphere)->set_centre(glm::vec3(s_cent[0], s_cent[1], s_cent[2]));
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));

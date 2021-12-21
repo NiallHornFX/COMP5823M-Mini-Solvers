@@ -31,7 +31,6 @@ public:
 };
 
 // Plane Collider 
-
 class Cloth_Collider_Plane : public Cloth_Collider
 {
 public:
@@ -61,8 +60,6 @@ private:
 	float radius; 
 
 };
-
-
 
 
 #endif

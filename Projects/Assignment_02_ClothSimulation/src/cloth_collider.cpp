@@ -60,6 +60,7 @@ void Cloth_Collider_Sphere::eval_collision(std::vector<Particle> &particles)
 		{
 			float inter_dist = (radius + eps) - dist;
 			curPt.P += inter_dist * glm::normalize(vec);
+			curPt.F += -curPt.V * inter_dist * 100.f;
 		}
 	}
 }

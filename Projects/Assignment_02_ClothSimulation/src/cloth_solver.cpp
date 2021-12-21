@@ -102,7 +102,7 @@ void Cloth_Solver::integrate_euler()
 		// A = F/M (assuming mass != 1) 
 		glm::vec3 accel = (forces / curPt.mass) + glm::vec3(0.f, gravity, 0.f);
 
-		// ==== Integrate (Semi-Implicit Euler) ====
+		// ======= Integrate (Semi-Implicit Euler) =======
 		// v_(n+1) = v(n) + a(n) * dt; 
 		curPt.V += accel * dt;
 		// x_(n+1) = x(n) + v(n+1) * dt; 
