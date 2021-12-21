@@ -846,11 +846,45 @@ Now one issue we could say is that for adjusting the Sphere Radius and Centre, w
 
 Note for changing the centre and radius, because Primitive class Translate,Scale,Rotate functions just call their GLM counterparts, they don't remove the current transformations first (they are additive/multiplicative) so we first remove the current model transform based on the current radius and centre (inverse to origin) then apply the new one. This should mean the meshes correctly align to the parametric collision primitive / inequality func. Note for the Sphere mesh I just have a unit sphere obj file with smooth normals (from Blender) that's loaded and then scaled and translated Model Matrix based on the radius and centre as above. As Mesh is been scaled need to do inverse transpose for scaling normals, ideally we should add this as a mesh uniform thats computed on host, but for now it doesn't matter doing it in the vert shader. 
 
-Oppose to adding/removing colliders based on GUI, we will just disable drawing+collision eval. I use nullptrs (where collision_eval() and render calls check for nullptr colliders and skip) to disable colliders, if re-enabled I stored a temp stored copied of the orginal pointer in a static local pointer copy within the GUI Render function (there is a lot of static locals been used now, kinda hard to avoid with IMode GUI).
+Oppose to adding/removing colliders based on GUI, we will just disable drawing+collision eval. I use nullptrs (where collision_eval() and render calls check for nullptr colliders and skip) to disable colliders, if re-enabled I stored a temp stored copied of the original pointer in a static local pointer copy within the GUI Render function (there is a lot of static locals been used now, kinda hard to avoid with IMode GUI).
 
 ###### Collision Issues
 
 Issues when Sphere Radius < 1.0. Not sure why this is.
+
+Also generally quite unstable unless air viscosity is > 1.0 
+
+Zeroing velocity post projection causes oscillations / jittering.  It might just be the integrator. But i'd hope semi-implicit euler could handle collision projection (even directly to positions).
+
+Its actually way more stable when using force based collisions ie something like : 
+
+```
+float inter_dist = radius - dist;
+//curPt.P += inter_dist * glm::normalize(vec);
+curPt.F += inter_dist * vec * 1000.f; 
+```
+
+I guess because of the springs and air visc been force based using direct position projection for mass spring does make less sense and may be behind the error. But then how to we define the force scale, 1000.f was found by arbitrary guesses, it won't scale for all cases/sphere radii etc. 
+
+Applying to velocity (impulse based) also kind of works but is jittery.
+
+Note current Step order of operations is : 
+
+```C++
+// Info : Single Simulation Step of Cloth Solver 
+void Cloth_Solver::step()
+{
+	integrate_euler();
+
+	eval_springs();
+
+	eval_colliders();
+}
+```
+
+Integration last causes incorrect collisions as springs are not evaluated correctly as a result of colliders, order of eval_spring and eval_colliders is the same result I think. You'd think eval_springs after colliders makes more sense, but it seems to yield the same result because all particles that are collided are projected together so there is no delta on the springs from before collision projection.
+
+Added epsilon of 1e-01 to the Sphere inequality as expected this is needed (not the source of the issue though).
 
 ##### Collision Friction
 
