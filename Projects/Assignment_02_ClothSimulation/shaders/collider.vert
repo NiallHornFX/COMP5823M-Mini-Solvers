@@ -19,7 +19,9 @@ uniform mat4 proj;
 void main()
 {
 	colour = v_C; 
-	normal_view = transpose(inverse(mat3(view * model))) * v_N; // Should precompute on host. 
+	//normal_view = transpose(inverse(mat3(view * model))) * v_N; // Should precompute on host. 
+	
+	normal_view = mat3(model) * v_N; 
 	pos_view    = vec3(view * model * vec4(v_P, 1.0));
 	gl_Position = proj * view * model * vec4(v_P, 1.0); 
 }

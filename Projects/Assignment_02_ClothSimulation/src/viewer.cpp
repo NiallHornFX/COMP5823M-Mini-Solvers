@@ -269,6 +269,7 @@ void Viewer::render()
 		collision_sphere->render_mesh->render();
 	}
 	// ==================== Render Cloth ====================
+	
 	cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 	// ==================== Render GUI ====================

@@ -65,6 +65,7 @@ private:
 
 	friend class Cloth_Solver; 
 	friend class Cloth_Mesh;
+	friend class Viewer; 
 };
 
 
