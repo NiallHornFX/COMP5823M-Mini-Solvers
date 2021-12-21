@@ -844,9 +844,13 @@ void Cloth_Solver::eval_colliders()
 
 Now one issue we could say is that for adjusting the Sphere Radius and Centre, we need to downcast the Cloth_Collider ptr but this only needs to be done within Viewer and not within the Solver as Cloth_Collider::eval_collision() is virtual from the base class ofc. 
 
-Note for changing the centre and radius, because Primitive class Translate,Scale,Rotate functions just call their GLM counterparts, they don't remove the current transformations first (they are additive/multiplicative) so we first remove the current model transform based on the current radius and centre (inverse to origin) then apply the new one. This should mean the meshes correctly align to the parametric collision primitive / inequality func. Note for the Sphere mesh I just have a unit sphere obj file with smooth normals (from Blender) that's loaded and then scaled and translated Model Matrix based on the radius and centre as above. 
+Note for changing the centre and radius, because Primitive class Translate,Scale,Rotate functions just call their GLM counterparts, they don't remove the current transformations first (they are additive/multiplicative) so we first remove the current model transform based on the current radius and centre (inverse to origin) then apply the new one. This should mean the meshes correctly align to the parametric collision primitive / inequality func. Note for the Sphere mesh I just have a unit sphere obj file with smooth normals (from Blender) that's loaded and then scaled and translated Model Matrix based on the radius and centre as above. As Mesh is been scaled need to do inverse transpose for scaling normals, ideally we should add this as a mesh uniform thats computed on host, but for now it doesn't matter doing it in the vert shader. 
 
+Oppose to adding/removing colliders based on GUI, we will just disable drawing+collision eval. I use nullptrs (where collision_eval() and render calls check for nullptr colliders and skip) to disable colliders, if re-enabled I stored a temp stored copied of the orginal pointer in a static local pointer copy within the GUI Render function (there is a lot of static locals been used now, kinda hard to avoid with IMode GUI).
 
+###### Collision Issues
+
+Issues when Sphere Radius < 1.0. Not sure why this is.
 
 ##### Collision Friction
 

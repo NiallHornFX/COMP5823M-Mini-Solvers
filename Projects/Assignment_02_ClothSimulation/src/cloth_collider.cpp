@@ -64,20 +64,19 @@ void Cloth_Collider_Sphere::eval_collision(std::vector<Particle> &particles)
 }
 
 // Reset Radius with new Radius
-void Cloth_Collider_Sphere::set_radius(float radius)
+void Cloth_Collider_Sphere::set_radius(float Rad)
 {
-	render_mesh->translate(-centre);
-	render_mesh->scale(glm::vec3(-this->radius));
+	radius = Rad; 
+	render_mesh->model = glm::mat4(1.f);
 	render_mesh->scale(glm::vec3(radius));
 	render_mesh->translate(centre);
-
-	this->radius = radius; 
 }
 
 // Reset Centre with new Centre
 void Cloth_Collider_Sphere::set_centre(const glm::vec3 &cent)
 {
-	render_mesh->translate(-centre);
-	render_mesh->translate(centre);
+	render_mesh->model = glm::mat4(1.f);
+	render_mesh->scale(glm::vec3(radius));
+	render_mesh->translate(cent);
 	centre = cent; 
 }

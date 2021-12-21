@@ -15,7 +15,7 @@
 // Debug Defines
 //#define DEBUG_LOG_OBJMESH
 //#define DEBUG_LOG_PTTRIS
-#define DEBUG_LOG_SPRINGS
+//#define DEBUG_LOG_SPRINGS
 
 // =================================== Cloth_State Implementation ===================================
 
@@ -268,13 +268,11 @@ void Cloth_State::set_fixed_corners(bool state)
 	std::size_t M = static_cast<std::size_t>(std::sqrt(particles.size()));
 	if (state)
 	{
-		// Set Corner Pts Fixed
 		particles[0].state = pt_state::FIXED, particles[M-1].state = pt_state::FIXED;
-		//for (std::size_t i = 0; i < M; ++i) particles[i].state = pt_state::FIXED;
 	}
 	else
 	{
-		particles[0].state = pt_state::FREE, particles[M].state = pt_state::FREE;
+		particles[0].state = pt_state::FREE, particles[M-1].state = pt_state::FREE;
 	}
 }
 

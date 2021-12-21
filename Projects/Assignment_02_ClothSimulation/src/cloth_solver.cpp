@@ -117,6 +117,7 @@ void Cloth_Solver::eval_colliders()
 
 	for (Cloth_Collider *col : colliders)
 	{
+		if (!col) continue;
 		col->eval_collision(clothData.particles);
 	}
 }

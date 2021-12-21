@@ -87,7 +87,7 @@ void Viewer::exec()
 
 	// ============= Test Operations =============
 	// Create Test Mesh
-	test_mesh();
+	//test_mesh();
 
 	// ============= Application Loop =============
 	bool esc = false; 
@@ -263,9 +263,11 @@ void Viewer::render()
 	}
 
 	//  ==================== Render Cloth Colldiers ====================
-	collision_sphere->render_mesh->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
-	collision_sphere->render_mesh->render();
-
+	if (collision_sphere)
+	{
+		collision_sphere->render_mesh->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		collision_sphere->render_mesh->render();
+	}
 	// ==================== Render Cloth ====================
 	cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
@@ -326,7 +328,7 @@ bool Viewer::esc_pressed()
 
 // =========================================== DEBUG CODE ===========================================
 
-// Obj Loading Test
+// Info : Test Mesh to verify viewer and OpenGL is setup correctly. 
 void Viewer::test_mesh()
 {
 	// Pig
@@ -342,6 +344,7 @@ void Viewer::test_mesh()
 
 // =========================================== DearImGUI Implementation ===========================================
 
+// Info : imgui Startup 
 void Viewer::gui_setup()
 {
 	IMGUI_CHECKVERSION();
@@ -353,7 +356,7 @@ void Viewer::gui_setup()
 	ImGui_ImplOpenGL3_Init("#version 400");
 }
 
-
+// Info : GUI Render with forwarding the relveant data based on input.
 void Viewer::gui_render()
 {
 	get_GLError();
@@ -363,27 +366,38 @@ void Viewer::gui_render()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
+	// ============= GUI Static Locals / State =============
 	// Solver State Text
 	std::string state; 
 	if (cloth_solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
-
 	// Cloth Mesh Path
 	static char obj_mesh_input[256]{ "../../assets/mesh/clothgrid_a.obj" };
 	static char obj_mesh_output[256]{ "export.obj" };
-
 	// Wind Force
 	static float wind[3] = { 0.f, 0.f, 0.f };
 	cloth_solver->wind.x = wind[0], cloth_solver->wind.y = wind[1], cloth_solver->wind.z = wind[2];
-
+	// Collider State
+	static bool p_use = true;
+	static bool s_use = true;
+	static char plane_onoff [32] {"Disable Plane Collider"};
+	static char sphere_onoff[32] {"Disable Sphere Collider"};
+	static float s_rad = 1.f; 
+	static float s_cent [3] = { 0.f, 0.f, 0.f };
 	// Get Dt 1/n. 
 	float n = 1.f / cloth_solver->dt;
 	static int tmp_count = 90;
+	// Cloth State Locals
+	bool static fix_corners = true;
+	static char corners_onoff[32]{ "Cut Cloth Corners" };
+	static Cloth_Collider *tmp_plane = collision_plane;
+	static Cloth_Collider *tmp_sphere = collision_sphere;
+
 
 	// ============= Imgui layout =============
 	{
 		ImGui::Begin("Simulation Controls");
 
-		// ==== Solver State ====
+		// ========== Solver State ==========
 		// Labels
 		if (cloth_solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 		ImGui::Text(state.c_str());
@@ -404,16 +418,11 @@ void Viewer::gui_render()
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 
-		// Physics Timestep
-		if (ImGui::InputInt("Timestep 1/x", &tmp_count))
-		{
-			cloth_solver->set_timestep(tmp_count);
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		} 
-
-		// ==== Cloth State Controls ====
+		// ========== Cloth State Controls ==========
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::Text("Cloth State Controls");
-		ImGui::InputText("Obj Mesh Input", obj_mesh_input, 256);
+		// Mesh Import
+		ImGui::InputText("Mesh Import", obj_mesh_input, 256);
 		if (ImGui::Button("Load Cloth Mesh"))
 		{
 			delete cloth;
@@ -423,7 +432,8 @@ void Viewer::gui_render()
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 
-		ImGui::InputText("Obj Mesh Export", obj_mesh_output, 256);
+		// Mesh Export
+		ImGui::InputText("Mesh Export", obj_mesh_output, 256);
 		if (ImGui::Button("Export Cloth Mesh"))
 		{
 			cloth_solver->simulate = false; 
@@ -431,17 +441,92 @@ void Viewer::gui_render()
 			cloth->export_mesh(obj_mesh_output);
 		}
 
+		// Cloth Corners
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Text("Constrain Cloth Corners");
+		if (ImGui::Button(corners_onoff))
+		{
+			fix_corners = !fix_corners;
+			if (!fix_corners)
+			{
+				cloth->set_fixed_corners(false);
+				strcpy_s(corners_onoff, 32, "Fix Cloth Corners");
+			}
+			else
+			{
+				cloth->set_fixed_corners(true);
+				strcpy_s(corners_onoff, 32, "Cut Cloth Corners");
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 
-		// ==== Solver Controls ====
+
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Text("Cloth Colliders");
+
+		// Slightly Hacky using Solver Collider Indices. 
+		if (ImGui::Button(sphere_onoff))
+		{
+			s_use = !s_use; 
+			if (!s_use)
+			{
+				collision_sphere           = nullptr; 
+				cloth_solver->colliders[1] = nullptr; 
+				strcpy_s(sphere_onoff, 32, "Enable Sphere Collider");
+			}
+			else
+			{
+				collision_sphere           = tmp_sphere;
+				cloth_solver->colliders[1] = tmp_sphere;
+				strcpy_s(sphere_onoff, 32, "Disable Sphere Collider");
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		if (ImGui::SliderFloat("Sphere Radius", &s_rad, 0.1f, 3.f))
+		{
+			static_cast<Cloth_Collider_Sphere*>(collision_sphere)->set_radius(s_rad);
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+		if (ImGui::SliderFloat3("Sphere Centre", s_cent, 0.f, 10.f))
+		{
+			static_cast<Cloth_Collider_Sphere*>(collision_sphere)->set_centre(glm::vec3(s_cent[0], s_cent[1], s_cent[2]));
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+		if (ImGui::Button(plane_onoff))
+		{
+			p_use = !p_use;
+			if (!p_use)
+			{
+				collision_plane            = nullptr;
+				cloth_solver->colliders[0] = nullptr;
+				strcpy_s(plane_onoff, 32, "Enable Plane Collider");
+			}
+			else
+			{
+				collision_plane            = tmp_plane;
+				cloth_solver->colliders[0] = tmp_plane;
+				strcpy_s(plane_onoff, 32, "Disable Plane Collider");
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+
+		// ========== Solver Controls ==========
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::Text("Solver Controls");
+		// Physics Timestep
+		if (ImGui::InputInt("Timestep 1/x", &tmp_count))
+		{
+			cloth_solver->set_timestep(tmp_count);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 		ImGui::SliderFloat("K_stiff", &cloth_solver->K_s, 0.f, 1000.f);
 		ImGui::SliderFloat("K_damp",  &cloth_solver->K_c, 0.f, 10.f);
 		ImGui::SliderFloat("K_visc",  &cloth_solver->K_v, 0.f, 2.f);
 		ImGui::SliderFloat("Gravity", &cloth_solver->gravity, -10.f, 10.f);
 		ImGui::SliderFloat3("Wind", wind, 0.f, 5.f);
 
-
-		// ==== Viewer State ====
+		// ========== Viewer State ==========
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::Text("Viewer Controls");
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))
@@ -462,10 +547,10 @@ void Viewer::gui_render()
 	// ============= Imgui Render =============
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
 	get_GLError();
 }
 
+// Info : imgui shut down. 
 void Viewer::gui_shutdown()
 {
 	// Cleanup
@@ -484,7 +569,7 @@ void Viewer::update_camera()
 	// Only set yaw,pitch if delta from last tick (update_camera() call). 
 	float delta_yaw   = (GLFWState.mouse_offset_x   != last_yawoffs)   ? GLFWState.mouse_offset_x : 0.f; 
 	float delta_pitch = (GLFWState.mouse_offset_y   != last_pitchoffs) ? GLFWState.mouse_offset_y : 0.f;
-	float delta_zoom =  (GLFWState.scroll_y         != last_zoom)      ? GLFWState.scroll_y : 0.f;
+	float delta_zoom  =  (GLFWState.scroll_y        != last_zoom)      ? GLFWState.scroll_y       : 0.f;
 	// Set last offsets
 	last_yawoffs   = GLFWState.mouse_offset_x;
 	last_pitchoffs = GLFWState.mouse_offset_y;

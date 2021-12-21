@@ -52,7 +52,7 @@ public:
 	virtual void eval_collision(std::vector<Particle> &particles) override final; 
 
 	// Setters (with render_mesh update) 
-	void set_radius(float radius);
+	void set_radius(float Rad);
 
 	void set_centre(const glm::vec3 &cent);
 
