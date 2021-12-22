@@ -27,7 +27,7 @@ vec3 checker(in float u, in float v, in float size)
 void main()
 {
 	// Normals or Checker ? 
-	vec3 r_colour = mix((checker(uvw.x, uvw.y, 10) * 0.25) + 0.2, vec3(0.1, 0.8, 0.1), 0.5); 
+	vec3 r_colour = mix((checker(uvw.x, uvw.y, 10) * 0.25) + 0.2, vec3(0.1, 0.8, 0.1), 0.4); 
 
 	// Blinn-Phong (WS)
 	vec3 light_dir    = normalize(lightPos_world - pos_world); 

@@ -338,6 +338,7 @@ void Viewer::get_dt()
 bool Viewer::esc_pressed()
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;
+	return false; 
 }
 
 
@@ -412,6 +413,7 @@ void Viewer::gui_render()
 
 	// ============= Imgui layout =============
 	{
+		// Begin ImGui
 		ImGui::Begin("Simulation Controls");
 
 		// ========== Solver State ==========
@@ -437,7 +439,9 @@ void Viewer::gui_render()
 
 		// ========== Cloth State Controls ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Cloth State Controls");
+		ImGui::PopStyleColor();
 		// Mesh Import
 		ImGui::InputText("Mesh Import", obj_mesh_input, 256);
 		if (ImGui::Button("Load Cloth Mesh"))
@@ -460,14 +464,16 @@ void Viewer::gui_render()
 
 		// Cloth Corners
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Constrain Cloth Corners");
+		ImGui::PopStyleColor();
 		if (ImGui::Button(corners_onoff))
 		{
 			fix_corners = !fix_corners;
 			if (!fix_corners)
 			{
 				cloth->set_fixed_corners(false);
-				strcpy_s(corners_onoff, 32, "Fix Cloth Corners");
+				strcpy_s(corners_onoff, 32, "Pin Cloth Corners");
 			}
 			else
 			{
@@ -479,7 +485,9 @@ void Viewer::gui_render()
 
 
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Cloth Colliders");
+		ImGui::PopStyleColor();
 
 		// Slightly Hacky using Solver Collider Indices. 
 		if (ImGui::Button(sphere_onoff))
@@ -529,7 +537,9 @@ void Viewer::gui_render()
 
 		// ========== Solver Controls ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Solver Controls");
+		ImGui::PopStyleColor();
 		// Physics Timestep
 		if (ImGui::InputInt("Timestep 1/x", &tmp_count))
 		{
@@ -544,14 +554,19 @@ void Viewer::gui_render()
 
 		// ========== Viewer State ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Viewer Controls");
+		ImGui::PopStyleColor();
 		ImGui::Text("Light");
 		ImGui::SliderFloat("Light Strength", &light_strength, 0.f, 10.f);
 		if (ImGui::SliderFloat3("Light Position", lpos, -50.f, 50.f))
 		{
 			light_pos.x = lpos[0], light_pos.y = lpos[1], light_pos.z = lpos[2];
 		}
-		ImGui::Text("Viewport Tools");
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Viewport Controls");
+		ImGui::PopStyleColor();
 		// Render Cloth Normals
 		if (ImGui::Button("Render Cloth Normals"))
 		{
@@ -560,6 +575,11 @@ void Viewer::gui_render()
 		if (ImGui::Button("Render Cloth Edges"))
 		{
 			cloth->mesh->ren_edges = !cloth->mesh->ren_edges;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		if (ImGui::Button("Render Cloth Points"))
+		{
+			cloth->mesh->ren_points = !cloth->mesh->ren_points;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		// Draw Axis
@@ -575,6 +595,7 @@ void Viewer::gui_render()
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		
+		// End ImGui
 		ImGui::End();
 	}
 

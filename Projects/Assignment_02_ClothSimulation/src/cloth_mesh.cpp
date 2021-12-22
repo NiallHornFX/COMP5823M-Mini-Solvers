@@ -16,7 +16,7 @@ Cloth_Mesh::Cloth_Mesh(const std::vector<Particle> &array_particles, const std::
 	// ========== Primitive Setup Cals ==========
 	set_shader("../../shaders/cloth.vert", "../../shaders/cloth.frag");
 	mode = Render_Mode::RENDER_MESH;
-	ren_edges = false; 
+	ren_edges = false, ren_points = false; 
 
 	// ========== Calc Attributes from Particles for Vert Data ==========
 	// Calculate Normals Per Particle-Vert
@@ -88,26 +88,29 @@ void Cloth_Mesh::render()
 		std::terminate();
 	}
 
-	// Tmp shader for rendering edges/wire. 
+	// Local Shader for rendering edges/wire + pts. 
 	Shader wire_shader("cloth_wrie", "../../shaders/cloth.vert", "../../shaders/cloth_wire.frag");
 	wire_shader.load();
 	
+	// Bind Buffers
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
+	// ================ Render Mesh ================
+	// Bind Primitive State
+	shader.use();
+	shader.setMat4("model", model);
+	// Render Mesh
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+
+	// ================ Render Edges ================
 	if (ren_edges)
 	{
-		// Bind Primitive State
-		shader.use();
-		shader.setMat4("model", model);
-
-		// Render Mesh
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-
 		// Bind Wire Shader State
 		glUseProgram(0);
 		wire_shader.use();
+		wire_shader.setBool("wire", true);
 		wire_shader.setMat4("model", model);
 		wire_shader.setMat4("view", view);
 		wire_shader.setMat4("proj", persp);
@@ -116,37 +119,19 @@ void Cloth_Mesh::render()
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 	}
-	else
+	// ================ Render Points ================
+	if (ren_points)
 	{
-		// Bind Primitive State
-		shader.use();
-		shader.setMat4("model", model);
-
-		// Render Mesh
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+		// Use Wire Shader for pts
+		wire_shader.setBool("wire", false);
+		glPointSize(10.f);
+		glDrawArrays(GL_POINTS, 0, vert_count);
 	}
 
 	// Clear State
 	glUseProgram(0);
 	glBindVertexArray(0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	/*
-	switch (mode)
-	{
-		case (RENDER_POINTS): // Draw Particles/Verts as Points
-		{
-			glDrawArrays(GL_POINTS, 0, vert_count);
-			break;
-		}
-		case (RENDER_LINES): // Indexed Cloth Wireframe
-		{
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-			break;
-		}
-	} */
 }
 
 // ==============================================================================================

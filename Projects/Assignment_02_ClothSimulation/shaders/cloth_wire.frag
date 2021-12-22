@@ -4,7 +4,16 @@
 // Output 
 out vec4 frag_colour; 
 
+uniform bool wire; 
+
 void main()
 {
-	frag_colour = vec4(vec3(0.1, 0.1, 0.1), 1); 
+	if (wire) 
+	{
+		frag_colour = vec4(vec3(0.1, 0.1, 0.1), 1); 
+	}
+	else
+	{
+		frag_colour = vec4(vec3(0.1, 0.1, 0.75), 1); 
+	}
 }
