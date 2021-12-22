@@ -25,6 +25,7 @@ public:
 	virtual void eval_collision(std::vector<Particle> &particles) = 0; 
 
 public:
+	float collision_epsilon;
 	std::string name; 
 	Mesh *render_mesh; 
 	bool render; 

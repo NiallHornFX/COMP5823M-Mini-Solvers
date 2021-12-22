@@ -59,7 +59,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Cloth Setup =============
 	// Cloth State 
-	cloth = new Cloth_State("clothgrid_a.obj");
+	cloth = new Cloth_State("../../assets/mesh/clothgrid_b.obj");
 	// Cloth Solver 
 	cloth_solver = new Cloth_Solver(*cloth, (1.f / 90.f));
 	// Collider Primtives
@@ -409,6 +409,7 @@ void Viewer::gui_render()
 	static char corners_onoff[32]{ "Cut Cloth Corners" };
 	static Cloth_Collider *tmp_plane = collision_plane;
 	static Cloth_Collider *tmp_sphere = collision_sphere;
+	static float col_eps = 0.01f; 
 
 
 	// ============= Imgui layout =============
@@ -446,10 +447,12 @@ void Viewer::gui_render()
 		ImGui::InputText("Mesh Import", obj_mesh_input, 256);
 		if (ImGui::Button("Load Cloth Mesh"))
 		{
-			delete cloth;
+			// Delete and Recreate Cloth State and Solver based on new mesh
+			delete cloth; delete cloth_solver;
 			cloth = new Cloth_State(obj_mesh_input);
-			delete cloth_solver; 
 			cloth_solver = new Cloth_Solver(*cloth, 1.f / 90.f);
+			cloth_solver->colliders.push_back(collision_plane);
+			cloth_solver->colliders.push_back(collision_sphere);
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 
@@ -488,8 +491,30 @@ void Viewer::gui_render()
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Cloth Colliders");
 		ImGui::PopStyleColor();
-
-		// Slightly Hacky using Solver Collider Indices. 
+		if (ImGui::SliderFloat("Collision Epsilon", &col_eps, 1e-06f, 1e-01f))
+		{
+			cloth_solver->set_collision_eps(col_eps);
+		}
+		// Slightly Hacky using ptr swapping via hardcoded collider indices. 
+		// Plane Collider
+		if (ImGui::Button(plane_onoff))
+		{
+			p_use = !p_use;
+			if (!p_use)
+			{
+				collision_plane = nullptr;
+				cloth_solver->colliders[0] = nullptr;
+				strcpy_s(plane_onoff, 32, "Enable Plane Collider");
+			}
+			else
+			{
+				collision_plane = tmp_plane;
+				cloth_solver->colliders[0] = tmp_plane;
+				strcpy_s(plane_onoff, 32, "Disable Plane Collider");
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		// Sphere Collider
 		if (ImGui::Button(sphere_onoff))
 		{
 			s_use = !s_use; 
@@ -517,23 +542,7 @@ void Viewer::gui_render()
 			static_cast<Cloth_Collider_Sphere*>(collision_sphere)->set_centre(glm::vec3(s_cent[0], s_cent[1], s_cent[2]));
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
-		if (ImGui::Button(plane_onoff))
-		{
-			p_use = !p_use;
-			if (!p_use)
-			{
-				collision_plane            = nullptr;
-				cloth_solver->colliders[0] = nullptr;
-				strcpy_s(plane_onoff, 32, "Enable Plane Collider");
-			}
-			else
-			{
-				collision_plane            = tmp_plane;
-				cloth_solver->colliders[0] = tmp_plane;
-				strcpy_s(plane_onoff, 32, "Disable Plane Collider");
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
+
 
 		// ========== Solver Controls ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));

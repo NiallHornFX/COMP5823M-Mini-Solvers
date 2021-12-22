@@ -4,7 +4,7 @@
 
 // ================================== Cloth_Collider Class Implementation ===============================
 Cloth_Collider::Cloth_Collider(const char *Name, const char *renderMesh_path)
-	: name(Name)
+	: name(Name), collision_epsilon(1e-02f)
 {
 	if (renderMesh_path)
 	{
@@ -51,14 +51,13 @@ Cloth_Collider_Sphere::Cloth_Collider_Sphere(const glm::vec3 &Cent, float Radius
 // ||P-C|| - r >= 0 (+ eps), for now we assume particles have zero radii. 
 void Cloth_Collider_Sphere::eval_collision(std::vector<Particle> &particles)
 {
-	float eps = 1e-02f; 
 	for (Particle &curPt : particles)
 	{
 		glm::vec3 vec = curPt.P - centre;
 		float dist = glm::length(vec);
-		if (dist < (radius + eps))
+		if (dist < (radius + collision_epsilon))
 		{
-			float inter_dist = (radius + eps) - dist;
+			float inter_dist = (radius + collision_epsilon) - dist;
 			curPt.P += inter_dist * glm::normalize(vec);
 			curPt.F += -curPt.V * inter_dist * 100.f;
 		}

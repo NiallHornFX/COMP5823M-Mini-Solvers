@@ -34,6 +34,7 @@ public:
 
 	// ======= Util =======
 	void set_timestep(std::size_t count);
+	void set_collision_eps(float epsilon);
 
 public:
 	// Solver Intrinsics

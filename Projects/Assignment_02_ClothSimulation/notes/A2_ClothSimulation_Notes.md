@@ -892,9 +892,18 @@ void Cloth_Solver::step()
 
 Integration last causes incorrect collisions as springs are not evaluated correctly as a result of colliders, order of eval_spring and eval_colliders is the same result I think. You'd think eval_springs after colliders makes more sense, but it seems to yield the same result because all particles that are collided are projected together so there is no delta on the springs from before collision projection.
 
-Added epsilon of 1e-01 to the Sphere inequality as expected this is needed (not the source of the issue though).
+Added epsilon of 1e-01 to the Sphere inequality as expected this is needed (not the source of the issue though). This will vary based on distance of verts/particles, and ideally should be radius based (this basically is the radius Ie the collision epsilon added to the radius) : 
 
-Fix issue where radius + centre changed model matrix is incorrect. 
+```C++
+if (dist < (radius + eps))
+{
+float inter_dist = (radius + eps) - dist;
+curPt.P += inter_dist * glm::normalize(vec);
+curPt.F += -curPt.V * inter_dist * 100.f;
+}
+```
+
+So we either add explicit particle radii or we have to make the epsilon adjustable for different cloth meshes.  Also note the Force term I added to stabilize the collisions, while this works ok it will hinder the friction calculation coming up. 
 
 ##### Collision Friction
 
@@ -908,7 +917,7 @@ ___
 
 One of the Simulations required is cloth on a rotating sphere which I guess is to test the friction implementation, although it's going to look a bit naff without self collisions. Anyway I need to figure out how to implement this because using a standard sphere collision test won't work (ie using a centre and Radius) because we need to have surface points to transform/rotate around the Y Axis.
 
-
+For time sake I'm omitting this. I have 4 days before Christmas and a SciComp assignment to do. 
 
 ____
 
@@ -940,7 +949,80 @@ cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 
 
-To Render wireframe because I need a second Fragment shader, rather than replacing the current shader that's within Cloth_Mesh derived from Primitive::shader member I create a second shader in the local scope to render with, but to get the Cam Matrices these need to be passed to Cloth_Mesh now as the Pass Cam Transforms function is Primitive based and forwards directly to its shader I dont want to modify this logic/copy to Primitive class, So I'm just doing this messy hack for Cloth_Mesh as I have little time. I don't need any other uniforms so its all good, just means Cloth_Mesh::Render() override is a bit different from Primitive base and Mesh class ::render() Implementations. I pass the Cam Uniforms to Cloth_Mesh within the Cloth_State::render() call (which itself takes in cam matrices, forwards to Cloth Meshes original Primitive::Update_CameraMatrices() function and we also set them to the Cloth_Mesh public members for storage for other shaders)
+To Render wireframe because I need a second Fragment shader, rather than replacing the current shader that's within Cloth_Mesh derived from Primitive::shader member I create a second shader in the local scope to render with, but to get the Cam Matrices these need to be passed to Cloth_Mesh now as the Pass Cam Transforms function is Primitive based and forwards directly to its shader I dont want to modify this logic/copy to Primitive class, So I'm just doing this messy hack for Cloth_Mesh as I have little time. I don't need any other uniforms so its all good, just means Cloth_Mesh::Render() override is a bit different from Primitive base and Mesh class ::render() Implementations. I pass the Cam Uniforms to Cloth_Mesh within the Cloth_State::render() call (which itself takes in cam matrices, forwards to Cloth Meshes original Primitive::Update_CameraMatrices() function and we also set them to the Cloth_Mesh public members for storage for other shaders).
+
+It worked out nicely in the end as I can render point just as easily, its semi-branchless because we render the mesh regardless and then we only render edges and points if enabled via GUI (which sets the render_mesh booleans directly), I use the wire shader for both pts and edges, rather than a costly call to change the vert_data colour attribs which would mean re-allocating the GPU resources each time I just use a uniform boolean to switch colours if wire or points : 
+
+```C++
+// Info : Override Primitive::create_buffers() to setup Element Buffer, while still calling Primtiive::CreateBuffers for VAO,VBO.
+void Cloth_Mesh::create_buffers()
+{
+	Primitive::create_buffers(); // VAO,VBO Setup
+
+	// EBO Setup  
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, (sizeof(uint) * indices.size()), indices.data(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+// Info : Override Primitive::render() to draw cloth mesh using indexed drawing. 
+void Cloth_Mesh::render()
+{
+	// Check for state to render
+	if (!check_state())
+	{
+		std::cerr << "ERROR::Cloth_Mesh::" << name << "::Render called, with incorrectly set state." << std::endl;
+		std::terminate();
+	}
+
+	// Tmp shader for rendering edges/wire. 
+	Shader wire_shader("cloth_wrie", "../../shaders/cloth.vert", "../../shaders/cloth_wire.frag");
+	wire_shader.load();
+	
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+	// ================ Render Mesh ================
+	// Bind Primitive State
+	shader.use();
+	shader.setMat4("model", model);
+	// Render Mesh
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+
+	// ================ Render Edges ================
+	if (ren_edges)
+	{
+		// Bind Wire Shader State
+		glUseProgram(0);
+		wire_shader.use();
+		wire_shader.setBool("wire", true);
+		wire_shader.setMat4("model", model);
+		wire_shader.setMat4("view", view);
+		wire_shader.setMat4("proj", persp);
+
+		// Render Edges
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	}
+	// ================ Render Points ================
+	if (ren_points)
+	{
+		// Use Wire Shader for pts
+		wire_shader.setBool("wire", false);
+		glPointSize(10.f);
+		glDrawArrays(GL_POINTS, 0, vert_count);
+	}
+
+	// Clear State
+	glUseProgram(0);
+	glBindVertexArray(0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+```
+
+
 
 ____
 
@@ -963,3 +1045,7 @@ ____
 Primitive Flags struct was using int8_t which meant the bit field of 1 bit was using the sign bit which did work, but this is not good, should be uint8_t so that we get a clean 0|1 value to use as a flag. Need to fix this in the IK project also. 
 
 Using std::size_t for indices instead of uint, this led to the mesh now drawing correctly (all triangles originated at vertex 0) this is a stupid mistake as std::size_t has to hold the maximum addressable memory address on the platform so is most likely a 64bit uint, whereas indices are typically 32 bit uints, so just use standard C++ uints which for most cases will always be 32bit uints. 
+
+Changing Cloth Meshes works (new cloth_state and new cloth_solver are created within Viewer based on the new mesh input), but the Sphere Collision is incorrect, not sure why as its passed a reference to the particle array directly so it should be getting the latest data. Ok yeah its because I wasn't passing the Cloth_Collider ptrs (that are objects allocated within Viewer Scope) to the new solver instance. Again this is not the best workflow for dealing with changing cloth mesh, but it works well and ensures the correct initialization is done from scratch with the new mesh, rather than using a reset based approach of the current cloth state and solver instance. 
+
+Issue where radius + centre changed model matrix is incorrect, something to do with transform order of Model matrix of collider, not a big prio as for test cases radius and centre may not even be changed. 

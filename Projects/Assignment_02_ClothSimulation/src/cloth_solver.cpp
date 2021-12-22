@@ -128,3 +128,12 @@ void Cloth_Solver::set_timestep(std::size_t count)
 	if (count <= 10) return; 
 	dt = 1.f / float(count);
 }
+
+// Info : Set eps for collider.
+void Cloth_Solver::set_collision_eps(float epsilon)
+{
+	for (Cloth_Collider *col : colliders)
+	{
+		if (col) col->collision_epsilon = epsilon;
+	}
+}
