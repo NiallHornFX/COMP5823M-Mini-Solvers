@@ -1,14 +1,19 @@
-// test.frag : Test fragment shader 
 #version 400 core 
 
+// Input
 in vec3 colour;
 in vec3 normal;
 in vec3 uvw; 
+in vec3 pos_world;
+in vec3 normal_world; 
 
-// View Space Lighting
-in vec3 pos_view;
-in vec3 normal_view; 
+// Uniforms 
+uniform vec3 camPos_world; 
+uniform vec3 lightPos_world;
+uniform float lightStr; 
+uniform bool ren_normals; 
 
+// Output 
 out vec4 frag_colour; 
 
 vec3 checker(in float u, in float v, in float size)
@@ -20,25 +25,24 @@ vec3 checker(in float u, in float v, in float size)
 
 void main()
 {
-	//frag_colour = vec4(colour, 1.0);
-	//frag_colour = vec4(normal, 1.0);
-	//frag_colour = vec4(uvw,    1.0);
+	// Normals or Checker ? 
+	vec3 r_colour = mix((checker(uvw.x, uvw.y, 10) * 0.25) + 0.2, vec3(0.1, 0.8, 0.1), 0.5); 
+
+	// Blinn-Phong (WS)
+	vec3 light_dir    = normalize(lightPos_world - pos_world); 
+	vec3 view_dir     = normalize(camPos_world - pos_world);
+	vec3 half         = normalize(light_dir + view_dir);
+	vec3 a = 0.125 * r_colour; 
+	vec3 d = (max(dot(normal_world, light_dir), 0.0) * r_colour) * lightStr; 
+	vec3 s = (pow(max(dot(normal_world, half), 0.0), 8.0) * vec3(0.9,0.9,0.9)) * lightStr; 
 	
-	vec3 check = (checker(uvw.x, uvw.y, 10) * 0.25) + 0.2; 
+	if (ren_normals)
+	{
+		frag_colour = vec4(normal, 1.0); 
+	}
+	else
+	{
+		frag_colour = vec4(a+d+s, 1.0); 
+	}
 	
-	// Blinn-Phong
-	vec3 light_pos    = vec3(0, 5.0, 0);
-	vec3 light_dir    = normalize(light_pos - pos_view); 
-	vec3 view_dir     = normalize(pos_view);
-	vec3 half         = normalize(light_pos) + view_dir;
-	float d = max(dot(normal_view, light_dir), 0.0); 
-	float s = pow(max(dot(normal_view, half), 0.0), 10.0); 
-	
-	//frag_colour = vec4((d + s + 0.1) * check, 1.0);
-	
-	//frag_colour = vec4((d + s + 0.1) * vec3(0.05, 0.35, 0.05), 1.0);
-	
-	frag_colour = vec4(s * vec3(1,1,1), 1.0);
-	
-	//frag_colour = vec4(mix((checker(uvw.x, uvw.y, 10) * 0.5) + 0.1, normal, 0.5), 1.0);
 }

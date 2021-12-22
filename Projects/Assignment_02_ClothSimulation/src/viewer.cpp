@@ -46,8 +46,9 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	last_zoom = 0.f;
 	draw_grid = true;
 	draw_axis = true;
-	light_strength = 1.f; 
+	light_strength = 0.75f; 
 	light_pos = glm::vec3(0.f, 5.f, 0.f);
+	ren_normals = false; 
 
 	// ============= OpenGL Setup ============= 
 	// Setup OpenGL Context and Window
@@ -274,6 +275,11 @@ void Viewer::render()
 		collision_sphere->render_mesh->render();
 	}
 	// ==================== Render Cloth ====================
+	cloth->mesh->shader.setVec("camPos_world", camera.Cam_Pos);
+	cloth->mesh->shader.setVec("lightPos_world", light_pos);
+	cloth->mesh->shader.setFloat("lightStr", light_strength);
+	cloth->mesh->shader.setBool("ren_normals", ren_normals);
+
 	cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 	// ==================== Render GUI ====================
@@ -542,6 +548,11 @@ void Viewer::gui_render()
 			light_pos.x = lpos[0], light_pos.y = lpos[1], light_pos.z = lpos[2];
 		}
 		ImGui::Text("Viewport Tools");
+		// Render Cloth Normals
+		if (ImGui::Button("Render Cloth Normals"))
+		{
+			ren_normals = !ren_normals;
+		}
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))
 		{

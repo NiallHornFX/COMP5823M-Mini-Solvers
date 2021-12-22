@@ -10,8 +10,8 @@ layout (location = 3) in vec2 v_UV;
 out vec3 colour; 
 out vec3 normal;
 out vec3 uvw; 
-out vec3 pos_view;
-out vec3 normal_view; 
+out vec3 pos_world;
+out vec3 normal_world; 
 
 // Uniforms
 uniform mat4 model; 
@@ -26,9 +26,9 @@ void main()
 	uvw = vec3(v_UV, 0); 
 	
 	// View Space
-	normal_view = transpose(inverse(mat3(view * model))) * v_N; // Should precompute on host. 
-	pos_view    = vec3(view * model * vec4(v_P, 1.0));
-	
+	pos_world    = vec3(model * vec4(v_P, 1.0));
+	normal_world = transpose(inverse(mat3(model))) * v_N; // Should precompute on host. 
+
 	gl_Position = proj * view * model * vec4(v_P, 1.0); 
 }
 
