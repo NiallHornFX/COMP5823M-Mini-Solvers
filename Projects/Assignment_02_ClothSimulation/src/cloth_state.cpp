@@ -9,9 +9,6 @@
 #include <fstream>
 #include <iomanip>
 
-// Project Headers
-#include "cloth_mesh.h"
-
 // Debug Defines
 //#define DEBUG_LOG_OBJMESH
 //#define DEBUG_LOG_PTTRIS

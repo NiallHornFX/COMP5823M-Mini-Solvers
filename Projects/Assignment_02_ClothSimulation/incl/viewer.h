@@ -87,6 +87,10 @@ private:
 	Camera camera; 
 	float last_yawoffs, last_pitchoffs, last_zoom;
 
+	// Light
+	glm::vec3 light_pos; 
+	float light_strength; 
+
 	// Primtivies
 	std::vector<Primitive*> prims;
 	Ground *ground;

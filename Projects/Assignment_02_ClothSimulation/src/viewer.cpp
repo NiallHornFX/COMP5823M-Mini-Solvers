@@ -46,6 +46,8 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	last_zoom = 0.f;
 	draw_grid = true;
 	draw_axis = true;
+	light_strength = 1.f; 
+	light_pos = glm::vec3(0.f, 5.f, 0.f);
 
 	// ============= OpenGL Setup ============= 
 	// Setup OpenGL Context and Window
@@ -266,10 +268,12 @@ void Viewer::render()
 	if (collision_sphere)
 	{
 		collision_sphere->render_mesh->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+		collision_sphere->render_mesh->shader.setVec("camPos_world", camera.Cam_Pos);
+		collision_sphere->render_mesh->shader.setVec("lightPos_world", light_pos);
+		collision_sphere->render_mesh->shader.setFloat("lightStr", light_strength);
 		collision_sphere->render_mesh->render();
 	}
 	// ==================== Render Cloth ====================
-	
 	cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 	// ==================== Render GUI ====================
@@ -368,6 +372,8 @@ void Viewer::gui_render()
 	ImGui::NewFrame();
 
 	// ============= GUI Static Locals / State =============
+	// Viewer State
+	static float lpos[3]{ light_pos.x, light_pos.y, light_pos.z };
 	// Solver State Text
 	std::string state; 
 	if (cloth_solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
@@ -529,6 +535,13 @@ void Viewer::gui_render()
 		// ========== Viewer State ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::Text("Viewer Controls");
+		ImGui::Text("Light");
+		ImGui::SliderFloat("Light Strength", &light_strength, 0.f, 10.f);
+		if (ImGui::SliderFloat3("Light Position", lpos, -50.f, 50.f))
+		{
+			light_pos.x = lpos[0], light_pos.y = lpos[1], light_pos.z = lpos[2];
+		}
+		ImGui::Text("Viewport Tools");
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))
 		{

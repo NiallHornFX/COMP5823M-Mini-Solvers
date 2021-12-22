@@ -9,13 +9,13 @@
 
 // Project Headers
 #include "cloth_common.h"
+#include "cloth_mesh.h"
 
 // Ext Headers
 #include "ext/glm/glm.hpp"
 
 // FDs
 class Primitive; 
-class Cloth_Mesh; 
 
 class Cloth_State
 {
@@ -67,7 +67,6 @@ private:
 	friend class Cloth_Mesh;
 	friend class Viewer; 
 };
-
 
 
 

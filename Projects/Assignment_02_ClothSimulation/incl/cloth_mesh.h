@@ -28,7 +28,6 @@ public:
 	std::vector<glm::vec3> calc_normals();
 
 	std::vector<glm::vec2> calc_uvs();
-
 private:
 	// Serailzied Data
 	std::vector<uint> indices; 

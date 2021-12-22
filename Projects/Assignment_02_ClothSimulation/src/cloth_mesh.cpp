@@ -236,4 +236,3 @@ std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
 
 
 
-
