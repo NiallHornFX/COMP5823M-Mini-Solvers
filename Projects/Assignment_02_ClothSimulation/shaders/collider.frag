@@ -19,10 +19,10 @@ void main()
 	// Blinn-Phong (WS)
 	vec3 light_dir    = normalize(lightPos_world - pos_world); 
 	vec3 view_dir     = normalize(camPos_world - pos_world);
-	vec3 half         = normalize(light_dir + view_dir);
+	vec3 half_v       = normalize(light_dir + view_dir);
 	vec3 a = 0.125 * colour; 
 	vec3 d = (max(dot(normal_world, light_dir), 0.0) * colour) * lightStr; 
-	vec3 s = (pow(max(dot(normal_world, half), 0.0), 4.0) * vec3(1,1,1)) * lightStr; 
+	vec3 s = (pow(max(dot(normal_world, half_v), 0.0), 4.0) * vec3(1,1,1)) * lightStr; 
 	
 	frag_colour = vec4(a+d+s, 1.0); 	
 }

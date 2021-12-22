@@ -54,8 +54,11 @@ public:
 	// Collision Friction Coeff
 	float coeff_fric; 
 
+private:
+
 	// Cloth_State Ref
-	Cloth_State &clothData; 
+	Cloth_State &clothData;
+
 };
 
 #endif

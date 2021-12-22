@@ -59,7 +59,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Cloth Setup =============
 	// Cloth State 
-	cloth = new Cloth_State("../../assets/mesh/clothgrid_b.obj");
+	cloth = new Cloth_State("../../assets/mesh/clothgrid_a.obj");
 	// Cloth Solver 
 	cloth_solver = new Cloth_Solver(*cloth, (1.f / 90.f));
 	// Collider Primtives
@@ -405,11 +405,12 @@ void Viewer::gui_render()
 	float n = 1.f / cloth_solver->dt;
 	static int tmp_count = 90;
 	// Cloth State Locals
+	float restOffs[3] = { 0.f, 2.f, 0.f };
 	bool static fix_corners = true;
 	static char corners_onoff[32]{ "Cut Cloth Corners" };
 	static Cloth_Collider *tmp_plane = collision_plane;
 	static Cloth_Collider *tmp_sphere = collision_sphere;
-	static float col_eps = 0.01f; 
+	static float col_eps = 1e-02f; 
 
 
 	// ============= Imgui layout =============
@@ -455,7 +456,13 @@ void Viewer::gui_render()
 			cloth_solver->colliders.push_back(collision_sphere);
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-
+		if (ImGui::SliderFloat3("Rest Offset", restOffs, -5.f, 10.f))
+		{
+			cloth->set_rest_offset(glm::vec3(restOffs[0], restOffs[1], restOffs[2]));
+			cloth_solver->simulate = false; 
+			cloth_solver->reset();
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
 		// Mesh Export
 		ImGui::InputText("Mesh Export", obj_mesh_output, 256);
 		if (ImGui::Button("Export Cloth Mesh"))

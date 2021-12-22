@@ -110,6 +110,7 @@ void Cloth_Solver::integrate_euler()
 	}
 }
 
+
 // Info : Evaulate Collisions using passed colliders.
 void Cloth_Solver::eval_colliders()
 {
