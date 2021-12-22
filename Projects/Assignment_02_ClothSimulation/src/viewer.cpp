@@ -1,5 +1,4 @@
-// COMP5823M - A1 : Niall Horn - viewer.cpp
-
+// COMP5823M - A2 : Niall Horn - viewer.cpp
 // Implements
 #include "viewer.h"
 
@@ -31,6 +30,7 @@ struct
 	double mousepos_prev_x = 0.f, mousepos_prev_y = 0.f;
 	double scroll_y = 0.f;
 	bool is_init = false; 
+	
 
 }GLFWState;
 
@@ -49,6 +49,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	light_strength = 0.75f; 
 	light_pos = glm::vec3(0.f, 5.f, 0.f);
 	ren_normals = false; 
+	ren_wire = false; 
 
 	// ============= OpenGL Setup ============= 
 	// Setup OpenGL Context and Window
@@ -224,7 +225,7 @@ void Viewer::render_prep()
 		0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
 	};
 	axis->set_data_mesh(data, 6);
-	axis->scale(glm::vec3(0.5f));
+	axis->scale(glm::vec3(1.f));
 	axis->translate(glm::vec3(0.f, 0.01f, 0.f));
 	axis->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
 	axis->mode = Render_Mode::RENDER_LINES;
@@ -268,18 +269,21 @@ void Viewer::render()
 	//  ==================== Render Cloth Colldiers ====================
 	if (collision_sphere)
 	{
+		// Set Uniforms 
 		collision_sphere->render_mesh->set_cameraTransform(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 		collision_sphere->render_mesh->shader.setVec("camPos_world", camera.Cam_Pos);
 		collision_sphere->render_mesh->shader.setVec("lightPos_world", light_pos);
 		collision_sphere->render_mesh->shader.setFloat("lightStr", light_strength);
+		// Render
 		collision_sphere->render_mesh->render();
 	}
 	// ==================== Render Cloth ====================
+	// Set Uniforms 
 	cloth->mesh->shader.setVec("camPos_world", camera.Cam_Pos);
 	cloth->mesh->shader.setVec("lightPos_world", light_pos);
 	cloth->mesh->shader.setFloat("lightStr", light_strength);
 	cloth->mesh->shader.setBool("ren_normals", ren_normals);
-
+	// Render
 	cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 	// ==================== Render GUI ====================
@@ -552,6 +556,11 @@ void Viewer::gui_render()
 		if (ImGui::Button("Render Cloth Normals"))
 		{
 			ren_normals = !ren_normals;
+		}
+		if (ImGui::Button("Render Cloth Edges"))
+		{
+			ren_wire = !ren_wire;
+
 		}
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))

@@ -922,11 +922,21 @@ As stated before instead of calling reset and clearing buffers on the current cl
 
 Will Implement Blinn-Phong Shading and Wireframe rendering (atop the mesh, use this as Spring viz to save creating a separate primitive to render springs when we know they are just the mesh edges (assuming the spring creation func is working correctly)). Ideally need a way to be able to switch shaders more easily so can switch based on GUI shading mode. Eg could have velocity based shading via Vel-->Colour but not a prio. 
 
-Need uniforms for light pos and control. If time make light primtive to view its pos. 
+Added uniforms for light pos and control. Also to enable normal shading for cloth. For lighting both the cloth and the collider I added Blinn-Phong lighting (calculated in world space). To set the uniforms I just do it within the Viewer Render Loop with Friend access to the Primitive Based class Shader, uniform setters.Eg:
 
-Need normal viz on off 
-
-Need wireframe on off.
+```C++
+// Viewer::render()
+// [..]
+// ==================== Render Cloth ====================
+// Set Uniforms 
+cloth->mesh->shader.setVec("camPos_world", camera.Cam_Pos);
+cloth->mesh->shader.setVec("lightPos_world", light_pos);
+cloth->mesh->shader.setFloat("lightStr", light_strength);
+cloth->mesh->shader.setBool("ren_normals", ren_normals);
+// Render
+cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
+// [..]
+```
 
 
 

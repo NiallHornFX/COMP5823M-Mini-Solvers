@@ -1,3 +1,4 @@
+// COMP5823M - A2 : Niall Horn - collider.vert
 #version 400 core 
 
 // Input 

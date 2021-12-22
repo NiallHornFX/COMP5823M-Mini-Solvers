@@ -1,4 +1,4 @@
-// Write Normal to frag colour. 
+// COMP5823M - A2 : Niall Horn - normal.vert
 
 #version 400 core 
 

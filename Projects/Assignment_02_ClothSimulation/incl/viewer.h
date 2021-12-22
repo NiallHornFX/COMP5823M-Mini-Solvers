@@ -91,6 +91,7 @@ private:
 	glm::vec3 light_pos; 
 	float light_strength; 
 	bool ren_normals; 
+	bool ren_wire; 
 
 	// Primtivies
 	std::vector<Primitive*> prims;

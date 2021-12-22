@@ -1,4 +1,4 @@
-// test.frag : Test fragment shader 
+// COMP5823M - A2 : Niall Horn - colour.frag
 #version 400 core 
 
 in vec3 colour;

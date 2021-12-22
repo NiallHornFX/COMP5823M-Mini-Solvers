@@ -1,3 +1,4 @@
+// COMP5823M - A2 : Niall Horn - ground.vert
 #version 400 core 
 
 // Input 

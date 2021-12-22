@@ -233,6 +233,16 @@ std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
 	return pt_uv;
 }
 
+void Cloth_Mesh::set_wireframe(bool wire)
+{
+	if (wire)
+	{
+		set_shader("../../shaders/cloth.vert", "../../shaders/cloth_wire.frag");
+		return;
+	}
 
+	set_shader("../../shaders/cloth.vert", "../../shaders/cloth.frag");
+
+}
 
 
