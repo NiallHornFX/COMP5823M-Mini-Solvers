@@ -411,6 +411,7 @@ void Viewer::gui_render()
 	static Cloth_Collider *tmp_plane = collision_plane;
 	static Cloth_Collider *tmp_sphere = collision_sphere;
 	static float col_eps = 1e-02f; 
+	static float col_fric = 0.25f;
 
 
 	// ============= Imgui layout =============
@@ -498,10 +499,15 @@ void Viewer::gui_render()
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Cloth Colliders");
 		ImGui::PopStyleColor();
+		if (ImGui::SliderFloat("Collision Friction", &col_fric, 0.f, 1.f))
+		{
+			cloth_solver->set_collision_fric(col_fric);
+		}
 		if (ImGui::SliderFloat("Collision Epsilon", &col_eps, 1e-06f, 1e-01f))
 		{
 			cloth_solver->set_collision_eps(col_eps);
 		}
+		ImGui::SliderFloat("K_visc", &cloth_solver->K_v, 0.f, 2.f);
 		// Slightly Hacky using ptr swapping via hardcoded collider indices. 
 		// Plane Collider
 		if (ImGui::Button(plane_onoff))

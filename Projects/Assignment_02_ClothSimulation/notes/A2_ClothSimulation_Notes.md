@@ -905,9 +905,39 @@ curPt.F += -curPt.V * inter_dist * 100.f;
 
 So we either add explicit particle radii or we have to make the epsilon adjustable for different cloth meshes.  Also note the Force term I added to stabilize the collisions, while this works ok it will hinder the friction calculation coming up. 
 
+Note friction and eps are Cloth_Collision base Members and are set via a Cloth_Solver function which loops over the Collider array and sets the member values based on passed input (which also sets them for the Viewer scope where they are actually allocated because we Cloth_Solver is accessing them via ptrs to them).
+
 ##### Collision Friction
 
 Uses the same approach I used for VerletCloth (PBD approach) when we decompose into Normal and Tangential components and then scale them to define the amount of friction tangential to the colliding object. 
+
+Ok so after some testing I came up with this, which is probs not completely correct (given that the effective coefficient range for the tangential velocity is between 0.9 - 1.0, with 0.9 been nearly completely sticking and 1.0 been no sticking). But I decompose the particles velocity into tangential and normal components (which makes sense because for Verlet based we did this on prev_Pos which would be used to calc the next steps velocity) then as I don't care for restitution we just add the normal component back as usual, the tangential component is scaled by a complemented coefficient so (0.1 frict = 0.9 * v_T) although as above this is scaled by 0.1 so its within the range that seems to work best (0.9-1.0 * v_t) ofcourse 1 * v_t is equal to (v_n + v_t) which is just the normal velocity with both components. The Normal is just the direction of the particle to the sphere centre. Code : 
+
+```C++
+void Cloth_Collider_Sphere::eval_collision(std::vector<Particle> &particles)
+{
+	for (Particle &curPt : particles)
+	{
+		glm::vec3 vec = curPt.P - centre;
+		float dist = glm::length(vec);
+		if (dist < (radius + collision_epsilon))
+		{
+			float inter_dist = (radius + collision_epsilon) - dist;
+			curPt.P += inter_dist * glm::normalize(vec);
+			//curPt.F += -curPt.V * inter_dist * 100.f;
+
+			// Decompose TangNorm for Friction (via Velocity)
+			glm::vec3 N = glm::normalize(vec);
+			glm::vec3 v_N = glm::dot(curPt.V, N) * N;
+			glm::vec3 v_T = curPt.V - v_N;
+			// Input fric (0-1) 
+			float fric = friction * 0.1f; 
+			// Effective range v_T * (0.9-1.0)
+			curPt.V = (v_N + (v_T * (1.f - fric)));
+		}
+	}
+}
+```
 
 
 
@@ -946,8 +976,6 @@ cloth->mesh->shader.setBool("ren_normals", ren_normals);
 cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 // [..]
 ```
-
-
 
 To Render wireframe because I need a second Fragment shader, rather than replacing the current shader that's within Cloth_Mesh derived from Primitive::shader member I create a second shader in the local scope to render with, but to get the Cam Matrices these need to be passed to Cloth_Mesh now as the Pass Cam Transforms function is Primitive based and forwards directly to its shader I dont want to modify this logic/copy to Primitive class, So I'm just doing this messy hack for Cloth_Mesh as I have little time. I don't need any other uniforms so its all good, just means Cloth_Mesh::Render() override is a bit different from Primitive base and Mesh class ::render() Implementations. I pass the Cam Uniforms to Cloth_Mesh within the Cloth_State::render() call (which itself takes in cam matrices, forwards to Cloth Meshes original Primitive::Update_CameraMatrices() function and we also set them to the Cloth_Mesh public members for storage for other shaders).
 
@@ -1022,7 +1050,7 @@ void Cloth_Mesh::render()
 }
 ```
 
-
+I feel like the wind force is a bit naff with it just been directional ideally we could add some sine wave variation to its strength etc so its not direct or use normals fetched from cloth_mesh to apply only in normal direction to cloth but its ok for the time I had. 
 
 ____
 

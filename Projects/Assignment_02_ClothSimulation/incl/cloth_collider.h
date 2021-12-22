@@ -26,6 +26,7 @@ public:
 
 public:
 	float collision_epsilon;
+	float friction;
 	std::string name; 
 	Mesh *render_mesh; 
 	bool render; 

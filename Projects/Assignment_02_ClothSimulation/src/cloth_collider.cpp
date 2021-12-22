@@ -4,7 +4,7 @@
 
 // ================================== Cloth_Collider Class Implementation ===============================
 Cloth_Collider::Cloth_Collider(const char *Name, const char *renderMesh_path)
-	: name(Name), collision_epsilon(1e-02f)
+	: name(Name), collision_epsilon(1e-02f), friction(0.25f)
 {
 	if (renderMesh_path)
 	{
@@ -59,7 +59,16 @@ void Cloth_Collider_Sphere::eval_collision(std::vector<Particle> &particles)
 		{
 			float inter_dist = (radius + collision_epsilon) - dist;
 			curPt.P += inter_dist * glm::normalize(vec);
-			curPt.F += -curPt.V * inter_dist * 100.f;
+			//curPt.F += -curPt.V * inter_dist * 100.f;
+
+			// Decompose TangNorm for Friction (via Velocity)
+			glm::vec3 N = glm::normalize(vec);
+			glm::vec3 v_N = glm::dot(curPt.V, N) * N;
+			glm::vec3 v_T = curPt.V - v_N;
+			// Input fric (0-1) 
+			float fric = friction * 0.1f; 
+			// Effective range v_T * (0.9-1.0)
+			curPt.V = (v_N + (v_T * (1.f - fric)));
 		}
 	}
 }

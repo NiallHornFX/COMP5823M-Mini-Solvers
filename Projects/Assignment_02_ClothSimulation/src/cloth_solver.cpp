@@ -130,11 +130,20 @@ void Cloth_Solver::set_timestep(std::size_t count)
 	dt = 1.f / float(count);
 }
 
-// Info : Set eps for collider.
+// Info : Set eps for colliders.
 void Cloth_Solver::set_collision_eps(float epsilon)
 {
 	for (Cloth_Collider *col : colliders)
 	{
 		if (col) col->collision_epsilon = epsilon;
+	}
+}
+
+// Info : Set frictions for colliders.
+void Cloth_Solver::set_collision_fric(float fric)
+{
+	for (Cloth_Collider *col : colliders)
+	{
+		if (col) col->friction = fric; 
 	}
 }

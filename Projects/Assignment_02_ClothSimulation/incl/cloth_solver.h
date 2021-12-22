@@ -35,6 +35,7 @@ public:
 	// ======= Util =======
 	void set_timestep(std::size_t count);
 	void set_collision_eps(float epsilon);
+	void set_collision_fric(float fric);
 
 public:
 	// Solver Intrinsics
