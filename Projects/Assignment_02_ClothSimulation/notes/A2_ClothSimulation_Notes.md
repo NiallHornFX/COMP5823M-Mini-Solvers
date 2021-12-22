@@ -940,6 +940,8 @@ cloth->render(camera.get_ViewMatrix(), camera.get_PerspMatrix());
 
 
 
+To Render wireframe because I need a second Fragment shader, rather than replacing the current shader that's within Cloth_Mesh derived from Primitive::shader member I create a second shader in the local scope to render with, but to get the Cam Matrices these need to be passed to Cloth_Mesh now as the Pass Cam Transforms function is Primitive based and forwards directly to its shader I dont want to modify this logic/copy to Primitive class, So I'm just doing this messy hack for Cloth_Mesh as I have little time. I don't need any other uniforms so its all good, just means Cloth_Mesh::Render() override is a bit different from Primitive base and Mesh class ::render() Implementations. I pass the Cam Uniforms to Cloth_Mesh within the Cloth_State::render() call (which itself takes in cam matrices, forwards to Cloth Meshes original Primitive::Update_CameraMatrices() function and we also set them to the Cloth_Mesh public members for storage for other shaders)
+
 ____
 
 ##### OBJ Export

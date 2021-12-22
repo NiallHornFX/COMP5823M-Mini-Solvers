@@ -223,6 +223,7 @@ void Cloth_State::render(const glm::mat4x4 &view, const glm::mat4x4 &persp)
 {
 	mesh->update_fromParticles();           // Update Mesh (cloth_state --> cloth_mesh)
 	mesh->set_cameraTransform(view, persp); // Forward Camera Matrices to cloth_mesh
+	mesh->view = view, mesh->persp = persp;
 	mesh->render(); 
 }
 

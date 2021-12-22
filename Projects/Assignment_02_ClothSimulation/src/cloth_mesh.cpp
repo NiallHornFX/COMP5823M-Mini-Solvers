@@ -16,7 +16,8 @@ Cloth_Mesh::Cloth_Mesh(const std::vector<Particle> &array_particles, const std::
 	// ========== Primitive Setup Cals ==========
 	set_shader("../../shaders/cloth.vert", "../../shaders/cloth.frag");
 	mode = Render_Mode::RENDER_MESH;
-	
+	ren_edges = false; 
+
 	// ========== Calc Attributes from Particles for Vert Data ==========
 	// Calculate Normals Per Particle-Vert
 	std::vector<glm::vec3> normals = calc_normals();
@@ -87,14 +88,51 @@ void Cloth_Mesh::render()
 		std::terminate();
 	}
 
-	// Bind Primitive State
-	shader.use();
-	// Update Modfied Uniforms
-	shader.setMat4("model", model);
-
-	// Render in set mode
+	// Tmp shader for rendering edges/wire. 
+	Shader wire_shader("cloth_wrie", "../../shaders/cloth.vert", "../../shaders/cloth_wire.frag");
+	wire_shader.load();
+	
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+	if (ren_edges)
+	{
+		// Bind Primitive State
+		shader.use();
+		shader.setMat4("model", model);
+
+		// Render Mesh
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+
+		// Bind Wire Shader State
+		glUseProgram(0);
+		wire_shader.use();
+		wire_shader.setMat4("model", model);
+		wire_shader.setMat4("view", view);
+		wire_shader.setMat4("proj", persp);
+
+		// Render Edges
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	}
+	else
+	{
+		// Bind Primitive State
+		shader.use();
+		shader.setMat4("model", model);
+
+		// Render Mesh
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	}
+
+	// Clear State
+	glUseProgram(0);
+	glBindVertexArray(0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	/*
 	switch (mode)
 	{
 		case (RENDER_POINTS): // Draw Particles/Verts as Points
@@ -108,18 +146,7 @@ void Cloth_Mesh::render()
 			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 			break;
 		}
-		case (RENDER_MESH): // Indexed Cloth Mesh 
-		{
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-			break;
-		}
-	}
-
-	// Clear State
-	glUseProgram(0);
-	glBindVertexArray(0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	} */
 }
 
 // ==============================================================================================
@@ -231,18 +258,6 @@ std::vector<glm::vec2> Cloth_Mesh::calc_uvs()
 		//std::cout << "particle_" << p << " UV = " << u << "," << v << "\n";
 	}
 	return pt_uv;
-}
-
-void Cloth_Mesh::set_wireframe(bool wire)
-{
-	if (wire)
-	{
-		set_shader("../../shaders/cloth.vert", "../../shaders/cloth_wire.frag");
-		return;
-	}
-
-	set_shader("../../shaders/cloth.vert", "../../shaders/cloth.frag");
-
 }
 
 

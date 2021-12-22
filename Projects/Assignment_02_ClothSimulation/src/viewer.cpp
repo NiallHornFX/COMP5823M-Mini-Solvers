@@ -559,8 +559,8 @@ void Viewer::gui_render()
 		}
 		if (ImGui::Button("Render Cloth Edges"))
 		{
-			ren_wire = !ren_wire;
-
+			cloth->mesh->ren_edges = !cloth->mesh->ren_edges;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))

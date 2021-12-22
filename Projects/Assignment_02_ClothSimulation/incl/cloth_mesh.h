@@ -29,7 +29,14 @@ public:
 
 	std::vector<glm::vec2> calc_uvs();
 
-	void set_wireframe(bool wire);
+public:
+	// Render Options 
+	bool ren_edges;
+	bool ren_points;
+
+	// Set Cam Matrices for additonal shaders (other than Primtivie::shader)
+	glm::mat4 view, persp;
+
 private:
 	// Serailzied Data
 	std::vector<uint> indices; 
@@ -39,7 +46,6 @@ private:
 	const std::vector<Particle> &particles;
 	const std::vector<glm::ivec3> &tri_indices; 
 	const ParticleTriList &particle_tris; 
-
 	// GL Data
 	GLuint EBO; 
 	std::size_t indices_count;
