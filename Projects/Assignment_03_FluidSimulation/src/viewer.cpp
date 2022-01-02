@@ -20,6 +20,7 @@
 #include "ext/dearimgui/imgui_impl_glfw.h"
 #include "ext/dearimgui/imgui_impl_opengl3.h"
 
+
 #define USE_FREE_CAMERA 1
 
 // Global GLFW State
@@ -182,14 +183,12 @@ void Viewer::render_prep()
 	// ============= Create Viewer Primtivies =============
 	// Axis
 	axis = new Primitive("axis");
-	float data[66] =
+	float data[44] =
 	{
 		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
 		1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
 		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
 		0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
-		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
-		0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
 	};
 	axis->set_data_mesh(data, 6);
 	axis->scale(glm::vec3(1.f));
@@ -214,6 +213,9 @@ void Viewer::render()
 	}
 	// ==================== Render Fluid ====================
 	// SPH_Fluid->render()
+
+	// ==================== Render Fluid Colliders ====================
+
 
 	// ==================== Render GUI ====================
 	gui_render();
@@ -322,135 +324,20 @@ void Viewer::gui_render()
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 
-		// ========== Cloth State Controls ==========
+		// ========== Fluid State Controls ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Fluid State Controls");
 		ImGui::PopStyleColor();
 
 
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
-		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
-		ImGui::Text("Cloth Colliders");
-		ImGui::PopStyleColor();
-		if (ImGui::SliderFloat("Collision Friction", &col_fric, 0.f, 1.f))
-		{
-			cloth_solver->set_collision_fric(col_fric);
-		}
-		if (ImGui::SliderFloat("Collision Epsilon", &col_eps, 1e-06f, 1e-01f))
-		{
-			cloth_solver->set_collision_eps(col_eps);
-		}
-		ImGui::SliderFloat("K_visc", &cloth_solver->K_v, 0.f, 2.f);
-		// Slightly Hacky using ptr swapping via hardcoded collider indices. 
-		// Plane Collider
-		if (ImGui::Button(plane_onoff))
-		{
-			p_use = !p_use;
-			if (!p_use)
-			{
-				collision_plane = nullptr;
-				cloth_solver->colliders[0] = nullptr;
-				strcpy_s(plane_onoff, 32, "Enable Plane Collider");
-			}
-			else
-			{
-				collision_plane = tmp_plane;
-				cloth_solver->colliders[0] = tmp_plane;
-				strcpy_s(plane_onoff, 32, "Disable Plane Collider");
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
-		// Sphere Collider
-		if (ImGui::Button(sphere_onoff))
-		{
-			s_use = !s_use; 
-			if (!s_use)
-			{
-				collision_sphere           = nullptr; 
-				cloth_solver->colliders[1] = nullptr; 
-				strcpy_s(sphere_onoff, 32, "Enable Sphere Collider");
-			}
-			else
-			{
-				collision_sphere           = tmp_sphere;
-				cloth_solver->colliders[1] = tmp_sphere;
-				strcpy_s(sphere_onoff, 32, "Disable Sphere Collider");
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
-		if (ImGui::SliderFloat("Sphere Radius", &s_rad, 0.25f, 2.5f))
-		{
-			static_cast<Cloth_Collider_Sphere*>(collision_sphere)->set_radius(s_rad);
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		}
-		if (ImGui::SliderFloat3("Sphere Centre", s_cent, -5.f, 5.f))
-		{
-			static_cast<Cloth_Collider_Sphere*>(collision_sphere)->set_centre(glm::vec3(s_cent[0], s_cent[1], s_cent[2]));
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		}
-
-
-		// ========== Solver Controls ==========
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
-		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
-		ImGui::Text("Solver Controls");
-		ImGui::PopStyleColor();
-		// Physics Timestep
-		if (ImGui::InputInt("Timestep 1/x", &tmp_count))
-		{
-			cloth_solver->set_timestep(tmp_count);
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
-		ImGui::SliderFloat("K_stiff", &cloth_solver->K_s, 0.f, 1000.f);
-		ImGui::SliderFloat("K_damp",  &cloth_solver->K_c, 0.f, 10.f);
-		ImGui::SliderFloat("K_visc",  &cloth_solver->K_v, 0.f, 2.f);
-		ImGui::SliderFloat("Gravity", &cloth_solver->gravity, -10.f, 10.f);
-		ImGui::SliderFloat3("Wind", wind, 0.f, 5.f);
-
-		// ========== Viewer State ==========
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
-		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
-		ImGui::Text("Viewer Controls");
-		ImGui::PopStyleColor();
-		ImGui::Text("Light");
-		ImGui::SliderFloat("Light Strength", &light_strength, 0.f, 10.f);
-		if (ImGui::SliderFloat3("Light Position", lpos, -50.f, 50.f))
-		{
-			light_pos.x = lpos[0], light_pos.y = lpos[1], light_pos.z = lpos[2];
-		}
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
-		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
-		ImGui::Text("Viewport Controls");
-		ImGui::PopStyleColor();
-		// Render Cloth Normals
-		if (ImGui::Button("Render Cloth Normals"))
-		{
-			ren_normals = !ren_normals;
-		}
-		if (ImGui::Button("Render Cloth Edges"))
-		{
-			cloth->mesh->ren_edges = !cloth->mesh->ren_edges;
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
-		if (ImGui::Button("Render Cloth Points"))
-		{
-			cloth->mesh->ren_points = !cloth->mesh->ren_points;
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))
 		{
 			draw_axis = !draw_axis; 
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		// Draw Grid
-		if (ImGui::Button("Draw Grid"))
-		{
-			draw_grid = !draw_grid;
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
-		
+
 		// End ImGui
 		ImGui::End();
 	}
@@ -472,7 +359,6 @@ void Viewer::gui_shutdown()
 
 // =========================================== GLFW State + Callbacks ===========================================
 
-// ======= Callback Functions =======
 void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
 	GLFWState.width = width, GLFWState.height = height; 

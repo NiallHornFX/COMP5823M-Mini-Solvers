@@ -11,6 +11,7 @@
 
 class Fluid_Object; 
 class Fluid_Collider; 
+
 struct Particle; 
 
 using kernel_func = float(*) (glm::vec3 v);
@@ -18,7 +19,7 @@ using kernel_func = float(*) (glm::vec3 v);
 class Fluid_Solver
 {
 public: 
-	Fluid_Solver(float DT, Fluid_Object *Data);
+	Fluid_Solver(float Sim_Dt, Fluid_Object *Data);
 	~Fluid_Solver() = default; 
 
 	// ======= Operations =======
@@ -27,6 +28,8 @@ public:
 	void tick(float viewer_Dt);
 
 	void step();
+
+	void render_colliders();
 
 	// ======= Solver =======
 	void eval_colliders();
@@ -47,15 +50,16 @@ public:
 	float kernel_spiky_gradient(glm::vec3 v);
 
 public:
-	// Solver Intrinsics
+	// ======= Solver Intrinsics =======
 	bool simulate;
 	float at, dt; // Acumulated Time, Fixed Physics timestep. 
 	std::size_t frame, timestep;
-	float kernel_radius; 
 
-	// Forces
+	// ======= Forces =======
 	float gravity, viscosity; 
 	float force_coeff; 
+
+	float kernel_radius;
 
 	// Fluid Colliders
 	std::vector<Fluid_Collider*> colliders;

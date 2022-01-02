@@ -19,19 +19,21 @@ public:
 	Fluid_Object(); 
 	~Fluid_Object() = default; 
 
-	// ======== Emit ========
+	void reset_fluid();
+
+	// ======== Emit Fluid ========
+	void emit_square(const glm::vec2 &P, const glm::vec2 &Dim, float h);
 
 
-	// ======== Render ========
+	// ======== Render Fluid ========
 	enum render_type {POINT_VERTS = 0, FRAGMENT = 1};
 	void render();
 
 public: 
-	std::vector<Particle> Particles; 
+	std::vector<Particle> particles; 
 
 
 private:
-
 	// Point Rendering via Primitive
 	Primitive *ren_points; 
 	Shader Shad_Points; 
@@ -52,17 +54,14 @@ private:
 
 
 
-
-
-
 struct Particle
 {
 	Particle(const glm::vec3 &p, std::size_t idx)
-		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), mass(1.f) {}
+		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), mass(1.f), density(0.f) {}
 
 	glm::vec3 P, V, F;
 	std::size_t id;
-	float mass;
+	float density, mass;
 };
 
 

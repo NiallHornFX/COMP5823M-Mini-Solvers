@@ -27,8 +27,8 @@ void Fluid_Collider_Plane::render_setup()
 
 	if (type == Type::HORIZONTAL)
 	{
-		// Assume q is centroid. 
-		float x_min = q.x - length; 
+		// Assume q is start position. 
+		float x_min = q.x;
 		float x_max = q.x + length; 
 		float data[11 * 2]
 		{
@@ -41,7 +41,7 @@ void Fluid_Collider_Plane::render_setup()
 	}
 	else
 	{
-		float y_min = q.y - length;
+		float y_min = q.y;
 		float y_max = q.y + length;
 		float data[11 * 2]
 		{
@@ -62,22 +62,26 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 	{
 		float dist = glm::dot(curPt.P, N);
 
-		switch (type)
+		switch (type) // Account for Plane Bounds over length or height. 
 		{
 			case Type::HORIZONTAL:
 			{
-
+				if (curPt.P.x <= length)
+				{
+					if (dist <= 1e-03f) curPt.P += -dist * N;
+				}
 				break;
 			}
 
 			case Type::VERTICAL:
 			{
-
+				if (curPt.P.y <= height)
+				{
+					if (dist <= 1e-03f) curPt.P += -dist * N;
+				}
 				break;
 			}
 		}
-
-		if (dist <= 1e-03f) curPt.P += -dist * N;
 	}
 }
 

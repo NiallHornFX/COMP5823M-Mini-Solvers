@@ -64,6 +64,7 @@ void Primitive::render()
 		}
 		case (RENDER_LINES) :
 		{
+			glLineWidth(line_width);
 			glDrawArrays(GL_LINES, 0, vert_count);
 			break;
 		}
