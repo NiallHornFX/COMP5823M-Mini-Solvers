@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{8A712C3B-EBF2-458E-BBD7-B7DEDF852031}</ProjectGuid>
+    <RootNamespace>BVHLoader</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)\build\bin</OutDir>
+    <IntDir>$(SolutionDir)\build\intermediate</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)\build\bin</OutDir>
+    <IntDir>$(SolutionDir)\build\intermediate</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)\incl;$(SolutionDir)\incl\ext\dearimgui</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>opengl32.lib;$(SolutionDir)\lib\GLEW\glew32.lib;$(SolutionDir)\lib\GLFW\glfw3dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)\incl;$(SolutionDir)\incl\ext\dearimgui</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>opengl32.lib;$(SolutionDir)\lib\GLEW\glew32.lib;$(SolutionDir)\lib\GLFW\glfw3dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\cloth_collider.cpp" />
+    <ClCompile Include="src\cloth_mesh.cpp" />
+    <ClCompile Include="src\cloth_solver.cpp" />
+    <ClCompile Include="src\cloth_state.cpp" />
+    <ClCompile Include="src\ext.cpp" />
+    <ClCompile Include="src\ext\dearimgui\imgui.cpp" />
+    <ClCompile Include="src\ext\dearimgui\imgui_demo.cpp" />
+    <ClCompile Include="src\ext\dearimgui\imgui_draw.cpp" />
+    <ClCompile Include="src\ext\dearimgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="src\ext\dearimgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src\ext\dearimgui\imgui_tables.cpp" />
+    <ClCompile Include="src\ext\dearimgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\ground.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\mesh.cpp" />
+    <ClCompile Include="src\primitive.cpp" />
+    <ClCompile Include="src\shader.cpp" />
+    <ClCompile Include="src\texture.cpp" />
+    <ClCompile Include="src\viewer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="incl\camera.h" />
+    <ClInclude Include="incl\cloth_collider.h" />
+    <ClInclude Include="incl\cloth_common.h" />
+    <ClInclude Include="incl\cloth_mesh.h" />
+    <ClInclude Include="incl\cloth_solver.h" />
+    <ClInclude Include="incl\cloth_state.h" />
+    <ClInclude Include="incl\ground.h" />
+    <ClInclude Include="incl\mesh.h" />
+    <ClInclude Include="incl\primitive.h" />
+    <ClInclude Include="incl\shader.h" />
+    <ClInclude Include="incl\texture.h" />
+    <ClInclude Include="incl\viewer.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

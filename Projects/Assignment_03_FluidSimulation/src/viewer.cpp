@@ -1,0 +1,504 @@
+// COMP5823M - A2 : Niall Horn - viewer.cpp
+// Implements
+#include "viewer.h"
+
+// Std Headers
+#include <iostream>
+#include <vector>
+#include <thread>
+
+// Ext Headers
+// GLEW
+#include "ext/GLEW/glew.h" 
+// GLFW
+#include "ext/GLFW/glfw3.h" 
+// GLM
+#include "ext/glm/gtc/matrix_transform.hpp"
+#include "ext/glm/gtc/type_ptr.hpp"
+// dearimgui
+#include "ext/dearimgui/imgui.h"
+#include "ext/dearimgui/imgui_impl_glfw.h"
+#include "ext/dearimgui/imgui_impl_opengl3.h"
+
+#define USE_FREE_CAMERA 1
+
+// Global GLFW State
+struct
+{
+	int    width, height;
+	double mouse_offset_x  = 0.f, mouse_offset_y  = 0.f;
+	double mousepos_prev_x = 0.f, mousepos_prev_y = 0.f;
+	double scroll_y = 0.f;
+	bool is_init = false; 
+	
+
+}GLFWState;
+
+// =========================================== Viewer Class Implementation ===========================================
+
+Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
+	: width(W), height(H), title(Title)
+{
+	// ============= Init =============
+	tick_c = 0;
+	draw_axis = true;
+
+	// ============= OpenGL Setup ============= 
+	// Setup OpenGL Context and Window
+	window_context(); 
+	// Load OpenGL Extensions
+	extensions_load();
+
+	// ============= Fluid Setup =============
+	// fluid-> ..
+
+}
+
+Viewer::~Viewer() 
+{
+	glfwDestroyWindow(window); window = nullptr;
+	glfwTerminate();
+}
+
+// Initalizes viewer state and calls indefinite application execution loop.
+void Viewer::exec()
+{
+	// ============= Init Operations =============
+	render_prep();
+
+	// ============= Application Loop =============
+	bool esc = false; 
+	while (!glfwWindowShouldClose(window) && !esc)
+	{
+		// Tick viewer application
+		tick();
+
+		// Query Esc key
+		esc = esc_pressed();
+	} 
+
+	// ============= Shutdown GUI =============
+	gui_shutdown();
+}
+
+
+// Single tick of the viewer application, all runtime operations are called from here. 
+void Viewer::tick()
+{
+	// ============= App Operations =============
+	get_dt();
+	update_window();
+
+	// ============= Input Query =============
+
+	// ============= Simulation =============
+	// solver->tick()
+
+	// ============= Render =============
+	render();
+
+	// ============= Post Tick Operations =============
+	tick_c++;
+}
+
+// Create Window via GLFW and Initalize OpenGL Context on current thread. 
+void Viewer::window_context()
+{
+	// ============= GLFW Setup =============
+	glfwInit();
+	if (!glfwInit())
+	{
+		std::cerr << "Error::Viewer:: GLFW failed to initalize.\n";
+		std::terminate();
+	}
+	// Window State
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, GL_MAJOR);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, GL_MINOR);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	//glfwWindowHint(GLFW_RESIZABLE, GL_FALSE); // Fixed Window Size. 
+	glfwWindowHint(GLFW_SAMPLES, 4); // MSAA.
+	// Create Window
+	window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
+	if (window == NULL)
+	{
+		std::cerr << "Error::Viewer:: GLFW failed to initalize.\n";
+		glfwTerminate();
+		std::terminate();
+	}
+
+	// ============= Set GLFW Callbacks =============
+	// Window Callack
+	glfwSetFramebufferSizeCallback(window, &framebuffer_size_callback);
+	// Mouse Callbacks
+	glfwSetCursorPosCallback(window, &mouse_callback);
+	glfwSetScrollCallback(window, &scroll_callback);
+
+	// ============= Set Context and Viewport =============
+	glfwMakeContextCurrent(window);
+	glViewport(0, 0, width, height);
+
+	// ============= Setup GUI =============
+	gui_setup();
+}
+
+// Load OpenGL Functions via GLEW and output device info.
+void Viewer::extensions_load()
+{
+	// GLEW Setup
+	glewExperimental = GL_TRUE;
+	glewInit();
+	if (glewInit() != GLEW_OK)
+	{
+		std::cerr << "ERROR::Viewer:: GLFW failed to initalize.\n";
+		std::terminate();
+	}
+
+	// Query GL Device and Version Info - 
+	render_device = glGetString(GL_RENDERER);
+	version = glGetString(GL_VERSION);
+	// Cleanup Debug Output
+	std::cout << "======== DEBUG::OPENGL::BEGIN ========\n"
+		<< "RENDER DEVICE = " << render_device << "\n"
+		<< "VERSION = " << version << "\n";
+	std::cout << "======== DEBUG::OPENGL::END ========\n\n";
+}
+
+// Initalize Render State
+void Viewer::render_prep()
+{
+	// ============= OpenGL Pre Render State =============
+	// Multisampling 
+	glEnable(GL_MULTISAMPLE);
+
+	// Sizes
+	glPointSize(5.f);
+	glLineWidth(2.5f);
+
+	// Blending and Depth. 
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	// ============= Create Viewer Primtivies =============
+	// Axis
+	axis = new Primitive("axis");
+	float data[66] =
+	{
+		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
+		1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
+		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+		0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+		0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+	};
+	axis->set_data_mesh(data, 6);
+	axis->scale(glm::vec3(1.f));
+	axis->translate(glm::vec3(0.f, 0.01f, 0.f));
+	axis->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
+	axis->mode = Render_Mode::RENDER_LINES;
+}
+
+// Render Operations
+void Viewer::render()
+{
+	// ==================== Render State ====================
+	glClearColor(0.15f, 0.15f, 0.15f, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// ==================== Render Viewer Primtivies ====================
+	// Draw Axis
+	if (draw_axis)
+	{
+		glLineWidth(2.5f); // Reset for axis width.
+		axis->render();
+	}
+	// ==================== Render Fluid ====================
+	// SPH_Fluid->render()
+
+	// ==================== Render GUI ====================
+	gui_render();
+
+	// ====================  Swap and Poll ====================
+	get_GLError();
+	glfwSwapBuffers(window);
+	glfwPollEvents();
+}
+
+void Viewer::query_drawState()
+{
+	// 
+}
+
+void Viewer::update_window()
+{
+	// Nth frame update
+	if (tick_c % 5 != 0) return;
+
+	// Update Window Title 
+	std::string title_u;
+	title_u = title + "      OpenGL " + std::to_string(GL_MAJOR) + "." + std::to_string(GL_MINOR)
+		+ "       FPS : " + std::to_string(1.f / dt);
+	
+	glfwSetWindowTitle(window, title_u.c_str());
+}
+
+void Viewer::get_GLError()
+{
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR) std::cerr << "ERROR::Viewer::GL_ERROR = " << err << std::endl;
+}
+
+void Viewer::get_dt()
+{
+	prev_t = cur_t; 
+	cur_t = glfwGetTime();
+	dt = cur_t - prev_t; 
+}
+
+bool Viewer::esc_pressed()
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;
+	return false; 
+}
+
+
+// =========================================== DearImGUI Implementation ===========================================
+
+// Info : imgui Startup 
+void Viewer::gui_setup()
+{
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 400");
+}
+
+// Info : GUI Render with forwarding the relveant data based on input.
+void Viewer::gui_render()
+{
+	get_GLError();
+	bool window = true; 
+
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	// ============= GUI Static Locals / State =============
+	// Solver State Text
+	std::string state; 
+	if (solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
+
+	// Get Dt 1/n. 
+	float n = 1.f / solver->dt;
+	static int tmp_count = 90;
+
+
+	// ============= Imgui layout =============
+	{
+		// Begin ImGui
+		ImGui::Begin("Simulation Controls");
+
+		// ========== Solver State ==========
+		// Labels
+		if (solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+		ImGui::Text(state.c_str());
+		ImGui::Text("Simulation Frame = %d, Substep = %d", solver->frame, solver->timestep);
+		ImGui::Text("Dt = 1/%d", std::size_t(n));
+		ImGui::PopStyleColor();
+
+		// Anim Loop Play Pause
+		if (ImGui::Button("Start/Stop"))
+		{
+			solver->simulate = !solver->simulate;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		// Reset
+		if (ImGui::Button("Reset"))
+		{
+			solver->reset();
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+
+		// ========== Cloth State Controls ==========
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Fluid State Controls");
+		ImGui::PopStyleColor();
+
+
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Cloth Colliders");
+		ImGui::PopStyleColor();
+		if (ImGui::SliderFloat("Collision Friction", &col_fric, 0.f, 1.f))
+		{
+			cloth_solver->set_collision_fric(col_fric);
+		}
+		if (ImGui::SliderFloat("Collision Epsilon", &col_eps, 1e-06f, 1e-01f))
+		{
+			cloth_solver->set_collision_eps(col_eps);
+		}
+		ImGui::SliderFloat("K_visc", &cloth_solver->K_v, 0.f, 2.f);
+		// Slightly Hacky using ptr swapping via hardcoded collider indices. 
+		// Plane Collider
+		if (ImGui::Button(plane_onoff))
+		{
+			p_use = !p_use;
+			if (!p_use)
+			{
+				collision_plane = nullptr;
+				cloth_solver->colliders[0] = nullptr;
+				strcpy_s(plane_onoff, 32, "Enable Plane Collider");
+			}
+			else
+			{
+				collision_plane = tmp_plane;
+				cloth_solver->colliders[0] = tmp_plane;
+				strcpy_s(plane_onoff, 32, "Disable Plane Collider");
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		// Sphere Collider
+		if (ImGui::Button(sphere_onoff))
+		{
+			s_use = !s_use; 
+			if (!s_use)
+			{
+				collision_sphere           = nullptr; 
+				cloth_solver->colliders[1] = nullptr; 
+				strcpy_s(sphere_onoff, 32, "Enable Sphere Collider");
+			}
+			else
+			{
+				collision_sphere           = tmp_sphere;
+				cloth_solver->colliders[1] = tmp_sphere;
+				strcpy_s(sphere_onoff, 32, "Disable Sphere Collider");
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		if (ImGui::SliderFloat("Sphere Radius", &s_rad, 0.25f, 2.5f))
+		{
+			static_cast<Cloth_Collider_Sphere*>(collision_sphere)->set_radius(s_rad);
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+		if (ImGui::SliderFloat3("Sphere Centre", s_cent, -5.f, 5.f))
+		{
+			static_cast<Cloth_Collider_Sphere*>(collision_sphere)->set_centre(glm::vec3(s_cent[0], s_cent[1], s_cent[2]));
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+
+
+		// ========== Solver Controls ==========
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Solver Controls");
+		ImGui::PopStyleColor();
+		// Physics Timestep
+		if (ImGui::InputInt("Timestep 1/x", &tmp_count))
+		{
+			cloth_solver->set_timestep(tmp_count);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		ImGui::SliderFloat("K_stiff", &cloth_solver->K_s, 0.f, 1000.f);
+		ImGui::SliderFloat("K_damp",  &cloth_solver->K_c, 0.f, 10.f);
+		ImGui::SliderFloat("K_visc",  &cloth_solver->K_v, 0.f, 2.f);
+		ImGui::SliderFloat("Gravity", &cloth_solver->gravity, -10.f, 10.f);
+		ImGui::SliderFloat3("Wind", wind, 0.f, 5.f);
+
+		// ========== Viewer State ==========
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Viewer Controls");
+		ImGui::PopStyleColor();
+		ImGui::Text("Light");
+		ImGui::SliderFloat("Light Strength", &light_strength, 0.f, 10.f);
+		if (ImGui::SliderFloat3("Light Position", lpos, -50.f, 50.f))
+		{
+			light_pos.x = lpos[0], light_pos.y = lpos[1], light_pos.z = lpos[2];
+		}
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Viewport Controls");
+		ImGui::PopStyleColor();
+		// Render Cloth Normals
+		if (ImGui::Button("Render Cloth Normals"))
+		{
+			ren_normals = !ren_normals;
+		}
+		if (ImGui::Button("Render Cloth Edges"))
+		{
+			cloth->mesh->ren_edges = !cloth->mesh->ren_edges;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		if (ImGui::Button("Render Cloth Points"))
+		{
+			cloth->mesh->ren_points = !cloth->mesh->ren_points;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		// Draw Axis
+		if (ImGui::Button("Draw Origin Axis"))
+		{
+			draw_axis = !draw_axis; 
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		// Draw Grid
+		if (ImGui::Button("Draw Grid"))
+		{
+			draw_grid = !draw_grid;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		
+		// End ImGui
+		ImGui::End();
+	}
+
+	// ============= Imgui Render =============
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	get_GLError();
+}
+
+// Info : imgui shut down. 
+void Viewer::gui_shutdown()
+{
+	// Cleanup
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+}
+
+// =========================================== GLFW State + Callbacks ===========================================
+
+// ======= Callback Functions =======
+void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+{
+	GLFWState.width = width, GLFWState.height = height; 
+	glViewport(0, 0, GLFWState.width, GLFWState.height);
+}
+
+void mouse_callback(GLFWwindow *window, double xpos, double ypos)
+{
+	if (!GLFWState.is_init)
+	{
+		GLFWState.mousepos_prev_x = xpos;
+		GLFWState.mousepos_prev_y = ypos;
+		GLFWState.is_init = true;
+	}
+	// Mouse Offset
+	GLFWState.mouse_offset_x =  (xpos - GLFWState.mousepos_prev_x);
+	GLFWState.mouse_offset_y =  (ypos - GLFWState.mousepos_prev_y);
+
+	// Prev Pos
+	GLFWState.mousepos_prev_x = xpos;
+	GLFWState.mousepos_prev_y = ypos;
+}
+
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+{
+	GLFWState.scroll_y = yoffset;
+}
+
+

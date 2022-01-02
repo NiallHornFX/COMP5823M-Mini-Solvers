@@ -1,0 +1,67 @@
+// COMP5823M - A3 : Niall Horn - fluid_solver.h
+#ifndef FLUID_SOLVER_H
+#define FLUID_SOLVER_H
+
+// Std Headers
+#include <vector>
+
+// Ext Headers 
+// GLM
+#include "ext/glm/glm.hpp"
+
+class Fluid_Object; 
+class Fluid_Collider; 
+struct Particle; 
+
+using kernel_func = float(*) (glm::vec3 v);
+
+class Fluid_Solver
+{
+public: 
+	Fluid_Solver(float DT, Fluid_Object *Data);
+	~Fluid_Solver() = default; 
+
+	// ======= Operations =======
+	void reset();
+
+	void tick(float viewer_Dt);
+
+	void step();
+
+	// ======= Solver =======
+	void eval_colliders();
+
+	void eval_forces();
+
+	void integrate();
+
+
+	// ======= Eval Fluid Quanities =======
+	float eval_fluid_density(const glm::vec3 P,  kernel_func w);
+	float eval_fluid_pressure(const glm::vec3 P, kernel_func w);
+
+	// ======= Smoothing Kernel Functions =======
+	float kernel_poly6(glm::vec3 v); 
+	float kernel_poly6_laplacian(glm::vec3 v);
+	float kernel_spiky(glm::vec3 v);
+	float kernel_spiky_gradient(glm::vec3 v);
+
+public:
+	// Solver Intrinsics
+	bool simulate;
+	float at, dt; // Acumulated Time, Fixed Physics timestep. 
+	std::size_t frame, timestep;
+	float kernel_radius; 
+
+	// Forces
+	float gravity, viscosity; 
+	float force_coeff; 
+
+	// Fluid Colliders
+	std::vector<Fluid_Collider*> colliders;
+
+	// Fluid State Object
+	Fluid_Object *fluidData; 
+};
+
+#endif
