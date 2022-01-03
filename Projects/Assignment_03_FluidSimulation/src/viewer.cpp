@@ -46,7 +46,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 {
 	// ============= Init =============
 	tick_c = 0;
-	draw_axis = true;
+	draw_axis = false;
 
 	// ============= OpenGL Setup ============= 
 	// Setup OpenGL Context and Window
@@ -56,7 +56,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
-	fluid_object->emit_square(glm::vec2(0.0f, 0.0f), glm::vec2(0.5f, 0.5f), 0.02f);
+	fluid_object->emit_square(glm::vec2(0.0f, 0.0f), glm::vec2(0.4f, 0.6f), 0.01f);
 	fluid_solver = new Fluid_Solver((1.f / 90.f), fluid_object);
 }
 
@@ -176,7 +176,7 @@ void Viewer::render_prep()
 	// Multisampling 
 	glEnable(GL_MULTISAMPLE);
 
-	// Sizes
+	// Default glPrim Sizes
 	glPointSize(5.f);
 	glLineWidth(2.5f);
 
@@ -191,9 +191,9 @@ void Viewer::render_prep()
 	float data[44] =
 	{
 		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
-		1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
+		0.5f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
 		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
-		0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+		0.f, 0.5f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f
 	};
 	axis->set_data_mesh(data, 6);
 	axis->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");

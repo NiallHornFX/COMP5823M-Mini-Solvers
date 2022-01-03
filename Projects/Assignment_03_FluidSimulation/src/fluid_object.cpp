@@ -25,15 +25,18 @@ void Fluid_Object::emit_square(const glm::vec2 &P, const glm::vec2 &Dim, float h
 {
 	std::size_t n_x = std::size_t(Dim.x / h); 
 	std::size_t n_y = std::size_t(Dim.y / h);
+	float h_dim_x = Dim.x * 0.5f, h_dim_y = Dim.y * 0.5f; 
 
 	for (std::size_t i = 0; i < n_x; ++i)
 	{
 		for (std::size_t j = 0; j < n_y; ++j)
 		{
-			float x = (float(i) / float(n_x-1)) * Dim.x;
-			float y = (float(j) / float(n_y-1)) * Dim.y;
+			float xx = (float(i) / float(n_x-1)) * Dim.x;
+			float yy = (float(j) / float(n_y-1)) * Dim.y;
+			xx -= h_dim_x, yy -= h_dim_y;
+			xx += P.x, yy += P.y; 
 			
-			particles.emplace_back(glm::vec3(x, y, 0.f), (i*n_x+j));
+			particles.emplace_back(glm::vec3(xx,yy,0.f), (i*n_x+j));
 		}
 	}
 }

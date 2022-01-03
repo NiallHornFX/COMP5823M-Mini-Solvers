@@ -13,8 +13,8 @@ Fluid_Collider::Fluid_Collider(const char *Name)
 
 // ================================== Cloth_Collider_Plane Implementation ===============================
 
-Fluid_Collider_Plane::Fluid_Collider_Plane(const char *name, const glm::vec3 &Q, const glm::vec3 &Normal, const glm::vec2 &WH)
-	: Fluid_Collider(name), q(Q), N(Normal), length(WH.x), height(WH.y)
+Fluid_Collider_Plane::Fluid_Collider_Plane(const char *name, const glm::vec3 &Q, const glm::vec3 &Normal, const glm::vec2 &LH)
+	: Fluid_Collider(name), q(Q), N(Normal), length(LH.x), height(LH.y)
 {
 	if (length != 0.f) type = Type::HORIZONTAL; else type = Type::VERTICAL;
 
@@ -32,8 +32,8 @@ void Fluid_Collider_Plane::render_setup()
 		float x_max = q.x + length; 
 		float data[11 * 2]
 		{
-			x_min, q.y, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f,
-			x_max, q.y, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f
+			x_min, q.y, 0.f, 0.f, 0.f, 0.f, 0.4f, 0.05f, 0.05f, 0.f, 0.f,
+			x_max, q.y, 0.f, 0.f, 0.f, 0.f, 0.4f, 0.05f, 0.05f, 0.f, 0.f
 		};
 		prim->set_data_mesh(data, 2);
 		prim->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");
@@ -42,11 +42,11 @@ void Fluid_Collider_Plane::render_setup()
 	else
 	{
 		float y_min = q.y;
-		float y_max = q.y + length;
+		float y_max = q.y + height;
 		float data[11 * 2]
 		{
-			q.x, y_min, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
-			q.x, y_max, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f
+			q.x, y_min, 0.f, 0.f, 0.f, 0.f, 0.05f, 0.4f, 0.05f, 0.f, 0.f,
+			q.x, y_max, 0.f, 0.f, 0.f, 0.f, 0.05f, 0.4f, 0.05f, 0.f, 0.f
 		};
 		prim->set_data_mesh(data, 2);
 		prim->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");

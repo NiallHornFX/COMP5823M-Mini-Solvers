@@ -10,9 +10,11 @@ layout (location = 3) in vec2 v_UV;
 // Output
 out vec3 colour; 
 
+uniform mat4 model;
+
 void main()
 {
 	colour = v_C; 
-	gl_Position = vec4(v_P, 1.0); 
+	gl_Position = model * vec4(v_P, 1.0); 
 }
 

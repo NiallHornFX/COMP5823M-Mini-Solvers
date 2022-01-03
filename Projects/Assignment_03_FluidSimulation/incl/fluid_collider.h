@@ -38,7 +38,7 @@ private:
 	enum Type {HORIZONTAL = 0, VERTICAL};
 
 public:
-	Fluid_Collider_Plane(const char *name, const glm::vec3 &Q, const glm::vec3 &Normal, const glm::vec2 &WH);
+	Fluid_Collider_Plane(const char *name, const glm::vec3 &Q, const glm::vec3 &Normal, const glm::vec2 &LH);
 
 	virtual void eval_collision(std::vector<Particle> &particles) override final;
 
