@@ -48,7 +48,8 @@ void Fluid_Object::render_setup()
 	ren_points->set_shader("../../shaders/fluid_points.vert", "../../shaders/fluid_points.frag");
 	ren_points->mode = Render_Mode::RENDER_POINTS;
 
-	//ren_points->scale(glm::vec3(0.1f)); // Scale into CCS for Rendering. 
+	ren_points->scale(glm::vec3(0.1f)); // Scale into CCS for Rendering. 
+	//ren_points->translate(glm::vec3(-1.f, -1.f, 0.f));
 }
 
 

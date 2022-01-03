@@ -36,7 +36,7 @@ void Fluid_Collider_Plane::render_setup()
 			x_max, q.y, 0.f, 0.f, 0.f, 0.f, 0.4f, 0.05f, 0.05f, 0.f, 0.f
 		};
 		prim->set_data_mesh(data, 2);
-		prim->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");
+		prim->set_shader("../../shaders/collider.vert", "../../shaders/collider.frag");
 		prim->mode = Render_Mode::RENDER_LINES;
 	}
 	else
@@ -49,9 +49,12 @@ void Fluid_Collider_Plane::render_setup()
 			q.x, y_max, 0.f, 0.f, 0.f, 0.f, 0.05f, 0.4f, 0.05f, 0.f, 0.f
 		};
 		prim->set_data_mesh(data, 2);
-		prim->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");
+		prim->set_shader("../../shaders/collider.vert", "../../shaders/collider.frag");
 		prim->mode = Render_Mode::RENDER_LINES;
 	}
+
+	//prim->scale(glm::vec3(0.1f));
+	//prim->translate(glm::vec3(-10.f, 0.f, 0.f));
 }
 
 // Info : Project positions of particles directly to satisfy the Plane collision inequality condition : (P-Q) * N >= 0

@@ -108,9 +108,13 @@ ___
 
 #### Fluid Solver
 
+
+
+##### Simulation Loop 
+
 Typically we'd do each solver operation within a timestep and each solver operation loops over each particle individually within its call. However because of the approach we need where we don't want to have  to write all data to particles, and we want to do an entire solve step per particle we do the solve loop differently, where we perform solver operations per particle, this means we have access to all the particles current state for all of its solver operations. Eg we can fetch particle density, and we only need to get it once, we can evaluate particle forces for the current particle multiple times without doing it for all particles. 
 
-So oppose to doing separate calls, that loop over all particles internally
+So oppose to doing separate calls to a bunch of functions, that loop over all particles internally.
 
 ```
 GetNeighbours();
@@ -131,9 +135,9 @@ Integrate(P)
 ...
 ```
 
-Where all solver operations take in a input particle index. 
+Where all solver operation functions take in a input particle index to operate on instead. 
 
-The typical approach is as 
+
 
 
 
@@ -146,3 +150,5 @@ ____
 ##### Rendering as Vertex Points :
 
 Particles + Tank are scaled down by $0.1$ and then offset to framebuffer bottom left origin. Scene is defined within a 0-10 Square cartesian range. Of course for rendering without Camera transforms all calculations are within clip space pre-rasterization so need to transform to screen space, can use model matrix for this strictly speaking its not a model transform but as its called this within Primitive class keep it as is. 
+
+Its probs better to use a 2D ortho matrix, because then I don't need to worry about scaling into NDC space, then screen space manually. My actual simulation domain is going to be [0,10] (x,y) so use Ortho matrix to transform this into NDC.
