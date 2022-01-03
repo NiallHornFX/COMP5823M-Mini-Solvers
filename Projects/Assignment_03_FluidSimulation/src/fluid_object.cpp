@@ -33,7 +33,7 @@ void Fluid_Object::emit_square(const glm::vec2 &P, const glm::vec2 &Dim, float h
 			float x = (float(i) / float(n_x)) * Dim.x;
 			float y = (float(j) / float(n_y)) * Dim.y;
 			
-			particles.emplace_back(glm::vec3(x, y, 0.f));
+			particles.emplace_back(glm::vec3(x, y, 0.f), (i*n_x+j));
 		}
 	}
 }

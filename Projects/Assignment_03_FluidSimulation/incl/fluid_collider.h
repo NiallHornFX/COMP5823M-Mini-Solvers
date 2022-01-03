@@ -12,7 +12,7 @@
 // Ext Headers 
 #include "ext/glm/glm.hpp" // GLM
 
-class Particle; 
+struct Particle; 
 
 // Base Collider Abstract Base 
 class Fluid_Collider

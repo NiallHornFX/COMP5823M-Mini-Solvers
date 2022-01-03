@@ -17,7 +17,7 @@ uniform mat4 model;
 void main()
 {
 	colour = v_C; 
-	velocity = V_N; 
+	velocity = v_N; 
 	gl_Position = model * vec4(v_P, 1.0); 
 }
 

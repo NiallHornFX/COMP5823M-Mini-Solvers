@@ -195,9 +195,9 @@ void Viewer::render_prep()
 		0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
 	};
 	axis->set_data_mesh(data, 6);
-	axis->scale(glm::vec3(1.f));
-	axis->translate(glm::vec3(0.f, 0.01f, 0.f));
-	axis->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
+	//axis->scale(glm::vec3(0.01));
+	//axis->translate(glm::vec3(0.f, 0.01f, 0.f));
+	axis->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");
 	axis->mode = Render_Mode::RENDER_LINES;
 }
 
@@ -212,7 +212,7 @@ void Viewer::render()
 	// Draw Axis
 	if (draw_axis)
 	{
-		glLineWidth(2.5f); // Reset for axis width.
+		axis->line_width = 2.5f; // Reset for axis width.
 		axis->render();
 	}
 	// ==================== Render Fluid ====================
