@@ -30,8 +30,8 @@ void Fluid_Object::emit_square(const glm::vec2 &P, const glm::vec2 &Dim, float h
 	{
 		for (std::size_t j = 0; j < n_y; ++j)
 		{
-			float x = (float(i) / float(n_x)) * Dim.x;
-			float y = (float(j) / float(n_y)) * Dim.y;
+			float x = (float(i) / float(n_x-1)) * Dim.x;
+			float y = (float(j) / float(n_y-1)) * Dim.y;
 			
 			particles.emplace_back(glm::vec3(x, y, 0.f), (i*n_x+j));
 		}
@@ -45,7 +45,7 @@ void Fluid_Object::render_setup()
 	ren_points->set_shader("../../shaders/fluid_points.vert", "../../shaders/fluid_points.frag");
 	ren_points->mode = Render_Mode::RENDER_POINTS;
 
-	ren_points->scale(glm::vec3(0.1f)); // Scale into CCS for Rendering. 
+	//ren_points->scale(glm::vec3(0.1f)); // Scale into CCS for Rendering. 
 }
 
 
@@ -62,7 +62,7 @@ void Fluid_Object::render()
 		{
 			data[p].pos = particles[p].P;
 			data[p].normal = particles[p].V;
-			data[p].col = glm::vec3(0.1f, 0.1f, 0.75f);
+			data[p].col = glm::vec3(0.1f, 0.1f, 1.f);
 		}
 		ren_points->set_data_mesh(data);
 	}

@@ -56,6 +56,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
+	fluid_object->emit_square(glm::vec2(0.0f, 0.0f), glm::vec2(0.5f, 0.5f), 0.02f);
 	fluid_solver = new Fluid_Solver((1.f / 90.f), fluid_object);
 }
 
@@ -195,8 +196,6 @@ void Viewer::render_prep()
 		0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
 	};
 	axis->set_data_mesh(data, 6);
-	//axis->scale(glm::vec3(0.01));
-	//axis->translate(glm::vec3(0.f, 0.01f, 0.f));
 	axis->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");
 	axis->mode = Render_Mode::RENDER_LINES;
 }
