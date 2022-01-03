@@ -63,15 +63,15 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 {
 	for (Particle &curPt : particles)
 	{
-		float dist = glm::dot(curPt.P, N);
+		float dist = glm::dot((curPt.P - q), N);
 
 		switch (type) // Account for Plane Bounds over length or height. 
 		{
 			case Type::HORIZONTAL:
 			{
-				if (curPt.P.x <= length)
+				if (curPt.P.x > q.x && curPt.P.x < length)
 				{
-					if (dist <= 1e-03f) curPt.P += -dist * N;
+					if (dist <= 1e-03) curPt.P += -dist * N;
 				}
 				break;
 			}

@@ -18,6 +18,7 @@ Fluid_Object::~Fluid_Object()
 void Fluid_Object::reset_fluid()
 {
 	particles.clear();
+	emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.1f);
 }
 
 // Info : Emit Fluid in square at P, defined by Dim with spacing h.
@@ -33,7 +34,7 @@ void Fluid_Object::emit_square(const glm::vec2 &P, const glm::vec2 &Dim, float h
 		{
 			float xx = (float(i) / float(n_x-1)) * Dim.x;
 			float yy = (float(j) / float(n_y-1)) * Dim.y;
-			xx -= h_dim_x, yy -= h_dim_y;
+			//xx -= h_dim_x, yy -= h_dim_y; // Center
 			xx += P.x, yy += P.y; 
 			
 			particles.emplace_back(glm::vec3(xx,yy,0.f), (i*n_x+j));
@@ -47,18 +48,15 @@ void Fluid_Object::render_setup()
 	ren_points = new Primitive("Render Fluid Points");
 	ren_points->set_shader("../../shaders/fluid_points.vert", "../../shaders/fluid_points.frag");
 	ren_points->mode = Render_Mode::RENDER_POINTS;
-
-	ren_points->scale(glm::vec3(0.1f)); // Scale into CCS for Rendering. 
-	//ren_points->translate(glm::vec3(-1.f, -1.f, 0.f));
 }
 
 
-void Fluid_Object::render()
+void Fluid_Object::render(const glm::mat4 &ortho)
 {
 	// ==== Point Render ====
 	// (Re)-Set Mesh Data, not ideal as new GPU resources per frame...
 	// Store Particle Velocites in Normal attrib.
-
+	ren_points->shader.setMat4("proj", ortho);
 	if (!ren_points->flags.data_set) // Do Inital Vert Data Alloc
 	{
 		std::vector<vert> data(particles.size());

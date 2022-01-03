@@ -11,11 +11,12 @@ layout (location = 3) in vec2 v_UV;
 out vec3 colour; 
 
 uniform mat4 model;
+uniform mat4 proj; 
 
 void main()
 {
 	colour = v_C; 
-	vec3 tPos = v_P / v_P;
-	gl_Position = model * vec4(tPos - 1.0, 1.0);
+	//vec3 tPos = v_P / v_P;
+	gl_Position = proj * vec4(v_P, 1.0);
 }
 

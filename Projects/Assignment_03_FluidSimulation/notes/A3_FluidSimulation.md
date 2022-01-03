@@ -108,13 +108,15 @@ ___
 
 #### Fluid Solver
 
-
-
 ##### Simulation Loop 
 
 Typically we'd do each solver operation within a timestep and each solver operation loops over each particle individually within its call. However because of the approach we need where we don't want to have  to write all data to particles, and we want to do an entire solve step per particle we do the solve loop differently, where we perform solver operations per particle, this means we have access to all the particles current state for all of its solver operations. Eg we can fetch particle density, and we only need to get it once, we can evaluate particle forces for the current particle multiple times without doing it for all particles. 
 
 So oppose to doing separate calls to a bunch of functions, that loop over all particles internally.
+
+Deciding on how to structure the solve step loop
+
+Per Operation approach (for all particles) 
 
 ```
 GetNeighbours();
@@ -124,7 +126,7 @@ Integrate()
 ...
 ```
 
-We do 
+vs. Per Particle (for all operations)
 
 ```
 for particle p : 
@@ -137,7 +139,7 @@ Integrate(P)
 
 Where all solver operation functions take in a input particle index to operate on instead. 
 
-
+Actually I'm undecided as if we do it this way it means all particle states apart from the current are based on the previous step. And it makes more sense to store some stuff on particles anyway, for rendering sake as well. 
 
 
 

@@ -29,7 +29,7 @@ public:
 
 	void step();
 
-	void render_colliders();
+	void render_colliders(const glm::mat4 &ortho);
 
 	// ======= Solver =======
 	void eval_colliders();

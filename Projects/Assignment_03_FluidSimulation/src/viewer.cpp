@@ -53,11 +53,13 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	window_context(); 
 	// Load OpenGL Extensions
 	extensions_load();
+	// Camera
+	ortho = glm::ortho(0.f, 10.f, 0.f, 10.f);
 
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
-	fluid_object->emit_square(glm::vec2(0.f, 0.0f), glm::vec2(2.f, 3.f), 0.1f);
-	//fluid_object->emit_square(glm::vec2(5.f, 4.0f), glm::vec2(2.f, 3.f), 0.1f);
+	//fluid_object->emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.1f);
+	fluid_object->emit_square(glm::vec2(3.f, 4.f), glm::vec2(6.f, 3.f), 0.1f);
 	fluid_solver = new Fluid_Solver((1.f / 90.f), fluid_object);
 }
 
@@ -216,10 +218,10 @@ void Viewer::render()
 		axis->render();
 	}
 	// ==================== Render Fluid ====================
-	fluid_object->render();
+	fluid_object->render(ortho);
 
 	// ==================== Render Fluid Colliders ====================
-	fluid_solver->render_colliders();
+	fluid_solver->render_colliders(ortho);
 
 	// ==================== Render GUI ====================
 	gui_render();

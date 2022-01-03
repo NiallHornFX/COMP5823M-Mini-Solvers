@@ -13,11 +13,12 @@ out vec3 colour;
 
 // Uniforms
 uniform mat4 model; 
+uniform mat4 proj;
 
 void main()
 {
 	colour = v_C; 
 	velocity = v_N; 
-	gl_Position = model * vec4(v_P, 1.0); 
+	gl_Position = proj * vec4(v_P, 1.0); 
 }
 

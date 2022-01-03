@@ -20,10 +20,10 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, Fluid_Object *Data)
 	simulate = false;
 
 	// Allocate Tank Collider Planes
-	Fluid_Collider_Plane *floor = new Fluid_Collider_Plane("Tank_Floor", glm::vec3(5.0f, 0.0f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec2(5.0f, 0.f));
-	Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left",  glm::vec3(5.0f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
-	Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(10.f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
-	colliders.push_back(floor), colliders.push_back(left), colliders.push_back(right);
+	Fluid_Collider_Plane *floor = new Fluid_Collider_Plane("Tank_Floor", glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec2(5.0f, 0.f));
+	//Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left",  glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
+	//Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(7.5f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
+	colliders.push_back(floor); // colliders.push_back(left), colliders.push_back(right);
 }
 
 // Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler
@@ -59,6 +59,8 @@ void Fluid_Solver::reset()
 // Info : Single Simulation Step of Cloth Solver 
 void Fluid_Solver::step()
 {
+	integrate();
+	eval_colliders();
 	// Get Particle Neighbours (HashGrid)
 	// Compute Particle Pressure
 	// Compute Particle Forces
@@ -79,10 +81,20 @@ void Fluid_Solver::eval_colliders()
 	}
 }
 
-void Fluid_Solver::render_colliders()
+void Fluid_Solver::render_colliders(const glm::mat4 &ortho)
 {
 	for (Fluid_Collider *col : colliders)
 	{
+		col->prim->shader.setMat4("proj", ortho);
 		col->prim->render();
+	}
+}
+
+void Fluid_Solver::integrate()
+{
+	for (Particle &p : fluidData->particles)
+	{
+		p.V += glm::vec3(0.f, -2.f, 0.f) * dt; 
+		p.P += p.V * dt; 
 	}
 }

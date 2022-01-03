@@ -28,7 +28,7 @@ public:
 	// ======== Render Fluid ========
 	enum render_type {POINT_VERTS = 0, FRAGMENT = 1};
 	void render_setup();
-	void render();
+	void render(const glm::mat4 &ortho);
 
 public: 
 	std::vector<Particle> particles; 

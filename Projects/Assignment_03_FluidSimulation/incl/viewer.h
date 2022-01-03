@@ -71,6 +71,9 @@ private:
 	const byte *render_device;
 	const byte *version;
 
+	// Camera
+	glm::mat4 ortho;
+
 	// Fluid Simulation
 	Fluid_Object *fluid_object; 
 	Fluid_Solver *fluid_solver; 
