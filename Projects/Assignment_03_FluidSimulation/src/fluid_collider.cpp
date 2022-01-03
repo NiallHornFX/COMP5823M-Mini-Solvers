@@ -36,7 +36,7 @@ void Fluid_Collider_Plane::render_setup()
 			x_max, q.y, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f
 		};
 		prim->set_data_mesh(data, 2);
-		prim->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
+		prim->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");
 		prim->mode = Render_Mode::RENDER_LINES;
 	}
 	else
@@ -49,7 +49,7 @@ void Fluid_Collider_Plane::render_setup()
 			q.x, y_max, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f
 		};
 		prim->set_data_mesh(data, 2);
-		prim->set_shader("../../shaders/basic.vert", "../../shaders/colour.frag");
+		prim->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");
 		prim->mode = Render_Mode::RENDER_LINES;
 	}
 }

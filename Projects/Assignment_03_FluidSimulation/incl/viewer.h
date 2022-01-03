@@ -7,8 +7,6 @@
 
 // Project Headers
 #include "primitive.h"
-#include "fluid_solver.h"
-
 
 // Ext Headers
 #include "ext/glm/glm.hpp"
@@ -21,6 +19,8 @@ using byte = unsigned char;
 #define GL_MINOR 0
 
 // FD 
+class Fluid_Object;
+class Fluid_Solver; 
 struct GLFWwindow;
 struct GLFWState;
 
@@ -59,9 +59,6 @@ public:
 	void get_dt();
 
 	// Debug
-	void test_mesh();
-
-private:
 	void get_GLError();
 
 private:
@@ -75,7 +72,8 @@ private:
 	const byte *version;
 
 	// Fluid Simulation
-	Fluid_Solver *solver; 
+	Fluid_Object *fluid_object; 
+	Fluid_Solver *fluid_solver; 
 
 	// Primtivies
 	Primitive *axis;

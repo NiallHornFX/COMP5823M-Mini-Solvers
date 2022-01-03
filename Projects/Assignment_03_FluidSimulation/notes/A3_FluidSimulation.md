@@ -44,9 +44,7 @@ ___
 
 #### Smoothing Kernels and Computing Fluid Quantities
 
-A Smoothing Kernel $\omega((\vec{r}-\vec{r}_j, h))$ takes in a vector of $\vec{r} - \vec{r}_j$ for some position $\vec{r}$ and some particle position $\vec{r}_j$ and computes the smoothed fluid quantity value at that location, within some radius $h$. Note that I'm following standard notation convention, while it may be confusing as Kernel functions may also have a radius however this is denoted h. 
-
-Where the position $\vec{r}$ is the location to evaluate the kernel at (eg some $ith$ particle's position). However as the second parameter $h$ may be omitted in some cases. 
+A Smoothing Kernel $\omega(||\vec{r}-\vec{r}_j||, h)$ takes in length/distance of vector $\vec{r} - \vec{r}_j$ for some position $\vec{r}$ (typically the ith particle position been iterated to compute quantity at) and the current iterated neighbour particle position $\vec{r}_j$ and computes the smoothed fluid quantity value at that location, within some radius $h$. Note that I'm following standard notation convention, while it may be confusing as Kernel functions may also have a radius however this is denoted h. The second parameter $h$ may be omitted in some cases. 
 
 Kernels need to have the property of their integral been equal to 1: 
 $$
@@ -64,7 +62,7 @@ Useful for computing all fluid quantities apart from pressure. For viscosity we 
 
 ##### Computing Fluid Quantities :
 
-Weighted Average interpolation of neighbouring fluid particles, where weighting is calculated via Smoothing Kernel using the following approach : 
+Weighted Average interpolation of neighbouring fluid particles, where weighting is calculated via Smoothing Kernel with the quantity divided by the mass, using the following approach : 
 $$
 Q(x) = \sum_j m_j {Q_j \over \rho_j} \omega(\vec{r} - \vec{r}_j, h)
 $$
@@ -90,7 +88,7 @@ ____
 
 #### Classes
 
-I will follow the same idea as the Viewer Application based I used for the other 2 assignments, The Viewer App class here will be adopted for just 2D display. We keep the primitive class as we still may need to render mesh data the traditional way. Eg I'm still unsure on if boundaries will be mesh based for rendering or use implicit functions. 
+I will follow the same idea as the Viewer Application based I used for the other 2 assignments, The Viewer App class here will be adopted for just 2D display. We keep the primitive class as we still may need to render mesh data the traditional way. Eg I'm still unsure on if boundaries will be mesh based for rendering or use implicit functions. For time sake we keep all vectors 3D and just omit the Z component. 
 
 Oppose to using an approach with separate SPH Fluid Object and SPH Solver classes, I think for this project I will just keep it as a single class. However it might be better to keep them separate so all the render state  can be put inside the fluid object class while keeping the solver decoupled from the fluid state. The solver class will also be used for setting the boundaries. 
 

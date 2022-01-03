@@ -85,11 +85,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\camera.cpp" />
-    <ClCompile Include="src\cloth_collider.cpp" />
-    <ClCompile Include="src\cloth_mesh.cpp" />
-    <ClCompile Include="src\cloth_solver.cpp" />
-    <ClCompile Include="src\cloth_state.cpp" />
     <ClCompile Include="src\ext.cpp" />
     <ClCompile Include="src\ext\dearimgui\imgui.cpp" />
     <ClCompile Include="src\ext\dearimgui\imgui_demo.cpp" />
@@ -98,22 +93,22 @@
     <ClCompile Include="src\ext\dearimgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="src\ext\dearimgui\imgui_tables.cpp" />
     <ClCompile Include="src\ext\dearimgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\fluid_collider.cpp" />
+    <ClCompile Include="src\fluid_object.cpp" />
+    <ClCompile Include="src\fluid_solver.cpp" />
     <ClCompile Include="src\ground.cpp" />
+    <ClCompile Include="src\hash_grid.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\mesh.cpp" />
     <ClCompile Include="src\primitive.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\texture.cpp" />
     <ClCompile Include="src\viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="incl\camera.h" />
-    <ClInclude Include="incl\cloth_collider.h" />
-    <ClInclude Include="incl\cloth_common.h" />
-    <ClInclude Include="incl\cloth_mesh.h" />
-    <ClInclude Include="incl\cloth_solver.h" />
-    <ClInclude Include="incl\cloth_state.h" />
-    <ClInclude Include="incl\ground.h" />
+    <ClInclude Include="incl\fluid_collider.h" />
+    <ClInclude Include="incl\fluid_object.h" />
+    <ClInclude Include="incl\fluid_solver.h" />
+    <ClInclude Include="incl\hash_grid.h" />
     <ClInclude Include="incl\mesh.h" />
     <ClInclude Include="incl\primitive.h" />
     <ClInclude Include="incl\shader.h" />

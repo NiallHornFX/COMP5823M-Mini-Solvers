@@ -26,6 +26,7 @@ Primitive::Primitive(const char *Name)
 	flags.shader_set   = 0;
 
 	line_width = 5.f; 
+	point_size = 2.f; 
 
 	// Init World to ident
 	model = glm::mat4(1);
@@ -59,6 +60,7 @@ void Primitive::render()
 	{
 		case (RENDER_POINTS) :
 		{
+			glPointSize(point_size);
 			glDrawArrays(GL_POINTS, 0, vert_count);
 			break;
 		}
@@ -174,6 +176,23 @@ void Primitive::update_data_position(const std::vector<glm::vec3> &posData)
 		vert_data[i++] = posData[v].x;
 		vert_data[i++] = posData[v].y;
 		vert_data[i++] = posData[v].z;
+	}
+
+	// Refill Buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+// Update Pos and Normal Data
+void Primitive::update_data_position_normals(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &normData)
+{
+	for (std::size_t v = 0; v < vert_count; ++v)
+	{
+		std::size_t P_i = v * 11;     // Vert Index, Position Offset 
+		vert_data[P_i++] = posData[v].x, vert_data[P_i++] = posData[v].y, vert_data[P_i++] = posData[v].z;
+		std::size_t N_i = 3 + v * 11; // Vert Index, Normal Offset
+		vert_data[N_i++] = normData[v].x, vert_data[N_i++] = normData[v].y, vert_data[N_i++] = normData[v].z;
 	}
 
 	// Refill Buffer

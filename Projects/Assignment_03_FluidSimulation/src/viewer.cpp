@@ -20,6 +20,10 @@
 #include "ext/dearimgui/imgui_impl_glfw.h"
 #include "ext/dearimgui/imgui_impl_opengl3.h"
 
+// Project Headers
+#include "fluid_object.h"
+#include "fluid_solver.h"
+
 
 #define USE_FREE_CAMERA 1
 
@@ -51,8 +55,8 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	extensions_load();
 
 	// ============= Fluid Setup =============
-	// fluid-> ..
-
+	fluid_object = new Fluid_Object;
+	fluid_solver = new Fluid_Solver((1.f / 90.f), fluid_object);
 }
 
 Viewer::~Viewer() 
@@ -93,7 +97,7 @@ void Viewer::tick()
 	// ============= Input Query =============
 
 	// ============= Simulation =============
-	// solver->tick()
+	fluid_solver->tick(dt);
 
 	// ============= Render =============
 	render();
@@ -212,10 +216,10 @@ void Viewer::render()
 		axis->render();
 	}
 	// ==================== Render Fluid ====================
-	// SPH_Fluid->render()
+	fluid_object->render();
 
 	// ==================== Render Fluid Colliders ====================
-
+	fluid_solver->render_colliders();
 
 	// ==================== Render GUI ====================
 	gui_render();
@@ -291,10 +295,10 @@ void Viewer::gui_render()
 	// ============= GUI Static Locals / State =============
 	// Solver State Text
 	std::string state; 
-	if (solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
+	if (fluid_solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
 
 	// Get Dt 1/n. 
-	float n = 1.f / solver->dt;
+	float n = 1.f / fluid_solver->dt;
 	static int tmp_count = 90;
 
 
@@ -305,22 +309,22 @@ void Viewer::gui_render()
 
 		// ========== Solver State ==========
 		// Labels
-		if (solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+		if (fluid_solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 		ImGui::Text(state.c_str());
-		ImGui::Text("Simulation Frame = %d, Substep = %d", solver->frame, solver->timestep);
+		ImGui::Text("Simulation Frame = %d, Substep = %d", fluid_solver->frame, fluid_solver->timestep);
 		ImGui::Text("Dt = 1/%d", std::size_t(n));
 		ImGui::PopStyleColor();
 
 		// Anim Loop Play Pause
 		if (ImGui::Button("Start/Stop"))
 		{
-			solver->simulate = !solver->simulate;
+			fluid_solver->simulate = !fluid_solver->simulate;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		// Reset
 		if (ImGui::Button("Reset"))
 		{
-			solver->reset();
+			fluid_solver->reset();
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 

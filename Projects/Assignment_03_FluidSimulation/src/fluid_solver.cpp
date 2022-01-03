@@ -72,3 +72,11 @@ void Fluid_Solver::eval_colliders()
 		col->eval_collision(fluidData->particles);
 	}
 }
+
+void Fluid_Solver::render_colliders()
+{
+	for (Fluid_Collider *col : colliders)
+	{
+		col->prim->render();
+	}
+}

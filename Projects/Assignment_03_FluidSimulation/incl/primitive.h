@@ -45,6 +45,7 @@ public:
 	void set_data_mesh(const float *data, std::size_t vert_n);
 
 	void update_data_position(const std::vector<glm::vec3> &posData);
+	void update_data_position_normals(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &normData);
 	void update_data_colour(const std::vector<glm::vec3> &colData);
 
 	void set_colour(const glm::vec3 &col);
@@ -63,7 +64,7 @@ public:
 	// Shader
 	Shader shader; 
 	glm::mat4x4 s_view, s_persp; 
-	float line_width; 
+	float line_width, point_size; 
 
 	// Data
 	std::vector<float> vert_data; 

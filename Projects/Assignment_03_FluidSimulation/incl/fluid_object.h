@@ -16,8 +16,8 @@ struct Particle;
 class Fluid_Object
 {
 public:
-	Fluid_Object(); 
-	~Fluid_Object() = default; 
+	Fluid_Object();
+	~Fluid_Object(); 
 
 	void reset_fluid();
 
@@ -27,6 +27,7 @@ public:
 
 	// ======== Render Fluid ========
 	enum render_type {POINT_VERTS = 0, FRAGMENT = 1};
+	void render_setup();
 	void render();
 
 public: 
@@ -34,36 +35,33 @@ public:
 
 
 private:
+
+	// ======== Render Primitives ========
 	// Point Rendering via Primitive
 	Primitive *ren_points; 
-	Shader Shad_Points; 
 
 	// Rendering within Fragment Shader
-	Primitive *fsQuad; // Fullscreen quad
-	Shader *Shad_Frag; 
+	Primitive *fsQuad; 
 
 	// Marching Squares ... 
+
+
 
 	friend class Fluid_Solver; 
 	friend class Fluid_Collider; 
 };
 
 
-
-
-
-
+// ======== Particle Struct ========
 
 struct Particle
 {
 	Particle(const glm::vec3 &p, std::size_t idx)
-		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), mass(1.f), density(0.f) {}
+		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), mass(1.f), radius(1.f), density(0.f) {}
 
 	glm::vec3 P, V, F;
 	std::size_t id;
-	float density, mass;
+	float density, mass, radius;
 };
-
-
 
 #endif
