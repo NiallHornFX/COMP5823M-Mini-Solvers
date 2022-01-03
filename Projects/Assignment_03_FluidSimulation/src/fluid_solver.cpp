@@ -20,10 +20,10 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, Fluid_Object *Data)
 	simulate = false;
 
 	// Allocate Tank Collider Planes
+	Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left", glm::vec3(2.5f, 0.0f, 0.f),   glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
+	Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(7.5f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *floor = new Fluid_Collider_Plane("Tank_Floor", glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec2(5.0f, 0.f));
-	//Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left",  glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
-	//Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(7.5f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
-	colliders.push_back(floor); // colliders.push_back(left), colliders.push_back(right);
+	colliders.push_back(std::move(left)), colliders.push_back(std::move(right)), colliders.push_back(std::move(floor));
 }
 
 // Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler

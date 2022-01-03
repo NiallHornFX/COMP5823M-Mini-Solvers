@@ -53,8 +53,6 @@ void Fluid_Collider_Plane::render_setup()
 		prim->mode = Render_Mode::RENDER_LINES;
 	}
 
-	//prim->scale(glm::vec3(0.1f));
-	//prim->translate(glm::vec3(-10.f, 0.f, 0.f));
 }
 
 // Info : Project positions of particles directly to satisfy the Plane collision inequality condition : (P-Q) * N >= 0
@@ -69,7 +67,7 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 		{
 			case Type::HORIZONTAL:
 			{
-				if (curPt.P.x > q.x && curPt.P.x < length)
+				if (curPt.P.x > q.x && curPt.P.x < (q.x + length))
 				{
 					if (dist <= 1e-03) curPt.P += -dist * N;
 				}
@@ -78,7 +76,7 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 
 			case Type::VERTICAL:
 			{
-				if (curPt.P.y <= height)
+				if (curPt.P.y > q.y && curPt.P.y <= (q.y + height))
 				{
 					if (dist <= 1e-03f) curPt.P += -dist * N;
 				}

@@ -17,8 +17,11 @@ Fluid_Object::~Fluid_Object()
 
 void Fluid_Object::reset_fluid()
 {
-	particles.clear();
-	emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.1f);
+	for (Particle &pt : particles)
+	{
+		pt.P = pt.rest;
+		pt = Particle(pt.P, pt.id);
+	}
 }
 
 // Info : Emit Fluid in square at P, defined by Dim with spacing h.

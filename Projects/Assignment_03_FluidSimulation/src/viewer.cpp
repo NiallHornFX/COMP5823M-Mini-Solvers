@@ -59,7 +59,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
 	//fluid_object->emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.1f);
-	fluid_object->emit_square(glm::vec2(3.f, 4.f), glm::vec2(6.f, 3.f), 0.1f);
+	fluid_object->emit_square(glm::vec2(1.5f, 4.f), glm::vec2(8.f, 3.f), 0.1f);
 	fluid_solver = new Fluid_Solver((1.f / 90.f), fluid_object);
 }
 

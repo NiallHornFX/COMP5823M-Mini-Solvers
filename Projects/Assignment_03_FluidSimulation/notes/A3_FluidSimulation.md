@@ -32,7 +32,7 @@ We have an open top cube as the fluid container and then square based inflow emi
 
 ***Integration*** : As with typical SPH fluid implementation, a Symplectic Integrator is needed, the Leapfrog scheme is specified in the assignment. 
 
-***Tank Boundaries*** : As the fluid is dropped into a open tank boundary, I can just use the plane equation with 3 Planes and specified q and normal vectors, and use only eval at certain positions defined by tank bounds. Can use collider from cloth class for this and loop over planes to eval for each tank side. Using planes makes adjusting the tank bounds at runtime easier. 
+***Tank Boundaries*** : As the fluid is dropped into a open tank boundary, I can just use the plane equation with 3 Planes and specified q and normal vectors, and use only eval at certain positions defined by tank bounds. Can use collider from cloth class for this and loop over planes to eval for each tank side. Using planes makes adjusting the tank bounds at runtime easier. However we need to only eval for particles whom like along the planes length/height and for some depth (so fluid can splash out of the tank and down the sides) else the planes will bound off to infinite depth either side of the tank. 
 
 ***Inflow***: Square of particles in grid pattern to define initial cube of fluid can jitter them if needed to stratify initial positions. 
 
@@ -51,10 +51,11 @@ $$
 \int \omega(r) = 1
 $$
 
-
 ##### Poly6 :
 
 Useful for computing all fluid quantities apart from pressure. For viscosity we use the Laplacian of this. 
+
+Note $\vec{r} = \vec{r}-\vec{r}_j$ within Poly6 is only used squared, so rather than passing the in the length of $\vec{r}$ we can use a square distance function to avoid the square root. Note this is only true for the Poly6 Kernel, Debrun's Spiky uses non square $\vec{r}$ length. 
 
 ##### Spiky :
 
@@ -100,9 +101,17 @@ Spatial Hash Grid will also be its own class based on my UE4 Cloth solver hash g
 
 **Fluid_Collider** : Defines a basic polymorphic class who evaluates collisions of some inequality condition against passed particle array (from Fluid_Object, invoked within Fluid_Solver()). Use Primitive Class to render collider via GL_Lines with Line Width. 
 
-**Hash_Grid** : Discretizes Fluids into Spatially coherent cells based on a 2D Spatial Hash Function for accelerating neighbour lookups. 
+**Hash_Grid** : Discretizes Fluids into Spatially coherent cells based on a 2D Spatial Hash Function for accelerating neighbour lookups. Only Cells that have been hashed to are allocated. 
 
 **Viewer** : Contains the OpenGL,Input and GUI code as well as housing the solver and fluid state instances. 
+
+____
+
+#### Hash Grid
+
+As state, the Hash Grid class is based on my UE4 Cloth Solver plugin where I was using it to accelerate particle-particle self collisions. The current approach doesn't use a cell size but specifies the number of buckets (which is then mod'd with the XOR'd spatial coords with some large prime integers) based on the paper *[Optimized Spatial Hashing for Collision Detection of Deformable Objects. Teschner et al.]*. 
+
+Particles are hashed and the resulting output is an index of the hash grid, so only cells which contain particles are allocated (Outer array contains pointers to inner dynamic arrays (eg std::vector)) while this does cause memory fragmentation it shouldn't be a big deal, each particle then stores the cell it lies within and can use the cell index to look up its neighbours to reduce the time complexity of particle-neighbour hood distance searching from $O(n^2) \mapsto O(nm)$ one disadvantage with Spatial Hashing is that as we cannot really define a cell size (Well we could modify the hash to use cell size instead of a cell count) which ideally should be the neighbourhood radius $h$ which is used in the smoothing Kernel functions. However HashGrid is faster than a uniform/explicit grid, as we don't need to do a per cell gather step and transform the grid from index space, to world space etc. 
 
 ___
 

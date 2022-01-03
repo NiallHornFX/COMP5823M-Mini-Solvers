@@ -34,6 +34,7 @@ public:
 	std::vector<Particle> particles; 
 
 
+
 private:
 
 	// ======== Render Primitives ========
@@ -57,9 +58,10 @@ private:
 struct Particle
 {
 	Particle(const glm::vec3 &p, std::size_t idx)
-		: P(p), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), mass(1.f), radius(1.f), density(0.f) {}
+		: P(p), rest(P), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), mass(1.f), radius(1.f), density(0.f) {}
 
 	glm::vec3 P, V, F;
+	glm::vec3 rest; 
 	std::size_t id;
 	float density, mass, radius;
 };
