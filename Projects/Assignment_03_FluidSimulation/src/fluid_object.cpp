@@ -8,7 +8,7 @@
 Fluid_Object::Fluid_Object()
 {
 	// Emission
-	emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.1f);
+	emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.05f);
 	//emit_square(glm::vec2(1.5f, 4.f), glm::vec2(4.f, 4.f), 0.12f);
 
 	// Setup

@@ -214,6 +214,11 @@ $$
 \textbf{f}_i^{pres} = -\nabla p(r_i) = -\sum_j m_j {{p_i + p_j}\over 2\rho_j}\nabla\omega(r-r_j, h)
 $$
 
+
+We should make sure we don't eval self particle when computing pressure as the pressure kernel uses the length of the vector $||\vec{r}||$ and it will cause a divide by zero nan to occur so the resulting pressure gradient and thus force will be nan.
+
+Density value incorrect if $h < 1$ this should not mean the kernel isnt normalized, it should still be even if $h < 1$ right ? 
+
 ____
 
 #### Classes
@@ -325,7 +330,7 @@ Particles + Tank are scaled down by $0.1$ and then offset to framebuffer bottom 
 
 Its probs better to use a 2D ortho matrix, because then I don't need to worry about scaling into NDC space, then screen space manually. My actual simulation domain is going to be [0,10] (x,y) so use Ortho matrix to transform this into NDC. Using glm::ortho works great.
 
-Problems are with the render time bottleneck when particle count is increase, we should be using instancing ideally and updating and re-allocating the VBO per tick is just too costly and stupid. I will fix this soon, want to get the solver working first. 
+Problems are with the render time bottleneck when particle count is increase, we should be using instancing ideally and updating and re-allocating the VBO per tick is just too costly and stupid. I will fix this soon, want to get the solver working first. Its more so the particle->vertex update thats so costly ie updating positions,normals,colour each tick. But to be fair in the release build, the optimization seems to speed it up greatly. 
 
 
 

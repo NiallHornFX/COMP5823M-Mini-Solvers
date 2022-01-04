@@ -60,7 +60,7 @@ void Fluid_Solver::tick(float viewer_Dt)
 	step(); 
 	frame++;
 
-	// DEBUG
+	// DEBUG - auto reset
 	if (frame > 15) { simulate = false; reset(); return; }
 
 	/*
@@ -142,7 +142,7 @@ void Fluid_Solver::get_neighbours()
 	if (hg) delete hg;
 
 	// Cell Size based on Kernel Radius
-	float cs = kernel_radius * 0.5f; 
+	float cs = kernel_radius * 1.f; 
 
 	// New Hash Grid 
 	hg = new Hash_Grid(fluidData, 10, cs);
@@ -210,12 +210,12 @@ void Fluid_Solver::eval_forces(kernel_func w, kernel_grad_func w_g)
 		glm::vec2 pressure_grad(0.f);
 		std::vector<Particle*> *neighbours = hg->grid[Pt_i.cell_idx];
 
-		// Pressure Gradient
+		// Compute Pressure Gradient
 		for (std::size_t j = 0; j < neighbours->size(); ++j)
 		{
 			Particle Pt_j = *((*neighbours)[j]);
-			if (Pt_j.id == Pt_i.id) continue; // Skip Self
-			pressure_grad += (std::max(Pt_i.pressure + Pt_j.pressure, -1.f) / 2.f * Pt_j.density) * (this->*w_g)(Pt_i.P - Pt_j.P);
+			if (Pt_j.id == Pt_i.id) continue; // Skip Self (nan)
+			pressure_grad += ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
 		}
 		force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
 
