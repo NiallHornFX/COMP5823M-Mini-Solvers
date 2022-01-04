@@ -5,6 +5,9 @@
 // Std Headers
 #include <vector>
 
+// Project Headers
+#include "hash_grid.h"
+
 // Ext Headers 
 // GLM
 #include "ext/glm/glm.hpp"
@@ -42,8 +45,7 @@ public:
 	void integrate();
 
 	// ======= Eval Fluid Quanities =======
-	void eval_fluid_density(kernel_func w);
-	float eval_fluid_pressure(const glm::vec3 P, kernel_func w);
+	void compute_dens_pres(kernel_func w);
 
 	// ======= Smoothing Kernel Functions =======
 	float kernel_poly6(const glm::vec3 &r);
@@ -59,6 +61,7 @@ public:
 	bool simulate;
 	float at, dt; // Acumulated Time, Fixed Physics timestep. 
 	std::size_t frame, timestep;
+	Hash_Grid *hg;
 
 	// ======= Forces =======
 	float gravity, viscosity; 
@@ -81,5 +84,6 @@ public:
 	// Fluid State Object
 	Fluid_Object *fluidData; 
 };
+
 
 #endif

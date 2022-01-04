@@ -35,8 +35,6 @@ struct
 	double mousepos_prev_x = 0.f, mousepos_prev_y = 0.f;
 	double scroll_y = 0.f;
 	bool is_init = false; 
-	
-
 }GLFWState;
 
 // =========================================== Viewer Class Implementation ===========================================
@@ -58,9 +56,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
-	//fluid_object->emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.1f);
-	fluid_object->emit_square(glm::vec2(1.5f, 4.f), glm::vec2(8.f, 3.f), 0.25f);
-	fluid_solver = new Fluid_Solver((1.f / 90.f), 100.f, 5.f, fluid_object);
+	fluid_solver = new Fluid_Solver((1.f / 90.f), 100.f, 1.f, fluid_object);
 }
 
 Viewer::~Viewer() 
@@ -314,6 +310,7 @@ void Viewer::gui_render()
 		if (fluid_solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 		ImGui::Text(state.c_str());
 		ImGui::Text("Simulation Frame = %d, Substep = %d", fluid_solver->frame, fluid_solver->timestep);
+		ImGui::Text("Particle Count = %d", fluid_object->particles.size());
 		ImGui::Text("Dt = 1/%d", std::size_t(n));
 		ImGui::PopStyleColor();
 
@@ -335,6 +332,9 @@ void Viewer::gui_render()
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Fluid State Controls");
 		ImGui::PopStyleColor();
+
+		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 100.f);
+		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 10.f, 1000.f);
 
 
 		// Draw Axis

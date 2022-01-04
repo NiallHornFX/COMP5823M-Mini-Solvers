@@ -7,7 +7,8 @@
 
 Fluid_Object::Fluid_Object()
 {
-	particles.reserve(1000);
+	//emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.1f);
+	emit_square(glm::vec2(1.5f, 4.f), glm::vec2(4.f, 4.f), 0.12f);
 	render_setup();
 }
 
@@ -71,7 +72,8 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 		{
 			data[p].pos = particles[p].P;
 			data[p].normal = particles[p].V;
-			data[p].col = glm::vec3(0.1f, 0.1f, 1.f);
+			//data[p].col = glm::vec3(0.1f, 0.1f, 1.f);
+			data[p].col = glm::vec3(particles[p].density * 0.1f); // Viz Density
 		}
 		ren_points->set_data_mesh(data);
 	}
@@ -92,11 +94,15 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 				rng.seed(seed + 321);  float b = dist(rng);
 				col[p] = glm::vec3(r, g, b);
 			}
+			else
+			{
+				col[p] = glm::vec3(fitRange(particles[p].density, 1.f, 50.f, 0.f, 1.f)); // Viz Density
+			}
 
-			pos[p] = particles[p].P;
+			pos[p]  = particles[p].P;
 			norm[p] = particles[p].V;
 		}
-		if (hash_colours) ren_points->update_data_position_normals_col(pos, norm, col); else ren_points->update_data_position_normals(pos, norm);
+		ren_points->update_data_position_normals_col(pos, norm, col);
 	}
 
 	// Render

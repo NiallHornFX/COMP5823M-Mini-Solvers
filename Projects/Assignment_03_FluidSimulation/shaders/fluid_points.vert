@@ -12,7 +12,6 @@ out vec3 velocity;
 out vec3 colour; 
 
 // Uniforms
-uniform mat4 model; 
 uniform mat4 proj;
 
 void main()

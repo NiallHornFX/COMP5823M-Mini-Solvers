@@ -64,4 +64,12 @@ struct Particle
 	float density, pressure, mass, radius;
 };
 
+// ================ Util Functions ================
+
+__forceinline inline float fitRange(float val, float a_min, float a_max, float b_min, float b_max)
+{
+	return b_min + (val - a_min)*(b_max - b_min) / (a_max - a_min);
+}
+
+
 #endif

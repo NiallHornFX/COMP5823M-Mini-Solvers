@@ -253,7 +253,7 @@ void Primitive::set_shader(const char *vert_path, const char *frag_path)
 	shader.load();
 
 	// Set Model Matrix
-	shader.setMat4("model", model);
+	//shader.setMat4("model", model); // No Model matrix in 2D used. 
 	if (shader.valid_state) flags.shader_set = 1; 
 }
 

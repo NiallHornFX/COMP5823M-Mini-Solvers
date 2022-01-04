@@ -10,7 +10,7 @@ layout (location = 3) in vec2 v_UV;
 // Output
 out vec3 colour; 
 
-uniform mat4 model;
+// Uniforms
 uniform mat4 proj; 
 
 void main()
