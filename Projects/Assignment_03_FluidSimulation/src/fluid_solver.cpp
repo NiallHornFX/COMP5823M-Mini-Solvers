@@ -5,7 +5,7 @@
 // Std Headers
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <functional>
+#include <algorithm>
 
 // Project Headers
 #include "fluid_object.h"
@@ -26,8 +26,8 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 	simulate = false;
 	got_neighbours = false; 
 	kernel_radius_sqr = kernel_radius * kernel_radius;
-	rest_density = 10.f; 
-	stiffness_coeff = 1e03f; 
+	rest_density = 100.f; 
+	stiffness_coeff = 1.f; 
 	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f; 
 
 	// ===== Setup Tank Collider Planes =====
@@ -60,6 +60,9 @@ void Fluid_Solver::tick(float viewer_Dt)
 	step(); 
 	frame++;
 
+	// DEBUG
+	if (frame > 15) { simulate = false; reset(); return; }
+
 	/*
 	// Subdivide Accumulated Viewer Timestep into Solver Substeps
 	at += viewer_Dt;
@@ -79,7 +82,10 @@ void Fluid_Solver::reset()
 	// Reset Time state
 	frame = 0, timestep = 0;
 
-	// Reset Cloth_State
+	// Reset Attrib Ranges
+	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f;
+
+	// Reset Fluid State
 	fluidData->reset_fluid();
 }
 
@@ -88,16 +94,15 @@ void Fluid_Solver::step()
 {
 	get_neighbours();
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
-	//eval_forces(&Fluid_Solver::kernel_poly6, &Fluid_Solver::kernel_poly6_gradient);
+	eval_forces(&Fluid_Solver::kernel_poly6, &Fluid_Solver::kernel_poly6_gradient);
 	integrate();
 	eval_colliders();
 
 	// Get Particle Neighbours (HashGrid)
-	// Compute Particle Pressure
+	// Compute Particle Density + Pressure
 	// Compute Particle Forces
 	// Integrate Particle Forces
 	// Eval Particle Collisions
-
 }
 
 // Info : Evaulate Collisions using passed colliders.
@@ -132,9 +137,15 @@ void Fluid_Solver::integrate()
 
 void Fluid_Solver::get_neighbours()
 {
+	// Delete old Hash Grid
 	got_neighbours = false; 
 	if (hg) delete hg;
-	hg = new Hash_Grid(fluidData, 10, kernel_radius * 1.2f);
+
+	// Cell Size based on Kernel Radius
+	float cs = kernel_radius * 0.5f; 
+
+	// New Hash Grid 
+	hg = new Hash_Grid(fluidData, 10, cs);
 	hg->hash();
 	got_neighbours = true; 
 }
@@ -203,7 +214,8 @@ void Fluid_Solver::eval_forces(kernel_func w, kernel_grad_func w_g)
 		for (std::size_t j = 0; j < neighbours->size(); ++j)
 		{
 			Particle Pt_j = *((*neighbours)[j]);
-			pressure_grad += (Pt_i.pressure + Pt_j.pressure / 2.f * Pt_j.density) * (this->*w_g)(Pt_i.P - Pt_j.P);
+			if (Pt_j.id == Pt_i.id) continue; // Skip Self
+			pressure_grad += (std::max(Pt_i.pressure + Pt_j.pressure, -1.f) / 2.f * Pt_j.density) * (this->*w_g)(Pt_i.P - Pt_j.P);
 		}
 		force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
 
@@ -227,7 +239,8 @@ glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
 {
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	float r_sqr = glm::dot(r, r);
-	return poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
+	auto foo = poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
+	return foo; 
 }
 
 float Fluid_Solver::kernel_spiky(const glm::vec3 &r)

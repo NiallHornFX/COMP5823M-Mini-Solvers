@@ -67,7 +67,12 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 			{
 				if (curPt.P.x > q.x && curPt.P.x < (q.x + length))
 				{
-					if (dist <= 1e-03) curPt.P += -dist * N;
+					if (dist <= 1e-03)
+					{
+						curPt.P += -dist * N;
+						curPt.V *= 0.1f; 
+					}
+						
 				}
 				break;
 			}
@@ -76,7 +81,12 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 			{
 				if (curPt.P.y > q.y && curPt.P.y <= (q.y + height))
 				{
-					if (dist <= 1e-03f) curPt.P += -dist * N;
+					if (dist <= 1e-03f)
+					{
+						curPt.P += -dist * N;
+						curPt.V *= 0.1f;
+					}
+						
 				}
 				break;
 			}

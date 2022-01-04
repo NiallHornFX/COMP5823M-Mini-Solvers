@@ -341,8 +341,8 @@ void Viewer::gui_render()
 		ImGui::Text("Fluid State Controls");
 		ImGui::PopStyleColor();
 
-		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 100.f);
-		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 10.f, 1000.f);
+		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 0.f, 200.f);
+		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 10.f);
 
 
 		// Draw Axis

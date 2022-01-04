@@ -268,11 +268,11 @@ I'll do something in Fluid_Object to set particle colours based on cell index so
 
 As in my UE4 Cloth solver, new hash grid will be created per frame, this is not ideal and ideally we can just reset the per cell particle lists /vectors, but it may be faster to just reallocate a new hash grid.
 
-Issues : 
+###### Issues : 
 
 If Cell size matches Kernel Radius $h$ we end up with too large cells and the $O(nm)$ gains diminish. Ideally we'd have a smaller cell size (thus more hash cells) and search the particles current cell and its adjacent cells, which still should be less than searching a larger single cell that matches the size of the kernel radius. 
 
-It becomes visible in the resulting density a hash grid is used as we have square regions of varying densities corresponding to each cell location, specially the nodes of the grid. This should be less of an issue with higher particle counts. 
+It becomes visible in the resulting density a hash grid is used as we have square regions of varying densities corresponding to each cell location, specially the nodes of the grid. This should be less of an issue with higher particle counts. However the other issue is that particles form into discrete cell groups as oppose to based on their smoothing kernel. 
 
 ___
 
