@@ -59,8 +59,8 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
 	//fluid_object->emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.1f);
-	fluid_object->emit_square(glm::vec2(1.5f, 4.f), glm::vec2(8.f, 3.f), 0.1f);
-	fluid_solver = new Fluid_Solver((1.f / 90.f), fluid_object);
+	fluid_object->emit_square(glm::vec2(1.5f, 4.f), glm::vec2(8.f, 3.f), 0.25f);
+	fluid_solver = new Fluid_Solver((1.f / 90.f), 100.f, 5.f, fluid_object);
 }
 
 Viewer::~Viewer() 
@@ -207,7 +207,7 @@ void Viewer::render_prep()
 void Viewer::render()
 {
 	// ==================== Render State ====================
-	glClearColor(0.15f, 0.15f, 0.15f, 1.0);
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// ==================== Render Viewer Primtivies ====================
@@ -341,6 +341,12 @@ void Viewer::gui_render()
 		if (ImGui::Button("Draw Origin Axis"))
 		{
 			draw_axis = !draw_axis; 
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+
+		if (ImGui::Button("Hash Colours"))
+		{
+			fluid_object->hash_colours = !fluid_object->hash_colours;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 

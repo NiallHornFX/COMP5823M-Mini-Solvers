@@ -4,12 +4,9 @@
 #include "fluid_collider.h"
 #include "fluid_object.h"
 
-// ================================== Cloth_Collider Class Implementation ===============================
+// ================================== Cloth_Collider Base Class Implementation ===============================
 Fluid_Collider::Fluid_Collider(const char *Name)
-	: name(Name), eps(1e-02f), friction(0.25f)
-{
-	render = false; 
-}
+	: name(Name), eps(1e-02f), friction(0.25f), render(false) {}
 
 // ================================== Cloth_Collider_Plane Implementation ===============================
 
@@ -63,7 +60,7 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 	{
 		float dist = glm::dot((curPt.P - q), N);
 
-		switch (type) // Account for Plane Bounds over length or height. 
+		switch (type) // Account for Plane Bounds over length or height.
 		{
 			case Type::HORIZONTAL:
 			{
@@ -74,7 +71,7 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 				break;
 			}
 
-			case Type::VERTICAL:
+			case Type::VERTICAL: // Need to add thickness limit on vertical planes dist < eps > thickness
 			{
 				if (curPt.P.y > q.y && curPt.P.y <= (q.y + height))
 				{

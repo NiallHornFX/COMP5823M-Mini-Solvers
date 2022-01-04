@@ -2,6 +2,9 @@
 // Implements
 #include "fluid_object.h"
 
+// Std Headers
+#include <random>
+
 Fluid_Object::Fluid_Object()
 {
 	particles.reserve(1000);
@@ -47,7 +50,7 @@ void Fluid_Object::emit_square(const glm::vec2 &P, const glm::vec2 &Dim, float h
 
 void Fluid_Object::render_setup()
 {
-	// ==== Point Render Setup ====
+	// =========== Point Vertices Render Setup ===========
 	ren_points = new Primitive("Render Fluid Points");
 	ren_points->set_shader("../../shaders/fluid_points.vert", "../../shaders/fluid_points.frag");
 	ren_points->mode = Render_Mode::RENDER_POINTS;
@@ -56,7 +59,8 @@ void Fluid_Object::render_setup()
 
 void Fluid_Object::render(const glm::mat4 &ortho)
 {
-	// ==== Point Render ====
+
+	// =========== Point Vertices Render ===========
 	// (Re)-Set Mesh Data, not ideal as new GPU resources per frame...
 	// Store Particle Velocites in Normal attrib.
 	ren_points->shader.setMat4("proj", ortho);
@@ -73,14 +77,26 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 	}
 	else // Update Pos and Normals Only
 	{
-		std::vector<glm::vec3> pos, norm;
-		pos.resize(particles.size()), norm.resize(particles.size());
+		std::vector<glm::vec3> pos, norm, col;
+		pos.resize(particles.size()), norm.resize(particles.size()), col.resize(particles.size());
 		for (std::size_t p = 0; p < particles.size(); ++p)
 		{
+			if (hash_colours)
+			{
+				// Colour per Hash Cell
+				std::mt19937_64 rng;
+				std::uniform_real_distribution<float> dist(0.0, 1.0);
+				int32_t seed = particles[p].cell_idx;
+				rng.seed(seed);        float r = dist(rng);
+				rng.seed(seed + 124);  float g = dist(rng);
+				rng.seed(seed + 321);  float b = dist(rng);
+				col[p] = glm::vec3(r, g, b);
+			}
+
 			pos[p] = particles[p].P;
 			norm[p] = particles[p].V;
 		}
-		ren_points->update_data_position_normals(pos, norm);
+		if (hash_colours) ren_points->update_data_position_normals_col(pos, norm, col); else ren_points->update_data_position_normals(pos, norm);
 	}
 
 	// Render

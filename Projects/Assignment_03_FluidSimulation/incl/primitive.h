@@ -46,6 +46,7 @@ public:
 
 	void update_data_position(const std::vector<glm::vec3> &posData);
 	void update_data_position_normals(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &normData);
+	void update_data_position_normals_col(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &normData, const std::vector<glm::vec3> &colData);
 	void update_data_colour(const std::vector<glm::vec3> &colData);
 
 	void set_colour(const glm::vec3 &col);

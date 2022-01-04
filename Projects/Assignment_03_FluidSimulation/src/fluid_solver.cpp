@@ -3,27 +3,44 @@
 #include "fluid_solver.h"
 
 // Std Headers
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <functional>
 
 // Project Headers
 #include "fluid_object.h"
 #include "fluid_collider.h"
+#include "hash_grid.h"
 
-Fluid_Solver::Fluid_Solver(float Sim_Dt, Fluid_Object *Data)
-	: fluidData(Data), dt(Sim_Dt), at(0.f)
+
+// ================================== Fluid_Solver Class Implementation ===============================
+
+Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_Object *Data)
+	: fluidData(Data), rest_density(RestDens), kernel_radius(KernelRad), dt(Sim_Dt), at(0.f)
 {
-	// Init 
+	// ===== Init Solver =====
 	gravity = -1.0f;
 	kernel_radius = 1.f; 
 	viscosity = 0.f; 
 	force_coeff = 1.f; 
 	frame = 0, timestep = 0; 
 	simulate = false;
+	kernel_radius_sqr = kernel_radius * kernel_radius;
 
-	// Allocate Tank Collider Planes
+	// ===== Setup Tank Collider Planes =====
 	Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left", glm::vec3(2.5f, 0.0f, 0.f),   glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(7.5f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *floor = new Fluid_Collider_Plane("Tank_Floor", glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec2(5.0f, 0.f));
 	colliders.push_back(std::move(left)), colliders.push_back(std::move(right)), colliders.push_back(std::move(floor));
+
+	// ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
+	poly6_s = 4.f / M_PI  * std::powf(kernel_radius, 8.f);
+	poly6_grad_s = -24.f / M_PI * std::powf(kernel_radius, 8.f);
+
+	spiky_s = 10.f / M_PI * std::powf(kernel_radius, 5.f);
+	spiky_grad_s = -30.f / M_PI * std::powf(kernel_radius, 5.f);
+
+	visc_lapl_s = -20.f / M_PI * std::powf(kernel_radius, 5.f);
 }
 
 // Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler
@@ -59,8 +76,11 @@ void Fluid_Solver::reset()
 // Info : Single Simulation Step of Cloth Solver 
 void Fluid_Solver::step()
 {
+	get_neighbours();
 	integrate();
+	eval_fluid_density(&Fluid_Solver::kernel_poly6);
 	eval_colliders();
+
 	// Get Particle Neighbours (HashGrid)
 	// Compute Particle Pressure
 	// Compute Particle Forces
@@ -97,4 +117,46 @@ void Fluid_Solver::integrate()
 		p.V += glm::vec3(0.f, -2.f, 0.f) * dt; 
 		p.P += p.V * dt; 
 	}
+}
+
+void Fluid_Solver::get_neighbours()
+{
+	Hash_Grid hg(fluidData, 10, kernel_radius);
+	hg.hash();
+
+	/*
+	for (Particle &p : fluidData->particles)
+	{
+
+	} */
+}
+
+// ================================== Eval Attrib Functions ===============================
+void Fluid_Solver::eval_fluid_density(kernel_func w)
+{
+	for (std::size_t p_i = 0; p_i < fluidData->particles.size(); ++p_i)
+	{
+		Particle &Pt_i = fluidData->particles[p_i];
+		float dens_tmp = 0.f; 
+		for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
+		{
+			// No Grid Hash yet...
+			const Particle &Pt_j = fluidData->particles[p_j];
+			dens_tmp += (this->*w)(Pt_i.P - Pt_j.P);
+		}
+		Pt_i.density = dens_tmp; 
+	}
+}
+
+
+// ================================== Kernel Functions ===============================
+
+// Assumes r = |r - r_j|^2
+float Fluid_Solver::kernel_poly6(const glm::vec3 &r)
+{
+	float r_sqr = glm::dot(r, r);
+
+	if (r_sqr >= kernel_radius_sqr) return 0.f;
+	
+	return poly6_s * std::powf((kernel_radius_sqr - r_sqr), 3.f);
 }
