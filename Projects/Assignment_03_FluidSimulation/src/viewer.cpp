@@ -310,7 +310,6 @@ void Viewer::gui_render()
 		if (fluid_solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 		ImGui::Text(state.c_str());
 		ImGui::Text("Simulation Frame = %d, Substep = %d", fluid_solver->frame, fluid_solver->timestep);
-		ImGui::Text("Particle Count = %d", fluid_object->particles.size());
 		ImGui::Text("Dt = 1/%d", std::size_t(n));
 		ImGui::PopStyleColor();
 
@@ -326,6 +325,15 @@ void Viewer::gui_render()
 			fluid_solver->reset();
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
+
+		// ========== Fluid Attributes  ==========
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Fluid Attributes");
+		ImGui::Text("Particle Count = %d", fluid_object->particles.size());
+		ImGui::PopStyleColor();
+		ImGui::Text("Density : min = %f | max = %f", fluid_solver->min_dens, fluid_solver->max_dens);
+		ImGui::Text("Pressure : min = %f | max = %f", fluid_solver->min_pres, fluid_solver->max_pres);
 
 		// ========== Fluid State Controls ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));

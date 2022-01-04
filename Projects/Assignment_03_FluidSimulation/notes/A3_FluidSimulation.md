@@ -134,9 +134,9 @@ Combine to get the 2D Gradient of the Spiky Kernel :
 $$
 \nabla\omega_{spiky} (r, h) = -{30\over\pi h^5} {\vec{r}\over ||\vec{r}||} (h-||r||)^2
 $$
-Which can be re-written more simply as : 
+Which can be re-written as scalar vector multipcation : 
 $$
-\nabla\omega_{spiky} (r, h) = -({30\over\pi h^5} \cdot (h-||r||)^2) \: {\vec{r}\over ||\vec{r}||}
+\nabla\omega_{spiky} (r, h) = (-({30\over\pi h^5}) \cdot (h-||r||)^2) \: {\vec{r}\over ||\vec{r}||}
 $$
 The Spiky Kernel however suffers from the same problem as Poly6 for its Laplacian which is used to define the viscosity force (as per the Navier Stokes momentum equation) so its not usable for Viscosity. So we use a different Kernel for Viscosity. 
 
@@ -268,6 +268,12 @@ I'll do something in Fluid_Object to set particle colours based on cell index so
 
 As in my UE4 Cloth solver, new hash grid will be created per frame, this is not ideal and ideally we can just reset the per cell particle lists /vectors, but it may be faster to just reallocate a new hash grid.
 
+Issues : 
+
+If Cell size matches Kernel Radius $h$ we end up with too large cells and the $O(nm)$ gains diminish. Ideally we'd have a smaller cell size (thus more hash cells) and search the particles current cell and its adjacent cells, which still should be less than searching a larger single cell that matches the size of the kernel radius. 
+
+It becomes visible in the resulting density a hash grid is used as we have square regions of varying densities corresponding to each cell location, specially the nodes of the grid. This should be less of an issue with higher particle counts. 
+
 ___
 
 #### Fluid Solver
@@ -319,4 +325,15 @@ Particles + Tank are scaled down by $0.1$ and then offset to framebuffer bottom 
 
 Its probs better to use a 2D ortho matrix, because then I don't need to worry about scaling into NDC space, then screen space manually. My actual simulation domain is going to be [0,10] (x,y) so use Ortho matrix to transform this into NDC. Using glm::ortho works great.
 
-Problems are with the render time bottleneck when particle count is increase, we should be using instancing ideally and updating and re-allocating the VBO per tick is just too costly and stupid. 
+Problems are with the render time bottleneck when particle count is increase, we should be using instancing ideally and updating and re-allocating the VBO per tick is just too costly and stupid. I will fix this soon, want to get the solver working first. 
+
+
+
+
+
+###### Rendering via Implicit Functions in Fragment Shader 
+
+###### Rendering via Grid Rasterize Density
+
+###### Rendering via Marching Squares
+

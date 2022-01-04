@@ -12,6 +12,8 @@
 struct Particle; 
 class Fluid_Object; 
 
+#define INLINE __forceinline 
+
 // Info : Simple 2D Spatial Hash Grid class, user specified dimensions and cell size. 
 
 class Hash_Grid
@@ -22,7 +24,7 @@ public:
 
 	void hash();
 
-	std::size_t hash_pos(const glm::vec2 &PtPos) const; 
+	INLINE std::size_t hash_pos(const glm::vec2 &PtPos) const;
 
 public: 
 	Fluid_Object *fluidData; 

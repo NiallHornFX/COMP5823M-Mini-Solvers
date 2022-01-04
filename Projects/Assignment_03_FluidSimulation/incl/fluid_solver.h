@@ -17,6 +17,8 @@ class Fluid_Collider;
 
 struct Particle; 
 
+#define INLINE __forceinline 
+
 class Fluid_Solver
 {
 public: 
@@ -40,7 +42,7 @@ public:
 
 	void eval_colliders();
 
-	void eval_forces();
+	void eval_forces(kernel_func w, kernel_grad_func w_g);
 
 	void integrate();
 
@@ -48,13 +50,13 @@ public:
 	void compute_dens_pres(kernel_func w);
 
 	// ======= Smoothing Kernel Functions =======
-	float kernel_poly6(const glm::vec3 &r);
-	float kernel_spiky(const glm::vec3 &r);
+	INLINE float kernel_poly6(const glm::vec3 &r);
+	INLINE float kernel_spiky(const glm::vec3 &r);
 
-	glm::vec2 kernel_poly6_gradient(const glm::vec3 &r);
-	glm::vec2 kernel_spiky_gradient(const glm::vec3 &r);
+	INLINE glm::vec2 kernel_poly6_gradient(const glm::vec3 &r);
+	INLINE glm::vec2 kernel_spiky_gradient(const glm::vec3 &r);
 
-	float kernel_visc_laplacian(const glm::vec3 &r);
+	INLINE float kernel_visc_laplacian(const glm::vec3 &r);
 
 public:
 	// ======= Solver Intrinsics =======
@@ -62,6 +64,7 @@ public:
 	float at, dt; // Acumulated Time, Fixed Physics timestep. 
 	std::size_t frame, timestep;
 	Hash_Grid *hg;
+	bool got_neighbours; 
 
 	// ======= Forces =======
 	float gravity, viscosity; 
@@ -77,6 +80,10 @@ public:
 
 	// Pressure
 	float rest_density, stiffness_coeff;
+
+	// Min/Max Attrib Ranges
+	float min_dens, max_dens;
+	float min_pres, max_pres; 
 
 	// Fluid Colliders
 	std::vector<Fluid_Collider*> colliders;

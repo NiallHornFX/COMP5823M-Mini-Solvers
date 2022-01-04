@@ -11,6 +11,8 @@
 // Ext Headers 
 #include "ext/glm/glm.hpp" // GLM
 
+#define INLINE __forceinline 
+
 struct Particle; 
 
 class Fluid_Object
@@ -19,11 +21,11 @@ public:
 	Fluid_Object();
 	~Fluid_Object(); 
 
-	// ======== Emit + Reset Fluid ========
+	// ======== Emit + Reset ========
 	void emit_square(const glm::vec2 &P, const glm::vec2 &Dim, float h);
 	void reset_fluid();
 
-	// ======== Render Fluid ========
+	// ======== Render ========
 	enum render_type {POINT_VERTS = 0, FRAGMENT = 1};
 	void render_setup();
 	void render(const glm::mat4 &ortho);
@@ -35,7 +37,6 @@ public:
 	// View State
 	bool hash_colours = false;
 
-private:
 	// ======== Render Primitives ========
 	// Point Rendering via Primitive
 	Primitive *ren_points; 
@@ -44,14 +45,10 @@ private:
 	Primitive *fsQuad; 
 
 	// Marching Squares ... 
-
-	friend class Fluid_Solver; 
-	friend class Fluid_Collider; 
 };
 
 
 // ================ Particle Struct ================
-
 struct Particle
 {
 	Particle(const glm::vec3 &p, std::size_t idx)
@@ -65,11 +62,9 @@ struct Particle
 };
 
 // ================ Util Functions ================
-
-__forceinline inline float fitRange(float val, float a_min, float a_max, float b_min, float b_max)
+INLINE float fitRange(float val, float a_min, float a_max, float b_min, float b_max)
 {
 	return b_min + (val - a_min)*(b_max - b_min) / (a_max - a_min);
 }
-
 
 #endif
