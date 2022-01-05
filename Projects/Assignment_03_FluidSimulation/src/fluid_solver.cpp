@@ -28,23 +28,23 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 	kernel_radius_sqr = kernel_radius * kernel_radius;
 	rest_density = 100.f; 
 	stiffness_coeff = 1.f; 
-	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f; 
+	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f, min_force = 0.f, max_force = 0.f; 
 
 	// ===== Setup Tank Collider Planes =====
 	Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left",  glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(7.5f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *floor = new Fluid_Collider_Plane("Tank_Floor", glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec2(5.0f, 0.f));
-	colliders.push_back(std::move(left)), colliders.push_back(std::move(right)), colliders.push_back(std::move(floor));
+	//colliders.push_back(std::move(left)), colliders.push_back(std::move(right)), colliders.push_back(std::move(floor));
 
 	// ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
 	// Poly 6
-	poly6_s = 4.f / M_PI  * std::powf(kernel_radius, 8.f);
-	poly6_grad_s = -24.f / M_PI * std::powf(kernel_radius, 8.f);
+	poly6_s      = 4.f / M_PI  * std::powf(kernel_radius, 8.f);
+	poly6_grad_s = -(24.f / M_PI * std::powf(kernel_radius, 8.f));
 	// Spiky
-	spiky_s = 10.f / M_PI * std::powf(kernel_radius, 5.f);
-	spiky_grad_s = -30.f / M_PI * std::powf(kernel_radius, 5.f);
+	spiky_s      = 10.f / M_PI * std::powf(kernel_radius, 5.f);
+	spiky_grad_s = -(30.f / M_PI * std::powf(kernel_radius, 5.f));
 	// Viscosity
-	visc_lapl_s = -20.f / M_PI * std::powf(kernel_radius, 5.f);
+	visc_lapl_s  = -(20.f / M_PI * std::powf(kernel_radius, 5.f));
 }
 
 // Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler
@@ -61,7 +61,7 @@ void Fluid_Solver::tick(float viewer_Dt)
 	frame++;
 
 	// DEBUG - auto reset
-	if (frame > 15) { simulate = false; reset(); return; }
+	if (frame > 30) { simulate = false; reset(); return; }
 
 	/*
 	// Subdivide Accumulated Viewer Timestep into Solver Substeps
@@ -83,7 +83,7 @@ void Fluid_Solver::reset()
 	frame = 0, timestep = 0;
 
 	// Reset Attrib Ranges
-	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f;
+	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f; min_force = 0.f, max_force = 0.f; 
 
 	// Reset Fluid State
 	fluidData->reset_fluid();
@@ -128,10 +128,28 @@ void Fluid_Solver::render_colliders(const glm::mat4 &ortho)
 
 void Fluid_Solver::integrate()
 {
+	/*
 	for (Particle &p : fluidData->particles)
 	{
-		p.V += (glm::vec3(0.f, -4.5f, 0.f) + p.F) * dt; 
+		p.V += (glm::vec3(0.f, -9.8f, 0.f) + p.F) * dt; 
 		p.P += p.V * dt; 
+	} */
+
+	std::vector<glm::vec3> vh(fluidData->particles.size(), glm::vec3(0.f));
+	for (std::size_t p = 0; p < fluidData->particles.size(); ++p)
+	{
+		Particle &pt = fluidData->particles[p];
+		glm::vec3 a_0 = glm::vec3(0.f, -9.8f, 0.f) + pt.F;
+		vh[p] = pt.V + a_0 * (dt * 0.5f);
+		pt.P += vh[p] * dt; 
+	}
+	// Eval (a_1) forces
+	eval_forces(&Fluid_Solver::kernel_poly6, &Fluid_Solver::kernel_poly6_gradient);
+	for (std::size_t p = 0; p < fluidData->particles.size(); ++p)
+	{
+		Particle &pt = fluidData->particles[p];
+		glm::vec3 a_1 = glm::vec3(0.f, -9.8f, 0.f) + pt.F;
+		pt.V += vh[p] + a_1 * (dt * 0.5f);
 	}
 }
 
@@ -174,11 +192,12 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		for (std::size_t p_j = 0; p_j < neighbours->size(); ++p_j)
 		{
 			const Particle &Pt_j = *((*neighbours)[p_j]);
+			if (Pt_j.id == Pt_i.id) continue; // Skip self. 
 			dens_tmp += (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
 
-		// Calc Pressure
+		// Calc Pressure using equation of state : pres_i = k (rho - rho_0)
 		Pt_i.pressure = stiffness_coeff * (Pt_i.density - rest_density);
 
 		// Store Min/Max Dens (Debug) 
@@ -187,6 +206,8 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		if (Pt_i.density  > max_dens) max_dens = Pt_i.density;
 		if (Pt_i.pressure > max_pres) max_pres = Pt_i.pressure;
 	}
+
+	//if (frame == 0) rest_density = max_dens; // Use as rest_dens
 
 }
 
@@ -199,6 +220,7 @@ void Fluid_Solver::eval_forces(kernel_func w, kernel_grad_func w_g)
 		return;
 	}
 
+	min_force = 1e06, max_force = 0.f; 
 	for (Particle &Pt_i : fluidData->particles)
 	{
 		glm::vec3 force_pressure (0.f); 
@@ -214,13 +236,18 @@ void Fluid_Solver::eval_forces(kernel_func w, kernel_grad_func w_g)
 		for (std::size_t j = 0; j < neighbours->size(); ++j)
 		{
 			Particle Pt_j = *((*neighbours)[j]);
-			if (Pt_j.id == Pt_i.id) continue; // Skip Self (nan)
+			if (Pt_j.id == Pt_i.id) continue; // Skip Self 
 			pressure_grad += ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
 		}
 		force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
 
 		// Accumulate forces
 		Pt_i.F += force_pressure; 
+
+		// Store Min/Max Dens (Debug)
+		float f_s = glm::dot(force_pressure, force_pressure);
+		if (f_s < min_force) min_force = f_s; 
+		if (f_s > max_force) max_force = f_s; 
 	}
 }
 
@@ -239,8 +266,10 @@ glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
 {
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	float r_sqr = glm::dot(r, r);
-	auto foo = poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
-	return foo; 
+
+	if (r_sqr > kernel_radius_sqr) return glm::vec2(0.f);
+
+	return poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
 }
 
 float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
@@ -254,6 +283,7 @@ float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
 glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
+	if (r_l > kernel_radius) return glm::vec2(0.f);
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	return spiky_grad_s * std::powf((kernel_radius - r_l), 2.f) * r_n2; 
 }

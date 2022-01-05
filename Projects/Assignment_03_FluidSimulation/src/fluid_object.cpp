@@ -63,7 +63,6 @@ void Fluid_Object::render_setup()
 
 void Fluid_Object::render(const glm::mat4 &ortho)
 {
-
 	// =========== Point Vertices Render ===========
 	// (Re)-Set Mesh Data, not ideal as new GPU resources per frame...
 	// Store Particle Velocites in Normal attrib.

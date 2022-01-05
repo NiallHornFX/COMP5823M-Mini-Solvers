@@ -52,7 +52,9 @@ Kernels need to be normalized and thus have the property of their integral been 
 $$
 \int \omega(r) = 1
 $$
-One thing I realised is that the Smoothing Kernels shown in the paper (and most other SPH text's) assume 3D Space, but the smoothing Kernel function and its derivatives would be different in 2D Space, when I get time I want to derive these by hand. I believe the 2D Kernels were officially derived first in the paper [SPH Based Shallow Water Simulation. Solenthaler, et al. 2011]
+One thing I realised is that the Smoothing Kernels shown in the paper (and most other SPH text's) assume 3D Space, but the smoothing Kernel function and its derivatives would be different in 2D Space, when I get time I want to derive these by hand. I believe the 2D Kernels were officially derived first in the paper [SPH Based Shallow Water Simulation. Solenthaler, et al. 2011]. 
+
+However I have seen some code online where 3D Kernels are used in a 2D Setting and it seems to work, so maybe I will try and use them at some point for comparison. 
 
 ##### Poly6 Kernel : 
 
@@ -80,7 +82,7 @@ The gradient can be calculated by calculating the first derivative of the Kernel
 
 So for the 2D Poly6 Kernel gradient we calculate : 
 $$
-x = r \\
+x = |r|^2 \\
 {d \over dx} \begin{bmatrix}{4\over \pi h^8 }{(h^2-x^2)^3}\end{bmatrix} = - {24x(h^2-x^2)^2\over \pi h^8}
 $$
 Note that $x / r$ here is the length of $\vec{r}$ but as per below we need to pass the vector in to the gradient calculation itself because we need the original vector to define the kernel direction. 
@@ -90,9 +92,12 @@ $$
 \vec{r} =  \vec{r} - \vec{r}_j\\
 \hat{r} =  {\vec{r} \over ||\vec{r}||}
 $$
-Combine to get the Gradient of the 2D Poly6 Kernel : 
+Combine to get : 
+
+###### Gradient of the 2D Poly6 Kernel : 
+
 $$
-\nabla\omega_{spiky} (r, h) = -{24\over\pi h^8} {\vec{r}\over ||\vec{r}||} (h-|r|^2)^2
+\nabla\omega_{poly6} (r, h) = -{24\over\pi h^8} {\vec{r}\over ||\vec{r}||} (h-|r|^2)^2
 $$
 
 ##### Spiky Kernel :
@@ -120,7 +125,7 @@ The gradient can be calculated by calculating the first derivative of the Kernel
 
 So for the 2D Spiky Kernel we calculate : 
 $$
-x = r \\
+x = ||\vec{r}|| \\
 {d \over dx} \begin{bmatrix}{10\over \pi h^5 }{(h-x)^3}\end{bmatrix} = -{30(h-x)^2 \over \pi h^5}
 $$
 Note that $x / r$ here is the length of $\vec{r}$ but as per below we need to pass the vector in to the gradient calculation itself because we need the original vector to define the kernel direction. 
@@ -130,10 +135,14 @@ $$
 \vec{r} =  \vec{r} - \vec{r}_j\\
 \hat{r} =  {\vec{r} \over ||\vec{r}||}
 $$
-Combine to get the 2D Gradient of the Spiky Kernel : 
+Combine to get the :
+
+###### 2D Gradient of the Spiky Kernel : 
+
 $$
 \nabla\omega_{spiky} (r, h) = -{30\over\pi h^5} {\vec{r}\over ||\vec{r}||} (h-||r||)^2
 $$
+
 Which can be re-written as scalar vector multipcation : 
 $$
 \nabla\omega_{spiky} (r, h) = (-({30\over\pi h^5}) \cdot (h-||r||)^2) \: {\vec{r}\over ||\vec{r}||}
@@ -164,8 +173,99 @@ $$
 \nabla^2\omega_{visc}(r,h) = - {20\over \pi h^5}\cdot (h-||r||)
 $$
 
+##### Modular Kernel Functions
 
-##### Computing Fluid Quantities :
+Because I want to be able to easily swap out the Kernels used as the assignment requires us to use Poly6 and Poly6 gradient first and then replace the pressure gradient calc with Spiky gradient, and the other attribs with Spiky etc. So I decided to use a Function pointer approach, i typedef (using) function pointers to use Member Functions of `Fluid_Solver` class via : 
+
+```C++
+// Fluid_Solver.h
+using kernel_func = float(Fluid_Solver::*) (const glm::vec3 &r);
+using kernel_grad_func = glm::vec2(Fluid_Solver::*)(const glm::vec3 &r);
+```
+
+And any function that computes fluid attributes (ie using Kernels) takes these func ptrs as input, eg : 
+
+```C++
+// Fluid_Solver.h
+// [..]
+void eval_forces(kernel_func w, kernel_grad_func w_g);
+void compute_dens_pres(kernel_func w);
+```
+
+To invoke the Kernel Functions, as they are member function pointers, invoked within the class itself, we need to explicitly use `this->*` to dereference them, eg eval Forces funct : 
+
+```C++
+// Fluid_Solver.cpp
+void Fluid_Solver::eval_forces(kernel_func w, kernel_grad_func w_g)
+// Invoke Kernel Gradient FuncPtr 
+(this->*w_g)(Pt_i.P - Pt_j.P);
+```
+
+##### Implementation of Kernel Functions : 
+
+The Kernels themselves are implemented to use a pre-defined Kernel Radius $h$ which is set on the `Fluid_Solver` construction, while this doesn't allow us to change the Kernel Radius / Smoothing Length in the GUI (Unless we re-build the Fluid_Solver instance) it allows us to precompute the coefficient part of the Kernel in the constructor, to avoid computing them every time the Kernel function is evaluated. 
+
+Precompute Kernel Coefficients in Ctor, using known $h$ / kernel radius. 
+
+ ```C++
+ // Fluid_Solver.cpp : Fluid_Solver::Fluid_Solver(..)
+ // ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
+ // Poly 6
+ poly6_s = 4.f / M_PI  * std::powf(kernel_radius, 8.f);
+ poly6_grad_s = -(24.f / M_PI * std::powf(kernel_radius, 8.f));
+ // Spiky
+ spiky_s = 10.f / M_PI * std::powf(kernel_radius, 5.f);
+ spiky_grad_s = -(30.f / M_PI * std::powf(kernel_radius, 5.f));
+ // Viscosity
+ visc_lapl_s = -(20.f / M_PI * std::powf(kernel_radius, 5.f));
+ ```
+
+Then we have the actual member function implementations (which are force inlined) of the Kernels themselves using the pre-computed coefficients along with the $\vec{r}$ vector input :
+
+```C++
+// Fluid_Solver.cpp 
+float Fluid_Solver::kernel_poly6(const glm::vec3 &r)
+{
+	float r_sqr = glm::dot(r, r);
+	if (r_sqr > kernel_radius_sqr) return 0.f;
+	
+	return poly6_s * std::powf((kernel_radius_sqr - r_sqr), 3.f);
+}
+
+glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
+{
+	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
+	float r_sqr = glm::dot(r, r);
+	return poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
+}
+
+float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
+{
+	float r_l = glm::length(r);
+	if (r_l > kernel_radius) return 0.f; 
+
+	return spiky_s * std::powf((kernel_radius - r_l), 3.f);
+}
+
+glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
+{
+	float r_l = glm::length(r);
+	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
+	return spiky_grad_s * std::powf((kernel_radius - r_l), 2.f) * r_n2; 
+}
+
+float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
+{
+	float r_l = glm::length(r);
+	return visc_lapl_s * (kernel_radius - r_l);
+}
+```
+
+
+
+____
+
+#### Computing Fluid Quantities :
 
 Weighted Average interpolation of neighbouring fluid particles, where weighting is calculated via Smoothing Kernel with the quantity divided by the mass, using the following approach : 
 $$
@@ -179,7 +279,7 @@ As density is based on the number of neighbouring particles, its used as both a 
 $$
 \rho(x) = \sum_j m_j\: \omega(\vec{r} - \vec{r}_j, h)
 $$
-Furthermore we can assume that mass is constant for all particles and simplfy this to just :
+Furthermore we can assume that mass is constant and $m_j = 1$ for all particles and simplify this density calc to just :
 $$
 \rho(x) = \sum_j \omega(\vec{r} - \vec{r}_j, h)
 $$
@@ -217,7 +317,23 @@ $$
 
 We should make sure we don't eval self particle when computing pressure as the pressure kernel uses the length of the vector $||\vec{r}||$ and it will cause a divide by zero nan to occur so the resulting pressure gradient and thus force will be nan.
 
-Density value incorrect if $h < 1$ this should not mean the kernel isnt normalized, it should still be even if $h < 1$ right ? 
+I don't think we can use $h < 1$ because it breaks the normalization of the Kernels, so this is a bit of an issue if the Scene is scaled such that 1 "unit" is too large we may have to scale all the scene up to be realativly scaled larger eg $[0,100]$ instead of $[0,10]$ such that we can use smaller kernel radius / smoothing length relative to the scale of the scene/fluid. This shouldn't be an issue as we just treat the scene meters as $0.1$ meter thus we use 40 instead of 4 etc. 
+
+###### Issues : 
+
+One implementation mistake I made was in the pressure gradient computation : 
+
+```C++
+// Fluid_Solver.cpp : Fluid_Solver::eval_forces(kernel_func w, kernel_grad_func w_g)
+// For Particles Pt_i
+//      For Particles Pt_j 
+pressure_grad += (Pt_i.pressure + Pt_j.pressure / 2.f * Pt_j.density) * (this->*w_g)(Pt_i.P - Pt_j.P); // Wrong. 
+// Incorrect, need to bracket out the Numer + Denom of the division duh !
+pressure_grad += ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P); // Correct.
+
+```
+
+Still having an issue of pressure gradient and thus force diverging to infinity and thus resulting in nans, but separate from the fixed above issue. 
 
 ____
 
@@ -243,9 +359,17 @@ Spatial Hash Grid will also be its own class based on my UE4 Cloth solver hash g
 
 ____
 
+##### Fluid Object
+
+Currently emit a square of fluid
+
+Will use random to add some jitter to the 2D positions to eliminate the grid discretisation the particles are visibly in. 
+
+____
+
 #### Hash Grid
 
-As stated, the Hash Grid class is based on my UE4 Cloth Solver plugin where I was using it to accelerate particle-particle self collisions. The standard approach doesn't use a cell size but specifies the number of buckets (which is then mod'd with the XOR'd spatial coords with some large prime integers) based on the paper *[Optimized Spatial Hashing for Collision Detection of Deformable Objects. Teschner et al.]*. However I adopted it to specify both a cell size and a cell count. However I plan to modifiy it to specify a cell size and a grid size (which will be scaled over the 2D $10^2$ domain) to derive cell count from this. The Particle Postions are hashed and the resulting index ranges from $0\:\:to\:\:cellcount-1$. 
+As stated, the Hash Grid class is based on my UE4 Cloth Solver plugin where I was using it to accelerate particle-particle self collisions. The standard approach doesn't use a cell size but specifies the number of buckets (which is then mod'd with the XOR'd spatial coords with some large prime integers) based on the paper *[Optimized Spatial Hashing for Collision Detection of Deformable Objects. Teschner et al.]*. However I adopted it to specify both a cell size and a cell count. However I plan to modify it to specify a cell size and a grid size (which will be scaled over the 2D $10^2$ domain) to derive cell count from this. The Particle Positions are hashed and the resulting index ranges from $0\:\:to\:\:cellcount-1$. 
 
 Particles are hashed and the resulting output is an index of the hash grid, so only cells which contain particles are allocated (Outer array contains pointers to inner dynamic arrays (eg std::vector)) while this does cause memory fragmentation it shouldn't be a big deal, each particle then stores the cell it lies within and can use the cell index to look up its neighbours to reduce the time complexity of particle-neighbour hood distance searching from $O(n^2) \mapsto O(nm)$. HashGrid is faster than a uniform/explicit grid, as we don't need to do a per cell gather step and transform the grid from index space, to world space etc and if we use an implementation with Cell Size specified for the HashGrid we don't have the disadvantage that we cannot specify a cell size like we can for an explicit uniform grid. We may need a uniform grid later for Surface Tension but will worry about that later. 
 
@@ -285,11 +409,7 @@ ___
 
 ##### Simulation Loop 
 
-Typically we'd do each solver operation within a timestep and each solver operation loops over each particle individually within its call. However because of the approach we need where we don't want to have  to write all data to particles, and we want to do an entire solve step per particle we do the solve loop differently, where we perform solver operations per particle, this means we have access to all the particles current state for all of its solver operations. Eg we can fetch particle density, and we only need to get it once, we can evaluate particle forces for the current particle multiple times without doing it for all particles. 
-
-So oppose to doing separate calls to a bunch of functions, that loop over all particles internally.
-
-Deciding on how to structure the solve step loop
+Deciding weather to use Per operation approach, or per particle approach, while the second one may work better if we need to eval forces multiple times and keep the previous force value local (without storing to an attrib on particles), we are only using the last steps particle state which is not ideal, it also makes it hard to multithread the outer $pt_i$, but the inner get neighbours and attribute eval loops could be. 
 
 Per Operation approach (for all particles) 
 
@@ -312,13 +432,29 @@ Integrate(P)
 ...
 ```
 
-Where all solver operation functions take in a input particle index to operate on instead. 
+##### Simulation Loop Implementation
 
-Actually I'm undecided as if we do it this way it means all particle states apart from the current are based on the previous step. And it makes more sense to store some stuff on particles anyway, for rendering sake as well. 
+Ok so I just used the normal approach of having per operation functions, where each function itself loops through the particles, all resulting attributes are stored onto the particles themselves. 
+
+A bit confusing mixing vec2 with vec3 ie particles use vec3 but kernels take in vec3s but use vec2s internally etc. Ideally we'd move the whole program to treat particles->vertices as 2D so attribute layout would change on the OGL side also. 
+
+##### Integration
+
+We are required to use the Leap Frog integration scheme which while been second order, has the property of been symplectic, which for SPH based solvers (and others like mass spring that have oscillatory Hamilton motion) creates much more stable solves as it can be evaluated forwards and backwards in time (preserves area in phase) even more so than using a higher order integrator. 
+
+Re-Eval forces ? 
 
 
 
+##### Simulation behaviour
 
+Been a few years since i've used an SPH solver so I forgot how unstable they are even using Houdini's old ParticleFluidSolver I managed to match the explosion behaviour of my solver which seems to be due to too small smoothing radius however my current issue is because smooth radius $h$ is tied to my cell size of the hashgrid increasing it increases to particle-particle cost of $O(nm)$, it also has the issue of visible cells been having the same particle attributes as oppose to smooth radii of particles within those cells hence using hash grid with coupled cell size from kernel radius is probs not ideal. As stated elsewhere I need to use either a uniform explicit grid instead where I can get adjacent cells, with smaller cell sizes (decoupled from $h$) or somehow figure out how to get adjacent cells of the hash grid, which is implictilly defined. 
+
+Rest Density is a key parameter ofcourse, if there is a larger rest density, the pressure will be smaller as as particles cluster and their local density increases if it is still lower than the rest density the pressure won't be too high, however ideally the rest density should be reflective of the fluid and not using higher values as a compromise. 
+
+Increasing Viscosity and SurfTension forces won't stop expanding / collapsing behaviours they are usually a product of the smoothing kernel radius been incorrect. It could also be due to integration, initially I was testing with Explicit Euler but need to use Leapfrog. 
+
+Houdini uses a mixed Runge Kutta 1 and 2 Method for integration which seems quite stable compared to leapfrog. 
 
 ____
 
@@ -326,11 +462,17 @@ ____
 
 ##### Rendering as Vertex Points :
 
-Particles + Tank are scaled down by $0.1$ and then offset to framebuffer bottom left origin. Scene is defined within a 0-10 Square cartesian range. Of course for rendering without Camera transforms all calculations are within clip space pre-rasterization so need to transform to screen space, can use model matrix for this strictly speaking its not a model transform but as its called this within Primitive class keep it as is. 
+###### 2D Particle Transforms
 
-Its probs better to use a 2D ortho matrix, because then I don't need to worry about scaling into NDC space, then screen space manually. My actual simulation domain is going to be [0,10] (x,y) so use Ortho matrix to transform this into NDC. Using glm::ortho works great.
+We can ethier manually transform the Particles + Tank into Clip Space via scaled down by $0.1$ and then offset to framebuffer bottom left origin. Scene is defined within a 0-10 Square cartesian range. Of course for rendering without Camera transforms all calculations are within clip space pre-rasterization so need to transform to screen space, can use model matrix for this strictly speaking its not a model transform but as its called this within Primitive class keep it as is. However it makes more sense to use a Projection transform still via a Orthogonal matrix, because then I don't need to worry about scaling into NDC space, then screen space manually. My actual simulation domain is going to be `[0,10]` (x,y) so use Ortho matrix to transform this into NDC with the (left,right) and (bottom,top) ranges been $[0,10]$. Using this approach with glm::ortho works great. 
 
-Problems are with the render time bottleneck when particle count is increase, we should be using instancing ideally and updating and re-allocating the VBO per tick is just too costly and stupid. I will fix this soon, want to get the solver working first. Its more so the particle->vertex update thats so costly ie updating positions,normals,colour each tick. But to be fair in the release build, the optimization seems to speed it up greatly. 
+I commented out the model matrix from `Primitive` and the shaders as I don't use it here at all, the only transformation is of the projection matrix described above which does the actual world-view/proj space transform. 
+
+###### Particle --> Vertex attribute update Perf
+
+In Debug mode we have problems are with the render time been bottleneck when particle count is increased, its not the GPU cost, but the update cost of the particle --> Vertex attributes within Primitive class because I made a new function to update Positions,Normals,Colours which all have to be written into the current vert_data array (it might be easier just to make a new vert_data array)
+
+ Its more so the particle->vertex update that's so costly ie updating positions,normals,colour each tick. But to be fair in the release build, the optimization seems to speed it up greatly. 
 
 
 

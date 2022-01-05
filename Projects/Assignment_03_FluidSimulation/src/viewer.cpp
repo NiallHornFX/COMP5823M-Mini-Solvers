@@ -334,6 +334,7 @@ void Viewer::gui_render()
 		ImGui::PopStyleColor();
 		ImGui::Text("Density : min = %f | max = %f", fluid_solver->min_dens, fluid_solver->max_dens);
 		ImGui::Text("Pressure : min = %f | max = %f", fluid_solver->min_pres, fluid_solver->max_pres);
+		ImGui::Text("Forcesqr : min = %f | max = %f", fluid_solver->min_force, fluid_solver->max_force);
 
 		// ========== Fluid State Controls ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
@@ -341,8 +342,8 @@ void Viewer::gui_render()
 		ImGui::Text("Fluid State Controls");
 		ImGui::PopStyleColor();
 
-		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 0.f, 200.f);
-		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 10.f);
+		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 0.f, 1000.f);
+		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 50.f);
 
 
 		// Draw Axis
