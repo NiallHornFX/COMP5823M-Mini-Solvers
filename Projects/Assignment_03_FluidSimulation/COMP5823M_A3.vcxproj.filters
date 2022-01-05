@@ -81,6 +81,9 @@
     <ClInclude Include="incl\fluid_object.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="incl\grid_2d.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Headers">

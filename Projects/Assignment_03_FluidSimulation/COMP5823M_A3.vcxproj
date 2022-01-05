@@ -107,6 +107,7 @@
     <ClInclude Include="incl\fluid_collider.h" />
     <ClInclude Include="incl\fluid_object.h" />
     <ClInclude Include="incl\fluid_solver.h" />
+    <ClInclude Include="incl\grid_2d.h" />
     <ClInclude Include="incl\hash_grid.h" />
     <ClInclude Include="incl\mesh.h" />
     <ClInclude Include="incl\primitive.h" />

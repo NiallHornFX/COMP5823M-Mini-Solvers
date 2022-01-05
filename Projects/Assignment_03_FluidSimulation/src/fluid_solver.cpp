@@ -128,17 +128,22 @@ void Fluid_Solver::render_colliders(const glm::mat4 &ortho)
 
 void Fluid_Solver::integrate()
 {
-	// Semi Implicit Euler test
+	// Chosen Kernel Functions
+	kernel_func      kernel = &Fluid_Solver::kernel_poly6;
+	kernel_grad_func grad = &Fluid_Solver::kernel_poly6_gradient;
+
+	// Semi Implicit Euler Integration (testing)
 	/*
 	for (Particle &p : fluidData->particles)
 	{
-		p.V += (glm::vec3(0.f, -9.8f, 0.f) + p.F) * dt; 
+		// Eval RHS forces 0 
+		eval_forces(pt, kernel, grad);
+		glm::vec3 a_0 = glm::vec3(0.f, -9.8f, 0.f) + pt.F;
+
+		// Integrate Accel and Vel
+		p.V += a_0 * dt; 
 		p.P += p.V * dt; 
 	} */
-
-	// Chosen Kernel Functions
-	kernel_func      kernel = &Fluid_Solver::kernel_poly6;
-	kernel_grad_func grad  = &Fluid_Solver::kernel_poly6_gradient;
 
 	// Leapfrog integration
 	for (Particle &pt : fluidData->particles)
@@ -154,7 +159,6 @@ void Fluid_Solver::integrate()
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
 	}
-
 }
 
 void Fluid_Solver::get_neighbours()
