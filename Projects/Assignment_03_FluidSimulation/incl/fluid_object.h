@@ -52,7 +52,7 @@ public:
 struct Particle
 {
 	Particle(const glm::vec3 &p, std::size_t idx)
-		: P(p), rest(P), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), cell_idx(-1), 
+		: P(p), rest(P), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), cell_idx(-1),
 		  mass(1.f), radius(1.f), density(0.f), pressure(0.f) {}
 
 	glm::vec3 P, V, F;

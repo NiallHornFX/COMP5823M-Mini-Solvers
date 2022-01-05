@@ -436,6 +436,8 @@ Integrate(P)
 
 Ok so I just used the normal approach of having per operation functions, where each function itself loops through the particles, all resulting attributes are stored onto the particles themselves. 
 
+Well for evaluation of forces, this is done per particle, so it can be called within a per particle for loop to eval forces twice during leapfrog integration.
+
 A bit confusing mixing vec2 with vec3 ie particles use vec3 but kernels take in vec3s but use vec2s internally etc. Ideally we'd move the whole program to treat particles->vertices as 2D so attribute layout would change on the OGL side also. 
 
 ##### Integration
@@ -444,7 +446,13 @@ We are required to use the Leap Frog integration scheme which while been second 
 
 Re-Eval forces ? 
 
+Oppose to doing eval forces as a sepreate per particle operation, its done within integration per particle loop via a func call taking in a single particle. 
 
+Eval forces should be per particle so we don't need to spilt integration into two particle loops ? 
+
+Do eval forces calls within integration (2 steps) dont even need to store force on pts now (but still will) could just return it directly to body of integrate callee
+
+Min/Max ranges won't work no more, need to eval these separately over all pts.
 
 ##### Simulation behaviour
 

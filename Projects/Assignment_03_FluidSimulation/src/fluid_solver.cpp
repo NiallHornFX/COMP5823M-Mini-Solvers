@@ -94,7 +94,7 @@ void Fluid_Solver::step()
 {
 	get_neighbours();
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
-	eval_forces(&Fluid_Solver::kernel_poly6, &Fluid_Solver::kernel_poly6_gradient);
+	//eval_forces(&Fluid_Solver::kernel_poly6, &Fluid_Solver::kernel_poly6_gradient);
 	integrate();
 	eval_colliders();
 
@@ -128,6 +128,7 @@ void Fluid_Solver::render_colliders(const glm::mat4 &ortho)
 
 void Fluid_Solver::integrate()
 {
+	// Semi Implicit Euler test
 	/*
 	for (Particle &p : fluidData->particles)
 	{
@@ -135,22 +136,25 @@ void Fluid_Solver::integrate()
 		p.P += p.V * dt; 
 	} */
 
-	std::vector<glm::vec3> vh(fluidData->particles.size(), glm::vec3(0.f));
-	for (std::size_t p = 0; p < fluidData->particles.size(); ++p)
+	// Chosen Kernel Functions
+	kernel_func      kernel = &Fluid_Solver::kernel_poly6;
+	kernel_grad_func grad  = &Fluid_Solver::kernel_poly6_gradient;
+
+	// Leapfrog integration
+	for (Particle &pt : fluidData->particles)
 	{
-		Particle &pt = fluidData->particles[p];
+		// Eval RHS forces 0 
+		eval_forces(pt, kernel, grad);
 		glm::vec3 a_0 = glm::vec3(0.f, -9.8f, 0.f) + pt.F;
-		vh[p] = pt.V + a_0 * (dt * 0.5f);
-		pt.P += vh[p] * dt; 
-	}
-	// Eval (a_1) forces
-	eval_forces(&Fluid_Solver::kernel_poly6, &Fluid_Solver::kernel_poly6_gradient);
-	for (std::size_t p = 0; p < fluidData->particles.size(); ++p)
-	{
-		Particle &pt = fluidData->particles[p];
+		// Integrate P 
+		pt.P += (pt.V * dt) + (0.5f * a_0 * (dt*dt));
+		// Eval RHS forces 1
+		eval_forces(pt, kernel, grad);
 		glm::vec3 a_1 = glm::vec3(0.f, -9.8f, 0.f) + pt.F;
-		pt.V += vh[p] + a_1 * (dt * 0.5f);
+		// Integrate V
+		pt.V += 0.5f * (a_0 + a_1) * dt; 
 	}
+
 }
 
 void Fluid_Solver::get_neighbours()
@@ -211,7 +215,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 
 }
 
-void Fluid_Solver::eval_forces(kernel_func w, kernel_grad_func w_g)
+void Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
 {
 	// Check Hash Grid has been evaulated
 	if (!got_neighbours)
@@ -220,35 +224,36 @@ void Fluid_Solver::eval_forces(kernel_func w, kernel_grad_func w_g)
 		return;
 	}
 
-	min_force = 1e06, max_force = 0.f; 
-	for (Particle &Pt_i : fluidData->particles)
+	//min_force = 1e06, max_force = 0.f; 
+
+	glm::vec3 force_pressure (0.f); 
+	//glm::vec3 force_surftension;
+	//glm::vec3 force_viscosity; 
+
+	// Reset Particle forces 
+	Pt_i.F.x = 0.f, Pt_i.F.y = 0.f, Pt_i.F.z = 0.f;
+
+	// Cache neighbour cell ptr
+	std::vector<Particle*> *neighbours = hg->grid[Pt_i.cell_idx];
+
+	// Compute Pressure Gradient
+	glm::vec2 pressure_grad(0.f);
+	for (std::size_t j = 0; j < neighbours->size(); ++j)
 	{
-		glm::vec3 force_pressure (0.f); 
-		//glm::vec3 force_surftension;
-		//glm::vec3 force_viscosity; 
-
-		// Reset forces
-		Pt_i.F.x = 0.f, Pt_i.F.y = 0.f, Pt_i.F.z = 0.f;
-		glm::vec2 pressure_grad(0.f);
-		std::vector<Particle*> *neighbours = hg->grid[Pt_i.cell_idx];
-
-		// Compute Pressure Gradient
-		for (std::size_t j = 0; j < neighbours->size(); ++j)
-		{
-			Particle Pt_j = *((*neighbours)[j]);
-			if (Pt_j.id == Pt_i.id) continue; // Skip Self 
-			pressure_grad += ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
-		}
-		force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
-
-		// Accumulate forces
-		Pt_i.F += force_pressure; 
-
-		// Store Min/Max Dens (Debug)
-		float f_s = glm::dot(force_pressure, force_pressure);
-		if (f_s < min_force) min_force = f_s; 
-		if (f_s > max_force) max_force = f_s; 
+		Particle Pt_j = *((*neighbours)[j]);
+		if (Pt_j.id == Pt_i.id) continue; // Skip Self 
+		pressure_grad += ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
 	}
+	force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
+
+	// Accumulate forces
+	Pt_i.F += force_pressure; 
+
+	// Store Min/Max Dens (Debug)
+	//float f_s = glm::dot(force_pressure, force_pressure);
+	//if (f_s < min_force) min_force = f_s; 
+	//if (f_s > max_force) max_force = f_s; 
+
 }
 
 
