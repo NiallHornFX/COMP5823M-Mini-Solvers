@@ -38,13 +38,13 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 
 	// ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
 	// Poly 6
-	poly6_s      = 4.f / M_PI  * std::powf(kernel_radius, 8.f);
-	poly6_grad_s = -(24.f / M_PI * std::powf(kernel_radius, 8.f));
+	poly6_s      = 315.f / (64 * M_PI  * std::powf(kernel_radius,  9.f));
+	poly6_grad_s = -(945.f / (32 * M_PI * std::powf(kernel_radius, 9.f)));
 	// Spiky
-	spiky_s      = 10.f / M_PI * std::powf(kernel_radius, 5.f);
-	spiky_grad_s = -(30.f / M_PI * std::powf(kernel_radius, 5.f));
+	spiky_s      = 15.f    / (M_PI * std::powf(kernel_radius, 6.f));
+	spiky_grad_s = -(45.f  / (M_PI * std::powf(kernel_radius, 6.f)));
 	// Viscosity
-	visc_lapl_s  = -(20.f / M_PI * std::powf(kernel_radius, 5.f));
+	visc_lapl_s  = 45.f / (M_PI * std::powf(kernel_radius, 5.f));
 }
 
 // Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler
@@ -296,5 +296,5 @@ glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
-	return visc_lapl_s * (kernel_radius - r_l);
+	return visc_lapl_s * (1.f - (r_l / kernel_radius));
 }

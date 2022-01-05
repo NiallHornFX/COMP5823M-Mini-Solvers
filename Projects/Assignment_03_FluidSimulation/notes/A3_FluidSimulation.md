@@ -56,6 +56,8 @@ One thing I realised is that the Smoothing Kernels shown in the paper (and most 
 
 However I have seen some code online where 3D Kernels are used in a 2D Setting and it seems to work, so maybe I will try and use them at some point for comparison. 
 
+Ok Curve-ball alert : He wants us to use the 3D Kernels in a 2D solver "because the mark scheme says so and I don't have any control over it blah blah", despite the fact the original author of the SPH paper he gave us was an author on the later paper that derives the kernels specifically for a 2D solver. I think they will work, but honestly so stupid. So I will now show the 3D versions and their respective gradient and Laplacians. 
+
 ##### Poly6 Kernel : 
 
 ###### Poly6 Function : 
@@ -99,6 +101,14 @@ Combine to get :
 $$
 \nabla\omega_{poly6} (r, h) = -{24\over\pi h^8} {\vec{r}\over ||\vec{r}||} (h-|r|^2)^2
 $$
+
+###### Gradient of 3D Poly6 Kernel :
+
+(Derivation later...)
+$$
+\nabla\omega_{poly6} (r, h) = -{945\over 32\pi h^9} {\vec{r}\over ||\vec{r}||} (h-|r|^2)^2
+$$
+
 
 ##### Spiky Kernel :
 
@@ -145,8 +155,19 @@ $$
 
 Which can be re-written as scalar vector multipcation : 
 $$
-\nabla\omega_{spiky} (r, h) = (-({30\over\pi h^5}) \cdot (h-||r||)^2) \: {\vec{r}\over ||\vec{r}||}
+\nabla\omega_{spiky} (r, h) = -({30\over\pi h^5} \cdot (h-||r||)^2) \: {\vec{r}\over ||\vec{r}||}
 $$
+
+###### 3D Gradient of the Spiky Kernel : 
+
+(Derivation Later ...)
+$$
+\nabla\omega_{spiky} (r, h) = -({45\over\pi h^6} (h-||r||)^2) {\vec{r}\over ||r||}  
+$$
+
+
+
+
 The Spiky Kernel however suffers from the same problem as Poly6 for its Laplacian which is used to define the viscosity force (as per the Navier Stokes momentum equation) so its not usable for Viscosity. So we use a different Kernel for Viscosity. 
 
 ##### Viscosity Kernel
@@ -164,14 +185,22 @@ $$
 \omega_{visc} (r, h) = {10\over3\pi h^2} \left\{\begin{array}{} -{||r||^3 \over 2h^3} + {||r||^2 \over h^2} + {h \over2||r||} - 1\:\:\:\: 0 \leq r \leq h\\ \:\:\:\:\:\:\:\: 0 \:\:\:\:\:\:\:\:\:\:\:\: otherwise \end{array}\right.
 $$
 
-###### Viscosity Kernel Gradient
+###### Viscosity Kernel 2D Laplacian: 
 
-Will derive Later : 
+(Will derive Later...)
 
-2D 
+*May be incorrect*
 $$
-\nabla^2\omega_{visc}(r,h) = - {20\over \pi h^5}\cdot (h-||r||)
+\nabla^2\omega_{visc}(r,h) = {20\over \pi h^5}\cdot (h-||r||)
 $$
+
+###### Viscosity Kernel 3D Laplacian: 
+
+(Will derive Later...)
+$$
+\nabla^2\omega_{visc}(r,h) = {45\over \pi h^5}\cdot (1 - {||r||\over h})
+$$
+
 
 ##### Modular Kernel Functions
 
