@@ -3,16 +3,18 @@
 #include "fluid_object.h"
 
 // Std Headers
-#include <random>
 
-Fluid_Object::Fluid_Object()
+Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc)
+	: pos(P), dim(Dim), spc(Spc)
 {
 	// Emission
-	emit_square(glm::vec2(3.f, 4.f), glm::vec2(2.f, 3.f), 0.05f);
-	//emit_square(glm::vec2(1.5f, 4.f), glm::vec2(4.f, 4.f), 0.12f);
+	emit_square();
 
 	// Setup
 	render_setup();
+
+	// Init 
+	particle_colour = Colour_Viz::Standard;
 }
 
 Fluid_Object::~Fluid_Object()
@@ -22,6 +24,7 @@ Fluid_Object::~Fluid_Object()
 	if (fsQuad) delete fsQuad;
 }
 
+// Info : Reset fluid to inital state.
 void Fluid_Object::reset_fluid()
 {
 	for (Particle &pt : particles)
@@ -32,20 +35,20 @@ void Fluid_Object::reset_fluid()
 }
 
 // Info : Emit Fluid in square at P, defined by Dim with spacing h.
-void Fluid_Object::emit_square(const glm::vec2 &P, const glm::vec2 &Dim, float h)
+void Fluid_Object::emit_square()
 {
-	std::size_t n_x = std::size_t(Dim.x / h); 
-	std::size_t n_y = std::size_t(Dim.y / h);
-	float h_dim_x = Dim.x * 0.5f, h_dim_y = Dim.y * 0.5f; 
+	std::size_t n_x = std::size_t(dim.x / spc); 
+	std::size_t n_y = std::size_t(dim.y / spc);
+	float h_dim_x = dim.x * 0.5f, h_dim_y = dim.y * 0.5f; 
 
 	for (std::size_t i = 0; i < n_x; ++i)
 	{
 		for (std::size_t j = 0; j < n_y; ++j)
 		{
-			float xx = (float(i) / float(n_x-1)) * Dim.x;
-			float yy = (float(j) / float(n_y-1)) * Dim.y;
+			float xx = (float(i) / float(n_x-1)) * dim.x;
+			float yy = (float(j) / float(n_y-1)) * dim.y;
 			//xx -= h_dim_x, yy -= h_dim_y; // Center
-			xx += P.x, yy += P.y; 
+			xx += pos.x, yy += pos.y; 
 			
 			particles.emplace_back(glm::vec3(xx,yy,0.f), (i*n_x+j));
 		}
@@ -64,49 +67,59 @@ void Fluid_Object::render_setup()
 void Fluid_Object::render(const glm::mat4 &ortho)
 {
 	// =========== Point Vertices Render ===========
-	// (Re)-Set Mesh Data, not ideal as new GPU resources per frame...
-	// Store Particle Velocites in Normal attrib.
+
+	// Set projection matrix from viewer passed ortho
 	ren_points->shader.setMat4("proj", ortho);
-	if (!ren_points->flags.data_set) // Do Inital Vert Data Alloc
+
+	if (!ren_points->flags.data_set) // Create GPU resources
 	{
 		std::vector<vert> data(particles.size());
 		for (std::size_t p = 0; p < particles.size(); ++p)
 		{
 			data[p].pos = particles[p].P;
-			data[p].normal = particles[p].V;
-			//data[p].col = glm::vec3(0.1f, 0.1f, 1.f);
-			data[p].col = glm::vec3(particles[p].density * 0.1f); // Viz Density
+			data[p].normal = particles[p].V; // Store Pt vel in vertex normal attrib.
+			data[p].col = glm::vec3(0.1f, 0.1f, 1.f);
 		}
 		ren_points->set_data_mesh(data);
 	}
-	else // Update Pos and Normals Only
+	else // Update Only
 	{
 		std::vector<glm::vec3> pos, norm, col;
 		pos.resize(particles.size()), norm.resize(particles.size()), col.resize(particles.size());
 		for (std::size_t p = 0; p < particles.size(); ++p)
 		{
-			if (hash_colours)
+			// Particle Colour : 
+			switch (particle_colour)
 			{
-				// Colour per Hash Cell
-				std::mt19937_64 rng;
-				std::uniform_real_distribution<float> dist(0.0, 1.0);
-				int32_t seed = particles[p].cell_idx;
-				rng.seed(seed);        float r = dist(rng);
-				rng.seed(seed + 124);  float g = dist(rng);
-				rng.seed(seed + 321);  float b = dist(rng);
-				col[p] = glm::vec3(r, g, b);
+				case Colour_Viz::GridCell:
+				{
+					// Colour particles by grid cell. 
+					col[p] = randRange(particles[p].cell_idx, 0.f, 1.f);
+					break;
+				}
+				case Colour_Viz::Density:
+				{
+					// Colour Particles by Density 
+					col[p] = glm::vec3(fitRange(particles[p].density, 1.f, 50.f, 0.f, 1.f));
+				}
+				case Colour_Viz::Velocity: 
+				{
+					break;
+				}
+				case Colour_Viz::Standard:
+				{
+					col[p] = glm::vec3(0.1f, 0.1f, 0.95f);
+				}
 			}
-			else
-			{
-				col[p] = glm::vec3(fitRange(particles[p].density, 1.f, 50.f, 0.f, 1.f)); // Viz Density
-			}
-
+			// Pos and Normal (vel)
 			pos[p]  = particles[p].P;
 			norm[p] = particles[p].V;
 		}
+		// Pass updated attribute arrays to Primitve::update_data... 
 		ren_points->update_data_position_normals_col(pos, norm, col);
 	}
 
 	// Render
+	ren_points->point_size = spc * 35.f;
 	ren_points->render();
 }

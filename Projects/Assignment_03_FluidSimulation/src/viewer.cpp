@@ -24,7 +24,6 @@
 #include "fluid_object.h"
 #include "fluid_solver.h"
 
-
 #define USE_FREE_CAMERA 1
 
 // Global GLFW State
@@ -56,7 +55,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
-	fluid_solver = new Fluid_Solver((1.f / 90.f), 100.f, 1.f, fluid_object);
+	fluid_solver = new Fluid_Solver((1.f / 90.f), 100.f, 1.5f, fluid_object);
 }
 
 Viewer::~Viewer() 
@@ -295,6 +294,14 @@ void Viewer::gui_render()
 	std::string state; 
 	if (fluid_solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
 
+	// Fluid Object Core parameters (Reconstruct if changed)
+	static float spc = 0.35f; 
+	static float pos [2] = { 1.5, 5.f };
+	static float dim [2] = { 2.f, 3.f };
+
+	// Fluid Solver Core parameters (Reconstruct if changed)
+	static float kernel_radius = 1.25f; 
+
 	// Get Dt 1/n. 
 	float n = 1.f / fluid_solver->dt;
 	static int tmp_count = 90;
@@ -342,8 +349,39 @@ void Viewer::gui_render()
 		ImGui::Text("Fluid State Controls");
 		ImGui::PopStyleColor();
 
+		// Causes rebuild of Fluid_Object if changed (could just reset ideally)
+		if (ImGui::SliderFloat2("Fluid Pos", pos, 0.f, 10.f))
+		{
+			delete fluid_object;
+			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc);
+			fluid_solver->fluidData = fluid_object;
+		}
+		if (ImGui::SliderFloat2("Fluid Dim", dim, 0.f, 10.f))
+		{
+			delete fluid_object;
+			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc);
+			fluid_solver->fluidData = fluid_object;
+		}
+		if (ImGui::SliderFloat("Fluid Spc", &spc, 0.f, 1.f))
+		{
+			delete fluid_object;
+			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc);
+			fluid_solver->fluidData = fluid_object;
+		}
+
+		// Causes rebuild of Fluid_Solver if changed (this is so kernels can be pre-computed) 
+		if (ImGui::SliderFloat("Kernel Radius", &kernel_radius, 1.f, 10.f))
+		{
+			float dt = fluid_solver->dt, rest_dens = fluid_solver->rest_density;
+			delete fluid_solver;
+			fluid_solver = new Fluid_Solver(dt, rest_dens, kernel_radius, fluid_object);
+		}
+
+
+		// Free parameters 
 		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 0.f, 1000.f);
 		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 50.f);
+		ImGui::SliderFloat("Gravity", &fluid_solver->gravity, -5.f, 5.f);
 
 
 		// Draw Axis
@@ -353,9 +391,20 @@ void Viewer::gui_render()
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 
-		if (ImGui::Button("Hash Colours"))
+		// Particle Colours 
+		if (ImGui::Button("Colour : std"))
 		{
-			fluid_object->hash_colours = !fluid_object->hash_colours;
+			fluid_object->particle_colour = Fluid_Object::Colour_Viz::Standard;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		if (ImGui::Button("Colour : Density"))
+		{
+			fluid_object->particle_colour = Fluid_Object::Colour_Viz::Density;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		if (ImGui::Button("Colour : Cells"))
+		{
+			fluid_object->particle_colour = Fluid_Object::Colour_Viz::GridCell;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 

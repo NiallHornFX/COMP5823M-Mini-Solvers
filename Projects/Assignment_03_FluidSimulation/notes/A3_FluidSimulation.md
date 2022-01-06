@@ -434,6 +434,26 @@ It becomes visible in the resulting density a hash grid is used as we have squar
 
 ___
 
+#### Uniform 2D Grid
+
+This class will be used as an alternate spatial acceleration structure as well as for rasterizing the particles for surface tension calculation and possible rendering via rasterized grid and marching squares from this. Thus will add methods to extract 2D textures later etc, primary implementation is for spatial acceleration. 
+
+The benefit over Spatial Hash grid been we can access neighbouring cells of each particle (along with its current cell) which means we no longer need to ensure the cell size of the hash grid is larger than the kernel radius. However we still need to make sure that the Kernel radius is smaller than all adjacent cells combined, else we will get the same issues where the resulting fluid quantities are cropped within the bounds of grid cells and not smoothed correctly to the edges of the kernels radii. As stated above one possible fix of this is to increase scene / simulation scale. 
+
+Need a gather step (per cell gather particles within cell, transformation from index space to world space, gather particles etc.), this is slower than hashing but will be worth it. 
+
+Function to get neighbour grid cell indices / pointers which is easy to do. The grid array itself will be 1D flat and indexed using standard $i \cdot m + j$ function. 
+
+
+
+
+
+
+
+
+
+____
+
 #### Fluid Solver
 
 ##### Simulation Loop 
@@ -469,6 +489,14 @@ Well for evaluation of forces, this is done per particle, so it can be called wi
 
 A bit confusing mixing vec2 with vec3 ie particles use vec3 but kernels take in vec3s but use vec2s internally etc. Ideally we'd move the whole program to treat particles->vertices as 2D so attribute layout would change on the OGL side also. 
 
+##### Fixed Kernel Radius
+
+As Kernel Radius $h$ / smoothing length is set on Solver construction, so we can precompute the coefficients of the smoothing kernel functions, if we want to add GUI control to adjust it, we'd need to rebuild the solver which is doable and still makes more sense than having it as a free parameter where the smoothing kernel functions would have to be re-eval'd each call entirely as there coefficients could not be pre-computed, unless we did a caching approach where if Kernel radius is changed, then we compute the new coefficients once and store them and read them until its changed again. 
+
+I implemented this and it works fine. The cost of rebuilding is hidden by the UI interaction anyway. 
+
+Would be nice to visually draw the radius of the kernel via a circle, but this is not a prio. 
+
 ##### Integration
 
 We are required to use the Leap Frog integration scheme which while been second order, has the property of been symplectic, which for SPH based solvers (and others like mass spring that have oscillatory Hamilton motion) creates much more stable solves as it can be evaluated forwards and backwards in time (preserves area in phase) even more so than using a higher order integrator. 
@@ -489,9 +517,13 @@ Been a few years since i've used an SPH solver so I forgot how unstable they are
 
 Rest Density is a key parameter ofcourse, if there is a larger rest density, the pressure will be smaller as as particles cluster and their local density increases if it is still lower than the rest density the pressure won't be too high, however ideally the rest density should be reflective of the fluid and not using higher values as a compromise. 
 
-Increasing Viscosity and SurfTension forces won't stop expanding / collapsing behaviours they are usually a product of the smoothing kernel radius been incorrect. It could also be due to integration, initially I was testing with Explicit Euler but need to use Leapfrog. 
+Increasing Viscosity and Surface Tension forces won't stop expanding / collapsing behaviours they are usually a product of the smoothing kernel radius been incorrect. It could also be due to integration, initially I was testing with Explicit Euler but need to use Leapfrog. 
 
 Houdini uses a mixed Runge Kutta 1 and 2 Method for integration which seems quite stable compared to leapfrog. 
+
+##### Issues
+
+Density or Pressure is tending to infinity after some x number of timesteps, not sure what's causing this, results in pressure force been incorrect and exploding...
 
 ____
 

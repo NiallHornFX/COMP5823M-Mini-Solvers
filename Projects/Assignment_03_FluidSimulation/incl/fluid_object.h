@@ -4,6 +4,7 @@
 
 // Std Headers
 #include <vector>
+#include <random>
 
 // Project Headers
 #include "primitive.h"
@@ -18,11 +19,11 @@ struct Particle;
 class Fluid_Object
 {
 public:
-	Fluid_Object();
+	Fluid_Object(const glm::vec2 &P = glm::vec2(1.5f, 4.f), const glm::vec2 &Dim = glm::vec2(2.f, 3.f), float Spc = 0.35f);
 	~Fluid_Object(); 
 
 	// ======== Emit + Reset ========
-	void emit_square(const glm::vec2 &P, const glm::vec2 &Dim, float h);
+	void emit_square();
 	void reset_fluid();
 
 	// ======== Render ========
@@ -31,11 +32,15 @@ public:
 	void render(const glm::mat4 &ortho);
 
 public: 
+	enum Colour_Viz {Standard = 0, Density, GridCell, Velocity};
+	Colour_Viz particle_colour;
 	// ======== Fluid Data ========
 	std::vector<Particle> particles; 
+	glm::vec2 pos, dim; 
+	float spc; 
 
 	// View State
-	bool hash_colours = false;
+	bool ptColour_ = false;
 
 	// ======== Render Primitives ========
 	// Point Rendering via Primitive
@@ -65,6 +70,16 @@ struct Particle
 INLINE float fitRange(float val, float a_min, float a_max, float b_min, float b_max)
 {
 	return b_min + (val - a_min)*(b_max - b_min) / (a_max - a_min);
+}
+
+INLINE glm::vec3 randRange(std::size_t seed, float min, float max)
+{
+	std::mt19937_64 rng;
+	std::uniform_real_distribution<float> dist(min, max);
+	rng.seed(seed);        float x = dist(rng);
+	rng.seed(seed + 124);  float y = dist(rng);
+	rng.seed(seed + 321);  float z = dist(rng);
+	return glm::vec3(x, y, z);
 }
 
 #endif
