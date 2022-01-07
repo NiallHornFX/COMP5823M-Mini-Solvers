@@ -438,7 +438,13 @@ ___
 
 This class will be used as an alternate spatial acceleration structure as well as for rasterizing the particles for surface tension calculation and possible rendering via rasterized grid and marching squares from this. Thus will add methods to extract 2D textures later etc, primary implementation is for spatial acceleration. 
 
-The benefit over Spatial Hash grid been we can access neighbouring cells of each particle (along with its current cell) which means we no longer need to ensure the cell size of the hash grid is larger than the kernel radius. However we still need to make sure that the Kernel radius is smaller than all adjacent cells combined, else we will get the same issues where the resulting fluid quantities are cropped within the bounds of grid cells and not smoothed correctly to the edges of the kernels radii. As stated above one possible fix of this is to increase scene / simulation scale. 
+The benefit over Spatial Hash grid been we can access neighbouring cells of each particle (along with its current cell) which means we no longer need to ensure the cell size of the hash grid is larger than the kernel radius. 
+
+However we still need to make sure that the Kernel radius is smaller than all adjacent cells combined, else we will get the same issues where the resulting fluid quantities are cropped within the bounds of grid cells and not smoothed correctly to the edges of the kernels radii. 
+
+The solution to this is, rather than getting per particle adjacent cells, we generalize it to positions, so for each position, we return a list of cells, whom lie within the kernel radius, therefore we guarantee that we are use particles whom lie in cells, that are within the distance of the kernel radius, ofcourse this is per cell distance and not per particle. 
+
+As stated above one possible fix of this is to increase scene / simulation scale. 
 
 Need a gather step (per cell gather particles within cell, transformation from index space to world space, gather particles etc.), this is slower than hashing but will be worth it. 
 

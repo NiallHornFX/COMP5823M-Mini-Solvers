@@ -42,7 +42,7 @@ public:
 
 	void eval_colliders();
 
-	void eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g);
+	glm::vec3 eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g);
 
 	void integrate();
 

@@ -35,9 +35,9 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 	Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left",  glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(7.5f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *floor = new Fluid_Collider_Plane("Tank_Floor", glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec2(5.0f, 0.f));
-	//colliders.push_back(std::move(left));
-	//colliders.push_back(std::move(right));
-	//colliders.push_back(std::move(floor));
+	colliders.push_back(std::move(left));
+	colliders.push_back(std::move(right));
+	colliders.push_back(std::move(floor));
 
 	// ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
 	// Poly 6
@@ -132,11 +132,12 @@ void Fluid_Solver::integrate()
 {
 	// Chosen Kernel Functions
 	kernel_func      kernel = &Fluid_Solver::kernel_poly6;
-	kernel_grad_func grad = &Fluid_Solver::kernel_poly6_gradient;
+	//kernel_grad_func grad = &Fluid_Solver::kernel_poly6_gradient;
+	kernel_grad_func grad = &Fluid_Solver::kernel_spiky_gradient;
 
 	// Ext Forces 
 	glm::vec3 g(0.f, gravity, 0.f);
-	//kernel_grad_func grad = &Fluid_Solver::kernel_spiky_gradient;
+
 
 	// Semi Implicit Euler Integration (testing)
 	/*
@@ -155,13 +156,13 @@ void Fluid_Solver::integrate()
 	for (Particle &pt : fluidData->particles)
 	{
 		// Eval RHS forces 0 
-		eval_forces(pt, kernel, grad);
-		glm::vec3 a_0 = g + pt.F;
+		
+		glm::vec3 a_0 = g + eval_forces(pt, kernel, grad) + pt.F;
 		// Integrate P 
 		pt.P += (pt.V * dt) + (0.5f * a_0 * (dt*dt));
 		// Eval RHS forces 1
 		eval_forces(pt, kernel, grad);
-		glm::vec3 a_1 = g + pt.F;
+		glm::vec3 a_1 = g + eval_forces(pt, kernel, grad) + pt.F;
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
 	}
@@ -207,8 +208,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
 		{
 			//const Particle &Pt_j = *((*neighbours)[p_j]);
-			const Particle &Pt_j = fluidData->particles[p_j];
-			if (Pt_j.id == Pt_i.id) continue; // Skip self. 
+			const Particle &Pt_j = fluidData->particles[p_j]; 
 			dens_tmp += (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
@@ -230,13 +230,13 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 
 }
 
-void Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
+glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
 {
 	// Check Hash Grid has been evaulated
 	if (!got_neighbours)
 	{
 		std::cerr << "ERROR::Frame::" << frame << " Fluid_Solver::Particles Neighbours not caluclated via Hash Grid" << std::endl;
-		return;
+		return glm::vec3(0.f);
 	}
 
 	//min_force = 1e06, max_force = 0.f; 
@@ -269,13 +269,13 @@ void Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w
 	if (std::isnan(glm::dot(force_pressure, force_pressure))) throw std::runtime_error("nan");
 
 	// Accumulate forces
-	Pt_i.F += force_pressure; 
+	// ret instead of write to Pt.F
+	return force_pressure; 
 
 	// Store Min/Max Dens (Debug)
 	//float f_s = glm::dot(force_pressure, force_pressure);
 	//if (f_s < min_force) min_force = f_s; 
 	//if (f_s > max_force) max_force = f_s; 
-
 }
 
 
@@ -284,7 +284,9 @@ void Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w
 float Fluid_Solver::kernel_poly6(const glm::vec3 &r)
 {
 	float r_sqr = glm::dot(r, r);
+
 	if (std::isnan(r_sqr)) throw std::runtime_error("nan");
+
 	if (r_sqr > kernel_radius_sqr) return 0.f;
 	
 	return poly6_s * std::powf((kernel_radius_sqr - r_sqr), 3.f);
@@ -294,11 +296,16 @@ glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
 {
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	float r_sqr = glm::dot(r, r);
+
 	if (std::isnan(r_sqr)) throw std::runtime_error("nan");
 
 	if (r_sqr > kernel_radius_sqr) return glm::vec2(0.f);
 
-	return poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
+	glm::vec2 val = poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
+
+	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
+
+	return val;
 }
 
 float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
@@ -313,8 +320,11 @@ glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
 	if (r_l > kernel_radius) return glm::vec2(0.f);
-	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
-	return spiky_grad_s * std::powf((kernel_radius - r_l), 2.f) * r_n2; 
+	glm::vec2 r_n2 = r_l != 0 ? glm::normalize(glm::vec2(r.x, r.y)) : r;
+	glm::vec2 val = spiky_grad_s * std::powf((kernel_radius - r_l), 2.f) * r_n2; 
+
+	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
+	return val; 
 }
 
 float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
