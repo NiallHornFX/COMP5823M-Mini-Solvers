@@ -334,6 +334,8 @@ p_i = k({\rho_i - \rho_{rest}})
 $$
 Using the particles current density $\rho_i$ and some rest density $\rho_{rest}$ scaled by some stiffness constant $k$. Both $k$ and $\rho_{rest}$ are user defined and need to be picked carefully. 
 
+So eg if we have a current density $\rho_i = 10$ and a rest density $rho_{rest} = 100$ we have $k * -90$ pressure and thus negative pressure will force the particles back together to maintain volume. As noted by Muller this doesn't affect the resulting pressure gradient (which is negative), ie it affects pressure not pressure gradient, its used for stability over the orginal ideal gas state equation $p_i = k\rho$. 
+
 The resulting pressure force on the particle is the negative pressure gradient, can be computed first naively :
 $$
 \textbf{f}_i^{pres} = -\nabla p(r_i) = -\sum_j m_j {p_j\over \rho_j}\nabla\omega(r-r_j, h)
@@ -347,6 +349,8 @@ $$
 We should make sure we don't eval self particle when computing pressure as the pressure kernel uses the length of the vector $||\vec{r}||$ and it will cause a divide by zero nan to occur so the resulting pressure gradient and thus force will be nan.
 
 I don't think we can use $h < 1$ because it breaks the normalization of the Kernels, so this is a bit of an issue if the Scene is scaled such that 1 "unit" is too large we may have to scale all the scene up to be realativly scaled larger eg $[0,100]$ instead of $[0,10]$ such that we can use smaller kernel radius / smoothing length relative to the scale of the scene/fluid. This shouldn't be an issue as we just treat the scene meters as $0.1$ meter thus we use 40 instead of 4 etc. 
+
+For pressure we do need to make sure $Pt_i \neq Pt_j$ otherwise we will get a case where the positions are thus the same and we will get a nan. However for computing density and other particle attributes we do want the neighbours $Pt_j$ to also contain the particle $Pt_i$ itself otherwise the resulting quanitity on $Pt_i$ when its isolated would be $0$. 
 
 ###### Issues : 
 

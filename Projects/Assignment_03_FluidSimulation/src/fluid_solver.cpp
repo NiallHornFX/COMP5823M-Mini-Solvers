@@ -41,8 +41,8 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 
 	// ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
 	// Poly 6
-	poly6_s      =  315.f  / (64 * M_PI  * std::powf(kernel_radius,  9.f));
-	poly6_grad_s = -(945.f / (32 * M_PI * std::powf(kernel_radius, 9.f)));
+	poly6_s      =  315.f  / (64.f * M_PI  * std::powf(kernel_radius,  9.f));
+	poly6_grad_s = -(945.f / (32.f * M_PI  * std::powf(kernel_radius, 9.f)));
 	// Spiky
 	spiky_s      = 15.f   / (M_PI * std::powf(kernel_radius, 6.f));
 	spiky_grad_s = -(45.f / (M_PI * std::powf(kernel_radius, 6.f)));
@@ -321,9 +321,10 @@ glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 	float r_l = glm::length(r);
 	if (r_l > kernel_radius) return glm::vec2(0.f);
 	glm::vec2 r_n2 = r_l != 0 ? glm::normalize(glm::vec2(r.x, r.y)) : r;
-	glm::vec2 val = spiky_grad_s * std::powf((kernel_radius - r_l), 2.f) * r_n2; 
+	glm::vec2 val = spiky_grad_s * std::powf((kernel_radius - r_l), 3.f) * r_n2; 
 
 	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
+
 	return val; 
 }
 

@@ -16,7 +16,7 @@ Hash_Grid::Hash_Grid(Fluid_Object *FluidData, std::size_t DimSqr, float CellSize
 	// Total x,y Cell Count, assumed dim_sqr is the dimension squared of the HG. 
 	cell_count = std::powf((dim_sqr / cell_size), 2.f); 
 
-	std::cout << "DEBUG::Hash_Grid::Cell_Count = " << cell_count << " | Cell_Size = " << cell_size << " | Dimensions " << dim_sqr << "^2\n";
+	//std::cout << "DEBUG::Hash_Grid::Cell_Count = " << cell_count << " | Cell_Size = " << cell_size << " | Dimensions " << dim_sqr << "^2\n";
 
 	// Allocate Outer Hash Grid Array (Pointer to inner cell list vectors) 
 	grid = new std::vector<Particle*>*[cell_count];

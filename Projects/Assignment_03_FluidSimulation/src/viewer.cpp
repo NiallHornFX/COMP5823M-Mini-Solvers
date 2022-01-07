@@ -379,7 +379,7 @@ void Viewer::gui_render()
 
 
 		// Free parameters 
-		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 0.f, 1000.f);
+		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 0.f, 100.f);
 		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 50.f);
 		ImGui::SliderFloat("Gravity", &fluid_solver->gravity, -5.f, 5.f);
 
