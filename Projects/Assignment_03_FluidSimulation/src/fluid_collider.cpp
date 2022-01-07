@@ -56,13 +56,19 @@ void Fluid_Collider_Plane::render_setup()
 // Within specified bounds (if horizontal or vertical)
 void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 {
+	auto vel_decomp = [this](const glm::vec3 &v, float tang_mult, float norm_mult) -> glm::vec3
+	{
+		// Decompose to tangential and normal components
+		glm::vec3 v_N = glm::dot(v, N) * N;
+		glm::vec3 v_T = v - v_N;
+		return (v_T * tang_mult) + ((-v_N) * norm_mult);
+	};
+	
 	for (Particle &curPt : particles)
 	{
 		float dist = glm::dot((curPt.P - q), N);
 		float thick = 2.f; 
 		float eps = 0.05f;
-		float vel_disp = 0.5f;
-		float force_str = 1.f; 
 
 		switch (type) // Account for Plane Bounds over length or height.
 		{
@@ -73,8 +79,7 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 					if (dist <= eps)
 					{
 						curPt.P += -(dist - eps) * N;
-						curPt.V.y *= -1.f; 
-						curPt.V *= vel_disp;
+						curPt.V = vel_decomp(curPt.V, 0.75f, 0.1f);
 					}
 				}
 				break;
@@ -86,8 +91,7 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 					if (dist <= eps)
 					{
 						curPt.P += -(dist - eps) * N;
-						curPt.V.x *= -1.f;
-						curPt.V *= vel_disp;
+						curPt.V = vel_decomp(curPt.V, 0.75f, 0.1f);
 					}	
 				}
 				break;

@@ -27,7 +27,7 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 	simulate = false;
 	got_neighbours = false; 
 	kernel_radius_sqr = kernel_radius * kernel_radius;
-	rest_density = 33.f; 
+	rest_density = 8.f; 
 	stiffness_coeff = 1.f; 
 	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f, min_force = 0.f, max_force = 0.f; 
 
@@ -156,12 +156,12 @@ void Fluid_Solver::integrate()
 	for (Particle &pt : fluidData->particles)
 	{
 		// Eval RHS forces 0 
-		glm::vec3 a_0 = g + eval_forces(pt, kernel, grad) + pt.F;
+		glm::vec3 a_0 = (eval_forces(pt, kernel, grad) / pt.density) + g;
 		// Integrate P 
 		pt.P += (pt.V * dt) + (0.5f * a_0 * (dt*dt));
 
 		// Eval RHS forces 1
-		glm::vec3 a_1 = g + eval_forces(pt, kernel, grad) + pt.F;
+		glm::vec3 a_1 = (eval_forces(pt, kernel, grad) / pt.density) + g;
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
 	}
@@ -296,9 +296,8 @@ glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	float r_sqr = glm::dot(r, r);
 
-	if (std::isnan(r_sqr)) throw std::runtime_error("nan");
-
-	if (r_sqr > kernel_radius_sqr) return glm::vec2(0.f);
+	// Outside Smoothing Radius or zero vector ? Ret 0.
+	if (r_sqr > kernel_radius_sqr || r_sqr == 0.f) return glm::vec2(0.f);
 
 	glm::vec2 val = poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
 
@@ -310,6 +309,7 @@ glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
 float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
+	// Outside Smoothing Radius ? Ret 0.
 	if (r_l > kernel_radius) return 0.f; 
 
 	return spiky_s * std::powf((kernel_radius - r_l), 3.f);
@@ -318,11 +318,11 @@ float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
 glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
-	if (r_l > kernel_radius) return glm::vec2(0.f);
 
-	// r is 0 vector ? 
-	glm::vec2 r_n2 = r_l != 0 ? glm::normalize(glm::vec2(r.x, r.y)) : r;
+	// Outside Smoothing Radius or zero vector ? Ret 0.
+	if (r_l > kernel_radius || r_l == 0.f) return glm::vec2(0.f);
 
+	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	glm::vec2 val = spiky_grad_s * std::powf((kernel_radius - r_l), 3.f) * r_n2; 
 
 	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
@@ -333,5 +333,7 @@ glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
+	// Outside Smoothing Radius ? Ret 0.
+	if (r_l > kernel_radius) return 0.f; 
 	return visc_lapl_s * (1.f - (r_l / kernel_radius));
 }

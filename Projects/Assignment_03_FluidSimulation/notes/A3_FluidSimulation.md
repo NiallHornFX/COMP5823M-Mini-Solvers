@@ -265,6 +265,8 @@ glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
 {
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	float r_sqr = glm::dot(r, r);
+    
+    if (r_sqr > kernel_radius_sqr) return glm::vec2(0.f);
 	return poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
 }
 
@@ -272,13 +274,14 @@ float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
 	if (r_l > kernel_radius) return 0.f; 
-
 	return spiky_s * std::powf((kernel_radius - r_l), 3.f);
 }
 
 glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
+     if (r_l > kernel_radius) return glm::vec2(0.f);
+    
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	return spiky_grad_s * std::powf((kernel_radius - r_l), 2.f) * r_n2; 
 }
@@ -290,7 +293,7 @@ float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
 }
 ```
 
-
+For the Gradients, we should also add in checks if length (or square) of $r$ is zero, we return $0$ as if the position was out of range of the kernel radius $h$. Otherwise we will get nans when the normalized vector $\hat{r}$ is calculated. 
 
 ____
 
@@ -350,13 +353,11 @@ Using the gradient of the smoothing kernel function. However due to the force no
 $$
 \textbf{f}_i^{pres} = -\nabla p(r_i) = -\sum_j m_j {{p_i + p_j}\over 2\rho_j}\nabla\omega(r-r_j, h)
 $$
-
-
 We should make sure we don't eval self particle when computing pressure as the pressure kernel uses the length of the vector $||\vec{r}||$ and it will cause a divide by zero nan to occur so the resulting pressure gradient and thus force will be nan.
 
 I don't think we can use $h < 1$ because it breaks the normalization of the Kernels, so this is a bit of an issue if the Scene is scaled such that 1 "unit" is too large we may have to scale all the scene up to be realativly scaled larger eg $[0,100]$ instead of $[0,10]$ such that we can use smaller kernel radius / smoothing length relative to the scale of the scene/fluid. This shouldn't be an issue as we just treat the scene meters as $0.1$ meter thus we use 40 instead of 4 etc. 
 
-For pressure we do need to make sure $Pt_i \neq Pt_j$ otherwise we will get a case where the positions are thus the same and we will get a nan. However for computing density and other particle attributes we do want the neighbours $Pt_j$ to also contain the particle $Pt_i$ itself otherwise the resulting quanitity on $Pt_i$ when its isolated would be $0$. 
+For pressure we do need to make sure $Pt_i \neq Pt_j$ otherwise we will get a case where the positions are thus the same and we will get a nan, ie we cannot have pressure on a single particle against itself so we skip the particle $Pt_j$ whom is equal to $Pt_i$. This is different than for computing density and other particle attributes we do want the neighbours $Pt_j$ to also contain the particle $Pt_i$ itself otherwise the resulting quanitity on $Pt_i$ when its isolated would be $0$. 
 
 ###### Issues : 
 
@@ -372,13 +373,15 @@ pressure_grad += ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (thi
 
 ```
 
-Still having an issue of pressure gradient and thus force diverging to infinity and thus resulting in nans, but separate from the fixed above issue. 
-
 ##### Clamping Density to Rest_Density and Controlling Negative Pressure
 
 A Key thing I  was missing is to either clamp the density $\rho_i$ to the rest density $rho_0$ (which when mass is 1 for all pts is quite low) because negative density results in negative pressure and thus while it creates some kinda surf tension its not correct and breaks the solve Or leave the density as is, but clamp the negative pressure to either be above 0 or if negative pressure is allowed, be able to control / scale it. This isn't mentioned in the paper, but is mentioned in Doyub Kims book along with some other things I read. Ideally we do want some negative pressure because we dont want the particles to always be projected out of each other if the do go too far away they should be pulled back in, but this needs to be controllable hence the separate surface tension force and possibility of scaling the negative pressure or clamping density to the rest_density. 
 
-Note if the rest density is too high and the fluid density never exceeds it even when particles come close together the density wont be higher than the rest density and thus no pressure nor pressure force is applied (this is probs due to me omitting mass, do density is purely based on number of pts and distance via kernels not also multiple by some mass based on particle/neighbour counts).
+Note if the rest density is too high and the fluid density never exceeds it even when particles come close together the density wont be higher than the rest density and thus no pressure nor pressure force is applied (this is probs due to me omitting mass, do density is purely based on number of pts and distance via kernels not also multiple by some mass based on particle/neighbour counts). The clamped min density could be different from the rest density. 
+
+However I may leave the negative density as is, and limit the negative pressure (oppose to clamping it to 0) so we can have some negative pressure but heavily reduced. That way we don't need to have another parameter ie min density. As stated above Surface Tension forces are what should be responsible for bringing the particles closer together in a parametrizable manner, oppose to the negative density and thus pressure from the pressure calculation which should be limited. 
+
+Density should be used to scale forces. 
 
 ____
 
@@ -550,6 +553,8 @@ Houdini uses a mixed Runge Kutta 1 and 2 Method for integration which seems quit
 It makes sense for there to be particles that align to the boundaries, this isn't an error. The particles atop of these are then what maintains volume. A way to avoid this would be to use ghost particles along the boundaries that enforce density and thus pressure along the boundaries so all simulated particles react to these directly. Ideally we'd use an approach where we push apart particles further to maintain a more even distribution and stop the particles aligning along the boundary. Its also to do with scaling the velocity after collision but that's needed to stop excessive restitution hence why decomposing to normal and tangential could help as we'd keep tangential vel at full strength but dampen normal velocity (post projection out of boundary).
 
 Bounce is needed on collisions to avoid fluid becoming compressible too easily, however rather than just flipping velocity as I'm currently doing, will probs decompose into normal and tangential reflection components and control these. 
+
+Also still have the issue that smoothing radius is too large, so probs will need to scale up scene units so that  minimum $h$ of $1.0$ is not an issue. 
 
 ##### Issues
 

@@ -19,7 +19,7 @@ struct Particle;
 class Fluid_Object
 {
 public:
-	Fluid_Object(const glm::vec2 &P = glm::vec2(1.5f, 4.f), const glm::vec2 &Dim = glm::vec2(2.f, 3.f), float Spc = 0.35f);
+	Fluid_Object(const glm::vec2 &P = glm::vec2(1.5f, 4.f), const glm::vec2 &Dim = glm::vec2(2.f, 3.f), float Spc = 0.25f);
 	~Fluid_Object(); 
 
 	// ======== Emit + Reset ========
