@@ -55,7 +55,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
-	fluid_solver = new Fluid_Solver((1.f / 90.f), 100.f, 1.5f, fluid_object);
+	fluid_solver = new Fluid_Solver((1.f / 256.f), 100.f, 1.5f, fluid_object);
 }
 
 Viewer::~Viewer() 

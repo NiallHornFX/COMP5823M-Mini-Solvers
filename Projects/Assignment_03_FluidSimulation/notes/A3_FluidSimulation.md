@@ -436,6 +436,8 @@ If Cell size matches Kernel Radius $h$ we end up with too large cells and the $O
 
 It becomes visible in the resulting density a hash grid is used as we have square regions of varying densities corresponding to each cell location, specially the nodes of the grid. This should be less of an issue with higher particle counts. However the other issue is that particles form into discrete cell groups as oppose to based on their smoothing kernel. 
 
+My original approach of just using the cell the particle lies within was stupid, because if  the particle is near the edge of the cell, then the smoothing kernel will only be able to eval the particles that lie within the steradian of the cell, while it should be evaling over the neighbouring cells adjacent to cover the full circumference of the kernel. 
+
 ___
 
 #### Uniform 2D Grid

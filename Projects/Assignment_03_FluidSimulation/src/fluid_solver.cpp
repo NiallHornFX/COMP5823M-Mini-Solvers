@@ -97,8 +97,8 @@ void Fluid_Solver::step()
 {
 	get_neighbours();
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
-	integrate();
 	eval_colliders();
+	integrate();
 
 	// Get Particle Neighbours (HashGrid)
 	// Compute Particle Density + Pressure
@@ -138,30 +138,29 @@ void Fluid_Solver::integrate()
 	// Ext Forces 
 	glm::vec3 g(0.f, gravity, 0.f);
 
-
-	// Semi Implicit Euler Integration (testing)
 	/*
+	// Semi Implicit Euler Integration (testing)
 	for (Particle &p : fluidData->particles)
 	{
 		// Eval RHS forces 0 
-		eval_forces(pt, kernel, grad);
-		glm::vec3 a_0 = glm::vec3(0.f, -9.8f, 0.f) + pt.F;
+		glm::vec3 a_0 = g + eval_forces(p, kernel, grad);
 
 		// Integrate Accel and Vel
 		p.V += a_0 * dt; 
 		p.P += p.V * dt; 
-	} */
+	} 
+	*/
 
+	
 	// Leapfrog integration
 	for (Particle &pt : fluidData->particles)
 	{
 		// Eval RHS forces 0 
-		
 		glm::vec3 a_0 = g + eval_forces(pt, kernel, grad) + pt.F;
 		// Integrate P 
 		pt.P += (pt.V * dt) + (0.5f * a_0 * (dt*dt));
+
 		// Eval RHS forces 1
-		eval_forces(pt, kernel, grad);
 		glm::vec3 a_1 = g + eval_forces(pt, kernel, grad) + pt.F;
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
@@ -320,7 +319,10 @@ glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
 	if (r_l > kernel_radius) return glm::vec2(0.f);
+
+	// r is 0 vector ? 
 	glm::vec2 r_n2 = r_l != 0 ? glm::normalize(glm::vec2(r.x, r.y)) : r;
+
 	glm::vec2 val = spiky_grad_s * std::powf((kernel_radius - r_l), 3.f) * r_n2; 
 
 	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
