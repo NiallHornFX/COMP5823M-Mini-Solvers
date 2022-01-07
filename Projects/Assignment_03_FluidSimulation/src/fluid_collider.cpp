@@ -79,7 +79,7 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 					if (dist <= eps)
 					{
 						curPt.P += -(dist - eps) * N;
-						curPt.V = vel_decomp(curPt.V, 0.75f, 0.1f);
+						//curPt.V = vel_decomp(curPt.V, 0.75f, 0.1f);
 					}
 				}
 				break;
@@ -91,7 +91,7 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 					if (dist <= eps)
 					{
 						curPt.P += -(dist - eps) * N;
-						curPt.V = vel_decomp(curPt.V, 0.75f, 0.1f);
+						//curPt.V = vel_decomp(curPt.V, 0.75f, 0.1f);
 					}	
 				}
 				break;

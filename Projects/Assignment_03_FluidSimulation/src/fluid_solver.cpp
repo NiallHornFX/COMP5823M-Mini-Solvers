@@ -208,7 +208,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		{
 			//const Particle &Pt_j = *((*neighbours)[p_j]);
 			const Particle &Pt_j = fluidData->particles[p_j]; 
-			dens_tmp += (this->*w)(Pt_i.P - Pt_j.P);
+			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = std::max(dens_tmp, rest_density); 
 
@@ -259,7 +259,7 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 		Particle &Pt_j = fluidData->particles[j];
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 		if (Pt_j.density == 0.f) continue; // Skip 0 dens else (-0 = nan). 
-		glm::vec2 tmp =  ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
+		glm::vec2 tmp =  Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
 		if (std::isnan(glm::dot(tmp, tmp))) throw std::runtime_error("nan");
 		pressure_grad += tmp; 
 	}

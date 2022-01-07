@@ -339,9 +339,10 @@ void Viewer::gui_render()
 		ImGui::Text("Fluid Attributes");
 		ImGui::Text("Particle Count = %d", fluid_object->particles.size());
 		ImGui::PopStyleColor();
+		ImGui::Text("Mass : %f", fluid_object->particles[0].mass);
 		ImGui::Text("Density : min = %f | max = %f",  fluid_solver->min_dens, fluid_solver->max_dens);
 		ImGui::Text("Pressure : min = %f | max = %f", fluid_solver->min_pres, fluid_solver->max_pres);
-		ImGui::Text("Forcesqr : min = %f | max = %f", fluid_solver->min_force, fluid_solver->max_force);
+		//ImGui::Text("Forcesqr : min = %f | max = %f", fluid_solver->min_force, fluid_solver->max_force);
 
 		// ========== Fluid State Controls ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));

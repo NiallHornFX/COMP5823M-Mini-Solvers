@@ -29,8 +29,8 @@ void Fluid_Object::reset_fluid()
 {
 	for (Particle &pt : particles)
 	{
-		pt.P = pt.rest;
-		pt = Particle(pt.P, pt.id);
+		pt.P = pt.rest; float mass = pt.mass;
+		pt = Particle(pt.P, mass, pt.id);
 	}
 }
 
@@ -41,6 +41,10 @@ void Fluid_Object::emit_square()
 	std::size_t n_y = std::size_t(dim.y / spc);
 	float h_dim_x = dim.x * 0.5f, h_dim_y = dim.y * 0.5f; 
 
+	// Compute particle mass
+	float mass = 100.f / std::sqrtf(n_x * n_y);
+	mass = 1.f; // Debug.
+
 	for (std::size_t i = 0; i < n_x; ++i)
 	{
 		for (std::size_t j = 0; j < n_y; ++j)
@@ -50,9 +54,10 @@ void Fluid_Object::emit_square()
 			//xx -= h_dim_x, yy -= h_dim_y; // Center
 			xx += pos.x, yy += pos.y; 
 			
-			particles.emplace_back(glm::vec3(xx,yy,0.f), (i*n_x+j));
+			particles.emplace_back(glm::vec3(xx,yy,0.f), mass, (i*n_x+j));
 		}
 	}
+
 }
 
 void Fluid_Object::render_setup()
