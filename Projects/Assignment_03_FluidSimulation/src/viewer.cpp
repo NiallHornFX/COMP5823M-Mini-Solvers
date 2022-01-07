@@ -339,7 +339,7 @@ void Viewer::gui_render()
 		ImGui::Text("Fluid Attributes");
 		ImGui::Text("Particle Count = %d", fluid_object->particles.size());
 		ImGui::PopStyleColor();
-		ImGui::Text("Density : min = %f | max = %f", fluid_solver->min_dens, fluid_solver->max_dens);
+		ImGui::Text("Density : min = %f | max = %f",  fluid_solver->min_dens, fluid_solver->max_dens);
 		ImGui::Text("Pressure : min = %f | max = %f", fluid_solver->min_pres, fluid_solver->max_pres);
 		ImGui::Text("Forcesqr : min = %f | max = %f", fluid_solver->min_force, fluid_solver->max_force);
 
@@ -379,7 +379,7 @@ void Viewer::gui_render()
 
 
 		// Free parameters 
-		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 0.f, 100.f);
+		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 500.f);
 		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 50.f);
 		ImGui::SliderFloat("Gravity", &fluid_solver->gravity, -5.f, 5.f);
 

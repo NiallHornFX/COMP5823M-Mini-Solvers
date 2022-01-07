@@ -314,6 +314,12 @@ $$
 $$
 The smoothing Kernel used in this case will be the Poly6. 
 
+As noted elsewhere, unlike for pressure calculation, we do want to evaluate the $j'th$ particle when it equals the $i'th$ particle that defines the $x$ position, ie we don't skip when $pt_j = pt_i$ otherwise if $pt_i$ is seperated it will yield zero density value on its self, it should always still evaluate its own density as the resulting $\rho_i$ value. Zero density on particles also creates problems elsewhere as we use density for weighting having $\rho = 0 $ can result in nans from divide by zero. 
+
+##### Adding Mass 
+
+Its not a correct way to go about it by assuming if mass is 1 for all particles, we can neglect it. Because Mass itself should be calculated from total particle count (or particle neighbour count) so that as particle spacing decreases the resulting density and behaviour is more correctly scaled, without needing to retune the parameters. 
+
  ###### Computing Pressure : shown below
 
 ____
@@ -368,6 +374,12 @@ pressure_grad += ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (thi
 
 Still having an issue of pressure gradient and thus force diverging to infinity and thus resulting in nans, but separate from the fixed above issue. 
 
+##### Clamping Density to Rest_Density and Controlling Negative Pressure
+
+A Key thing I  was missing is to either clamp the density $\rho_i$ to the rest density $rho_0$ (which when mass is 1 for all pts is quite low) because negative density results in negative pressure and thus while it creates some kinda surf tension its not correct and breaks the solve Or leave the density as is, but clamp the negative pressure to either be above 0 or if negative pressure is allowed, be able to control / scale it. This isn't mentioned in the paper, but is mentioned in Doyub Kims book along with some other things I read. Ideally we do want some negative pressure because we dont want the particles to always be projected out of each other if the do go too far away they should be pulled back in, but this needs to be controllable hence the separate surface tension force and possibility of scaling the negative pressure or clamping density to the rest_density. 
+
+Note if the rest density is too high and the fluid density never exceeds it even when particles come close together the density wont be higher than the rest density and thus no pressure nor pressure force is applied (this is probs due to me omitting mass, do density is purely based on number of pts and distance via kernels not also multiple by some mass based on particle/neighbour counts).
+
 ____
 
 #### Classes
@@ -388,6 +400,8 @@ Spatial Hash Grid will also be its own class based on my UE4 Cloth solver hash g
 
 **Hash_Grid** : Discretizes Fluids into Spatially coherent cells based on a 2D Spatial Hash Function for accelerating neighbour lookups. Only Cells that have been hashed to are allocated. 
 
+**Grid_2D** : Uniform 2D Grid for spatial acceleration (as oppose to using Hash_Grid) also used for the colour field and rasterizing the particle densities for rendering. 
+
 **Viewer** : Contains the OpenGL,Input and GUI code as well as housing the solver and fluid state instances. 
 
 ____
@@ -402,7 +416,7 @@ ____
 
 #### Hash Grid
 
-As stated, the Hash Grid class is based on my UE4 Cloth Solver plugin where I was using it to accelerate particle-particle self collisions. The standard approach doesn't use a cell size but specifies the number of buckets (which is then mod'd with the XOR'd spatial coords with some large prime integers) based on the paper *[Optimized Spatial Hashing for Collision Detection of Deformable Objects. Teschner et al.]*. However I adopted it to specify both a cell size and a cell count. However I plan to modify it to specify a cell size and a grid size (which will be scaled over the 2D $10^2$ domain) to derive cell count from this. The Particle Positions are hashed and the resulting index ranges from $0\:\:to\:\:cellcount-1$. 
+As stated, the Hash Grid class is based on my UE4 Cloth Solver plugin where I was using it to accelerate particle-particle self collisions. The standard approach doesn't use a cell size but specifies the number of buckets (which is then mod'd with the xor'd spatial coords with some large prime integers) based on the paper *[Optimized Spatial Hashing for Collision Detection of Deformable Objects. Teschner et al.]*. However I adopted it to specify both a cell size and a cell count. However I plan to modify it to specify a cell size and a grid size (which will be scaled over the 2D $10^2$ domain) to derive cell count from this. The Particle Positions are hashed and the resulting index ranges from $0\:\:to\:\:cellcount-1$. 
 
 Particles are hashed and the resulting output is an index of the hash grid, so only cells which contain particles are allocated (Outer array contains pointers to inner dynamic arrays (eg std::vector)) while this does cause memory fragmentation it shouldn't be a big deal, each particle then stores the cell it lies within and can use the cell index to look up its neighbours to reduce the time complexity of particle-neighbour hood distance searching from $O(n^2) \mapsto O(nm)$. HashGrid is faster than a uniform/explicit grid, as we don't need to do a per cell gather step and transform the grid from index space, to world space etc and if we use an implementation with Cell Size specified for the HashGrid we don't have the disadvantage that we cannot specify a cell size like we can for an explicit uniform grid. We may need a uniform grid later for Surface Tension but will worry about that later. 
 
@@ -446,15 +460,11 @@ This class will be used as an alternate spatial acceleration structure as well a
 
 The benefit over Spatial Hash grid been we can access neighbouring cells of each particle (along with its current cell) which means we no longer need to ensure the cell size of the hash grid is larger than the kernel radius. 
 
-However we still need to make sure that the Kernel radius is smaller than all adjacent cells combined, else we will get the same issues where the resulting fluid quantities are cropped within the bounds of grid cells and not smoothed correctly to the edges of the kernels radii. 
+However we still need to make sure that the Kernel radius is smaller than all adjacent cells combined, else we will get the same issues where the resulting fluid quantities are cropped within the bounds of grid cells and not smoothed correctly to the edges of the kernels radii. The solution to this is, rather than getting per particle adjacent cells, we generalize it to positions, so for each position, we return a list of cells, whom lie within the kernel radius, therefore we guarantee that we are use particles whom lie in cells, that are within the distance of the kernel radius, ofcourse this is per cell distance and not per particle. 
 
-The solution to this is, rather than getting per particle adjacent cells, we generalize it to positions, so for each position, we return a list of cells, whom lie within the kernel radius, therefore we guarantee that we are use particles whom lie in cells, that are within the distance of the kernel radius, ofcourse this is per cell distance and not per particle. 
+However oppose to just doing a hash step, we need a per cell gather step : per cell gather particles within cell, transformation from index space to world space, gather particles etc. this is slower than hashing but will be worth it. As we can deal with explicit spatial indices for adjacent cell access oppose Hashing where indices are not ordered based on spatial locality. Function to get neighbour grid cell indices / pointers which is easy to do. The grid array itself will be 1D flat and indexed using standard $i \cdot m + j$ function. 
 
-As stated above one possible fix of this is to increase scene / simulation scale. 
 
-Need a gather step (per cell gather particles within cell, transformation from index space to world space, gather particles etc.), this is slower than hashing but will be worth it. 
-
-Function to get neighbour grid cell indices / pointers which is easy to do. The grid array itself will be 1D flat and indexed using standard $i \cdot m + j$ function. 
 
 
 
@@ -493,6 +503,8 @@ Integrate(P)
 ...
 ```
 
+It will actually be a mix of approaches, ie I need `EvalForces()` to operate on single particles passed in, oppose to looping itself internally, so I can call it within the Integration function to eval the RHS forces twice within a single Integration call (for multi-step integrators ie Leap-Frog, Runge Kutta etc) without splitting into multiple for (all particle) calls. 
+
 ##### Simulation Loop Implementation
 
 Ok so I just used the normal approach of having per operation functions, where each function itself loops through the particles, all resulting attributes are stored onto the particles themselves. 
@@ -519,9 +531,11 @@ Oppose to doing eval forces as a sepreate per particle operation, its done withi
 
 Eval forces should be per particle so we don't need to spilt integration into two particle loops ? 
 
-Do eval forces calls within integration (2 steps) dont even need to store force on pts now (but still will) could just return it directly to body of integrate callee
+Do eval forces calls within integration (2 steps) dont even need to store force on pts now (but still will) could just return it directly to body of integrate callee.
 
 Min/Max ranges won't work no more, need to eval these separately over all pts.
+
+Yep so Integrate now calls `Eval_Forces()` per particle within its particle for loop, `Eval_Forces()` takes in a single particle input to calculate forces onto, thus it can be called multiple times within a single integrate loop to eval the forces for multistep integration methods, without needing separate calls and separate particle for loops over all particles to get new forces based on half step integrated postions etc. 
 
 ##### Simulation behaviour
 
@@ -532,6 +546,10 @@ Rest Density is a key parameter ofcourse, if there is a larger rest density, the
 Increasing Viscosity and Surface Tension forces won't stop expanding / collapsing behaviours they are usually a product of the smoothing kernel radius been incorrect. It could also be due to integration, initially I was testing with Explicit Euler but need to use Leapfrog. 
 
 Houdini uses a mixed Runge Kutta 1 and 2 Method for integration which seems quite stable compared to leapfrog. 
+
+It makes sense for there to be particles that align to the boundaries, this isn't an error. The particles atop of these are then what maintains volume. A way to avoid this would be to use ghost particles along the boundaries that enforce density and thus pressure along the boundaries so all simulated particles react to these directly. Ideally we'd use an approach where we push apart particles further to maintain a more even distribution and stop the particles aligning along the boundary. Its also to do with scaling the velocity after collision but that's needed to stop excessive restitution hence why decomposing to normal and tangential could help as we'd keep tangential vel at full strength but dampen normal velocity (post projection out of boundary).
+
+Bounce is needed on collisions to avoid fluid becoming compressible too easily, however rather than just flipping velocity as I'm currently doing, will probs decompose into normal and tangential reflection components and control these. 
 
 ##### Issues
 

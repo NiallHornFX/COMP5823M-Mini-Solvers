@@ -41,13 +41,13 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 
 	// ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
 	// Poly 6
-	poly6_s      =  315.f  / (64.f * M_PI  * std::powf(kernel_radius,  9.f));
+	poly6_s      =  315.f  / (64.f * M_PI  * std::powf(kernel_radius, 9.f));
 	poly6_grad_s = -(945.f / (32.f * M_PI  * std::powf(kernel_radius, 9.f)));
 	// Spiky
-	spiky_s      = 15.f   / (M_PI * std::powf(kernel_radius, 6.f));
+	spiky_s      = 15.f / (M_PI * std::powf(kernel_radius, 6.f));
 	spiky_grad_s = -(45.f / (M_PI * std::powf(kernel_radius, 6.f)));
 	// Viscosity
-	visc_lapl_s  = 45.f  / (M_PI * std::powf(kernel_radius, 5.f));
+	visc_lapl_s  = 45.f / (M_PI * std::powf(kernel_radius, 5.f));
 }
 
 // Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler
@@ -210,7 +210,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 			const Particle &Pt_j = fluidData->particles[p_j]; 
 			dens_tmp += (this->*w)(Pt_i.P - Pt_j.P);
 		}
-		Pt_i.density = dens_tmp; 
+		Pt_i.density = std::max(dens_tmp, rest_density); 
 
 		// Calc Pressure using equation of state : pres_i = k (rho - rho_0)
 		Pt_i.pressure = stiffness_coeff * (Pt_i.density - rest_density);
