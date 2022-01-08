@@ -216,9 +216,6 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		// Calc Pressure using equation of state : pres_i = k (rho - rho_0)
 		Pt_i.pressure = std::max((stiffness_coeff * (Pt_i.density - rest_density)), 0.f); // Test no neg pres. 
 
-		//assert(!std::isnan(Pt_i.pressure));
-		//assert(!std::isnan(Pt_i.density));
-
 		// Store Min/Max Dens (Debug) 
 		if (Pt_i.density  < min_dens) min_dens = Pt_i.density;
 		if (Pt_i.pressure < min_pres) min_pres = Pt_i.pressure;

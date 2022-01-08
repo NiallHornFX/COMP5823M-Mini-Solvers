@@ -102,11 +102,17 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 					col[p] = randRange(particles[p].cell_idx, 0.f, 1.f);
 					break;
 				}
+				case Colour_Viz::Pressure:
+				{
+					// Colour Particles by Pressure 
+					col[p] = glm::vec3(fitRange(particles[p].pressure, 1.f, 100.f, 0.f, 1.f));
+					break;
+				}
 				case Colour_Viz::Density:
 				{
 					// Colour Particles by Density 
-					//col[p] = glm::vec3(fitRange(particles[p].density, 1.f, 50.f, 0.f, 1.f));
-					col[p] = glm::vec3(fitRange(particles[p].pressure, 1.f, 50.f, 0.f, 1.f));
+					col[p] = glm::vec3(fitRange(particles[p].density, 1.f, 50.f, 0.f, 1.f));
+					break;
 				}
 				case Colour_Viz::Velocity: 
 				{

@@ -32,7 +32,7 @@ public:
 	void render(const glm::mat4 &ortho);
 
 public: 
-	enum Colour_Viz {Standard = 0, Density, GridCell, Velocity};
+	enum Colour_Viz {Standard = 0, Density, Pressure, Velocity, GridCell};
 	Colour_Viz particle_colour;
 	// ======== Fluid Data ========
 	std::vector<Particle> particles; 

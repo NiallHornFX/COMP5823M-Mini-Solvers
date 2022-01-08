@@ -300,7 +300,7 @@ void Viewer::gui_render()
 	static float dim [2] = { 2.f, 3.f };
 
 	// Fluid Solver Core parameters (Reconstruct if changed)
-	static float kernel_radius = 1.25f; 
+	static float kernel_radius = 1.0; 
 
 	// Get Dt 1/n. 
 	float n = 1.f / fluid_solver->dt;
@@ -371,18 +371,19 @@ void Viewer::gui_render()
 		}
 
 		// Causes rebuild of Fluid_Solver if changed (this is so kernels can be pre-computed) 
-		if (ImGui::SliderFloat("Kernel Radius", &kernel_radius, 1.f, 10.f))
+		if (ImGui::SliderFloat("Kernel Radius", &kernel_radius, 1.f, 2.f))
 		{
-			float dt = fluid_solver->dt, rest_dens = fluid_solver->rest_density;
+			float dt = fluid_solver->dt, rest_dens = fluid_solver->rest_density, stiff = fluid_solver->stiffness_coeff, g = fluid_solver->gravity;
 			delete fluid_solver;
 			fluid_solver = new Fluid_Solver(dt, rest_dens, kernel_radius, fluid_object);
+			fluid_solver->stiffness_coeff = stiff, fluid_solver->gravity = g; 
 		}
 
 
 		// Free parameters 
 		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 500.f);
-		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 500.f);
-		ImGui::SliderFloat("Gravity", &fluid_solver->gravity, -5.f, 5.f);
+		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 1000.f);
+		ImGui::SliderFloat("Gravity", &fluid_solver->gravity, -10.f, 10.f);
 
 
 		// Draw Axis
@@ -393,9 +394,14 @@ void Viewer::gui_render()
 		}
 
 		// Particle Colours 
-		if (ImGui::Button("Colour : std"))
+		if (ImGui::Button("Colour : Const"))
 		{
 			fluid_object->particle_colour = Fluid_Object::Colour_Viz::Standard;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		if (ImGui::Button("Colour : Pressure"))
+		{
+			fluid_object->particle_colour = Fluid_Object::Colour_Viz::Pressure;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		if (ImGui::Button("Colour : Density"))
