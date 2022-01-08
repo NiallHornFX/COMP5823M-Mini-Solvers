@@ -371,7 +371,7 @@ void Viewer::gui_render()
 		}
 
 		// Causes rebuild of Fluid_Solver if changed (this is so kernels can be pre-computed) 
-		if (ImGui::SliderFloat("Kernel Radius", &kernel_radius, 1.f, 2.f))
+		if (ImGui::SliderFloat("Kernel Radius", &kernel_radius, 0.1f, 2.f))
 		{
 			float dt = fluid_solver->dt, rest_dens = fluid_solver->rest_density, stiff = fluid_solver->stiffness_coeff, g = fluid_solver->gravity;
 			delete fluid_solver;

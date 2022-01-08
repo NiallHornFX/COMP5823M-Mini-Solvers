@@ -45,7 +45,7 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 	poly6_grad_s = -(945.f / (32.f * M_PI  * std::powf(kernel_radius, 9.f)));
 	// Spiky
 	spiky_s      = 15.f / (M_PI * std::powf(kernel_radius, 6.f));
-	spiky_grad_s = -(45.f / (M_PI * std::powf(kernel_radius, 6.f)));
+	spiky_grad_s = -45.f / (M_PI * std::powf(kernel_radius, 6.f));
 	// Viscosity
 	visc_lapl_s  = 45.f / (M_PI * std::powf(kernel_radius, 5.f));
 }
@@ -151,7 +151,6 @@ void Fluid_Solver::integrate()
 	} 
 	*/
 
-	
 	// Leapfrog integration
 	for (Particle &pt : fluidData->particles)
 	{
@@ -164,6 +163,7 @@ void Fluid_Solver::integrate()
 		glm::vec3 a_1 = (eval_forces(pt, kernel, grad) / pt.density) + g;
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
+		pt.V *= 0.999f; 
 	}
 }
 
@@ -211,10 +211,9 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
-		//Pt_i.density = std::max(dens_tmp, rest_density); 
 
-		// Calc Pressure using equation of state : pres_i = k (rho - rho_0)
-		Pt_i.pressure = std::max((stiffness_coeff * (Pt_i.density - rest_density)), 0.f); // Test no neg pres. 
+		// Calc Pressure using equation of state : pres_i = k (rho - rho_0). No Negative Pressure (Use Surf Tens force).
+		Pt_i.pressure = std::max((stiffness_coeff * (Pt_i.density - rest_density)), 0.f); 
 
 		// Store Min/Max Dens (Debug) 
 		if (Pt_i.density  < min_dens) min_dens = Pt_i.density;
@@ -318,9 +317,13 @@ glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 	float r_l = glm::length(r);
 
 	// Outside Smoothing Radius or zero vector ? Ret 0.
-	if (r_l > kernel_radius || r_l == 0.f) return glm::vec2(0.f);
+	//if (r_l > kernel_radius || r_l == 0.f) return glm::vec2(0.f);
 
-	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
+	if (r_l > kernel_radius) return glm::vec2(0.f);
+
+	// Use orgn vector if zero legnth (oppose to ret 0.f)
+	glm::vec2 r_n2 = r_l == 0.f ? r : glm::normalize(glm::vec2(r.x, r.y));
+
 	glm::vec2 val = spiky_grad_s * std::powf((kernel_radius - r_l), 3.f) * r_n2; 
 
 	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
