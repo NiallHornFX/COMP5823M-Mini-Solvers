@@ -105,7 +105,8 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 				case Colour_Viz::Density:
 				{
 					// Colour Particles by Density 
-					col[p] = glm::vec3(fitRange(particles[p].density, 1.f, 50.f, 0.f, 1.f));
+					//col[p] = glm::vec3(fitRange(particles[p].density, 1.f, 50.f, 0.f, 1.f));
+					col[p] = glm::vec3(fitRange(particles[p].pressure, 1.f, 50.f, 0.f, 1.f));
 				}
 				case Colour_Viz::Velocity: 
 				{
@@ -125,6 +126,6 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 	}
 
 	// Render
-	ren_points->point_size = spc * 35.f;
+	ren_points->point_size = spc * 55.f;
 	ren_points->render();
 }

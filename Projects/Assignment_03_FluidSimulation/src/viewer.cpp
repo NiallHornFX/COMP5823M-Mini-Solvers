@@ -295,8 +295,8 @@ void Viewer::gui_render()
 	if (fluid_solver->simulate) state = "Solve Running"; else state = "Solve Stopped";
 
 	// Fluid Object Core parameters (Reconstruct if changed)
-	static float spc = 0.35f; 
-	static float pos [2] = { 1.5, 5.f };
+	static float spc = 0.25f; 
+	static float pos [2] = { 1.5, 4.f };
 	static float dim [2] = { 2.f, 3.f };
 
 	// Fluid Solver Core parameters (Reconstruct if changed)
@@ -381,7 +381,7 @@ void Viewer::gui_render()
 
 		// Free parameters 
 		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 500.f);
-		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 50.f);
+		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 500.f);
 		ImGui::SliderFloat("Gravity", &fluid_solver->gravity, -5.f, 5.f);
 
 

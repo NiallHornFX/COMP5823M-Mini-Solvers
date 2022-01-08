@@ -210,10 +210,11 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 			const Particle &Pt_j = fluidData->particles[p_j]; 
 			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
 		}
-		Pt_i.density = std::max(dens_tmp, rest_density); 
+		Pt_i.density = dens_tmp; 
+		//Pt_i.density = std::max(dens_tmp, rest_density); 
 
 		// Calc Pressure using equation of state : pres_i = k (rho - rho_0)
-		Pt_i.pressure = stiffness_coeff * (Pt_i.density - rest_density);
+		Pt_i.pressure = std::max((stiffness_coeff * (Pt_i.density - rest_density)), 0.f); // Test no neg pres. 
 
 		//assert(!std::isnan(Pt_i.pressure));
 		//assert(!std::isnan(Pt_i.density));
