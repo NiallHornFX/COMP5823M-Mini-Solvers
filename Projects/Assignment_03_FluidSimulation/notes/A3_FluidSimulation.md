@@ -109,7 +109,6 @@ $$
 \nabla\omega_{poly6} (r, h) = -{945\over 32\pi h^9} {\vec{r}\over ||\vec{r}||} (h-|r|^2)^2
 $$
 
-
 ##### Spiky Kernel :
 
 As noted above Poly6 suffers from the gradient of it approaching zero at the centre and edge (boundaries) which when used for the pressure gradient calculation can cause instability and particle clustering to occur, this [Desbrun] proposes the spiky Kernel which has a gradient which does not approach zero at the centre of the kernel. 
@@ -355,7 +354,9 @@ $$
 $$
 We should make sure we don't eval self particle when computing pressure as the pressure kernel uses the length of the vector $||\vec{r}||$ and it will cause a divide by zero nan to occur so the resulting pressure gradient and thus force will be nan.
 
-I don't think we can use $h < 1$ because it breaks the normalization of the Kernels, so this is a bit of an issue if the Scene is scaled such that 1 "unit" is too large we may have to scale all the scene up to be realativly scaled larger eg $[0,100]$ instead of $[0,10]$ such that we can use smaller kernel radius / smoothing length relative to the scale of the scene/fluid. This shouldn't be an issue as we just treat the scene meters as $0.1$ meter thus we use 40 instead of 4 etc. 
+I don't think we can use $h < 1$ because it breaks the normalization of the Kernels, so this is a bit of an issue if the Scene is scaled such that 1 "unit" is too large we may have to scale all the scene up to be relatively scaled larger eg $[0,100]$ instead of $[0,10]$ such that we can use smaller kernel radius / smoothing length relative to the scale of the scene/fluid. This shouldn't be an issue as we just treat the scene meters as $0.1$ meter thus we use 40 instead of 4 etc. 
+
+This is incorrect, $h \leq 1$ is fine, the normalization of the kernel is provided by the coefficient part not the radius itself. Granted too small radii can result in problems, but I found most of my issues were resolved with lack of pressure at boundary particles (whom were projected via collision response) by lowering the kernel radius $h$ to be $[0.35,0.75]$. This was while keeping the scene scale as is $(0-10 | x,y)$ because with $h = 1$ the radius was too big and thus the resulting weighted pressure was too low at the boundaries where particles are very close thus smaller $h \leq 1$ resolves this.  As the Kernel radius is smaller the density contribution becomes larger and thus pressure becomes larger, as the smoothing length (ofcourse!) is reduced.
 
 For pressure we do need to make sure $Pt_i \neq Pt_j$ otherwise we will get a case where the positions are thus the same and we will get a nan, ie we cannot have pressure on a single particle against itself so we skip the particle $Pt_j$ whom is equal to $Pt_i$. This is different than for computing density and other particle attributes we do want the neighbours $Pt_j$ to also contain the particle $Pt_i$ itself otherwise the resulting quanitity on $Pt_i$ when its isolated would be $0$. 
 
@@ -381,7 +382,7 @@ Note if the rest density is too high and the fluid density never exceeds it even
 
 However I may leave the negative density as is, and limit the negative pressure (oppose to clamping it to 0) so we can have some negative pressure but heavily reduced. That way we don't need to have another parameter ie min density. As stated above Surface Tension forces are what should be responsible for bringing the particles closer together in a parametrizable manner, oppose to the negative density and thus pressure from the pressure calculation which should be limited. 
 
-Density should be used to scale forces. 
+Density should be used to scale forces (not external forces). 
 
 ____
 

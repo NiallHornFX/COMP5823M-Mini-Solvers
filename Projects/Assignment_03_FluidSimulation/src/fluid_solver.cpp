@@ -163,7 +163,9 @@ void Fluid_Solver::integrate()
 		glm::vec3 a_1 = (eval_forces(pt, kernel, grad) / pt.density) + g;
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
-		pt.V *= 0.999f; 
+
+		// Artifcial Damping
+		//pt.V *= 0.999f; 
 	}
 }
 
