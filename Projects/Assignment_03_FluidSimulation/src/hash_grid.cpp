@@ -61,15 +61,13 @@ void Hash_Grid::hash()
 	}
 }
 
-// Info : Return (upto) 8 neighbouring cells, particles of current particle along with self cell particles.
+// Info : Return (upto) 8 neighbouring cells, particles of current particle along with self cell's
+// particles in single vector of pt's neighbours. 
 std::vector<Particle*> Hash_Grid::get_adjacent_cells(const Particle &pt) const
 {
-	// Store adj cell particle lists 
-	std::vector<std::vector<Particle*>*> AdjCells(8, nullptr);
-
 	const glm::vec3 &PtPos = pt.P;
 	// Pos Offsets from Current Particle
-	float cell_eps = cell_size + 1e-02f; 
+	float cell_eps = cell_size; 
 	// (-x, y) | (+x, y)
 	glm::vec2 x_n(PtPos.x - cell_eps, PtPos.y); glm::vec2 x_p(PtPos.x + cell_eps, PtPos.y);
 	// (x, -y) | (x, +y) | 
@@ -79,15 +77,25 @@ std::vector<Particle*> Hash_Grid::get_adjacent_cells(const Particle &pt) const
 	// (-x, -y) | (+x, +y)
 	glm::vec2 nx_ny(PtPos.x - cell_eps, PtPos.y - cell_eps); glm::vec2 px_py(PtPos.x + cell_eps, PtPos.y + cell_eps);
 
-	// Hash Indices into tmp array; 
-	std::size_t idx_arr[8] = { hash_pos(x_n), hash_pos(x_p), hash_pos(y_n), hash_pos(y_p), hash_pos(nx_py), hash_pos(px_ny), hash_pos(nx_ny), hash_pos(px_py) };
-	// Check if out of bounds (to prevent idx wrap-around) if not store into concat'd particle array if not null ptr. 
+	// Hash Pos offsets to cell indices.
+	std::vector<std::size_t> idx_arr = { hash_pos(x_n), hash_pos(x_p), hash_pos(y_n), hash_pos(y_p), hash_pos(nx_py), hash_pos(px_ny), hash_pos(nx_ny), hash_pos(px_py) };
+	for (std::size_t i : idx_arr) std::cout << i << "\n";
+	std::cout << "Cell Count before dupe : " << idx_arr.size() << "\n";
+	// Remove Duplicate Indices 
+	for (std::size_t i = 0; i < idx_arr.size(); ++i)
+	{
+		//std::cout << "Adj Cell idx = " << idx_arr[i] << "\n";
+		for (std::size_t j = i+1; j < idx_arr.size(); ++j) if (idx_arr[j] == idx_arr[i]) idx_arr.erase(idx_arr.begin() + j);
+	}
+	std::cout << "Cell Count after dupe : " << idx_arr.size() << "\n";
+
+
+	// Check if cell indices out of bounds (to prevent idx wrap-around) if not store into concat'd particle array if not null. 
 	std::vector<Particle*> concat;
 	for (std::size_t c = 0; c < 8; ++c)
 	{
 		// Hashed Adj Cell Idx larger than cell count ? Skip. 
 		if (idx_arr[c] > (cell_count - 1)) continue; 
-		std::cout << idx_arr[c] << "\n";
 		std::vector<Particle*> *cell_list = grid[idx_arr[c]];
 		// Adj Cell List null ? Skip.
 		if (cell_list) concat.insert(concat.end(), cell_list->begin(), cell_list->end());

@@ -529,12 +529,10 @@ We could also set a limit on total number of particles within neighbourhood, but
 Adapted version, with wrap around checking (eliminated need to store in temp array, we concat directly after retrieving hashed offset positions particle list vectors) : 
 
 ```C++
-// Info : Return (upto) 8 neighbouring cells, particles of current particle along with self cell particles.
+// Info : Return (upto) 8 neighbouring cells, particles of current particle along 
+// with self cell particles in single vecotor, of pt's neighbours. 
 std::vector<Particle*> Hash_Grid::get_adjacent_cells(const Particle &pt) const
 {
-	// Store adj cell particle lists 
-	std::vector<std::vector<Particle*>*> AdjCells(8, nullptr);
-
 	const glm::vec3 &PtPos = pt.P;
 	// Pos Offsets from Current Particle
 	float cell_eps = cell_size + 1e-02f; 
@@ -558,11 +556,10 @@ std::vector<Particle*> Hash_Grid::get_adjacent_cells(const Particle &pt) const
 	std::vector<Particle*> concat;
 	for (std::size_t c = 0; c < 8; ++c)
 	{
-		// Hashed Adj Cell Idx larger than cell count ? Skip. (prevent wrap-around) 
+		// Adj Cell Idx larger than cell count ? Skip. (prevent wrap-around) 
 		if (idx_arr[c] > (cell_count - 1)) continue; 
-		std::cout << idx_arr[c] << "\n";
 		std::vector<Particle*> *cell_list = grid[idx_arr[c]];
-		// Adj Cell List null ? Skip.
+		// Adj Cell Particle Vector (list) null ? Skip.
 		if (cell_list) concat.insert(concat.end(), cell_list->begin(), cell_list->end());
 	}
 	// Also add pt's own cell particle list to concated array. 	
@@ -573,7 +570,9 @@ std::vector<Particle*> Hash_Grid::get_adjacent_cells(const Particle &pt) const
 }
 ```
 
+We should check for duplicates though in case same cell was hashed twice from an offset position (because we cannot count on it been regular). Also I think the eps is too large, or should be omitted ? 
 
+We cannot guarantee locality of adjacent cells anyway because of possible hash collisions. 
 
 ___
 
