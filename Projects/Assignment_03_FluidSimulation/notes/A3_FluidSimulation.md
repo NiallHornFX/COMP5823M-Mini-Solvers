@@ -384,6 +384,12 @@ However I may leave the negative density as is, and limit the negative pressure 
 
 Density should be used to scale forces (not external forces). 
 
+##### Viscosity 
+
+I may have some general damping that's done by multiplying velocity by $0.999$ each timestep or something similar, just to ensure the fluid does settle even if viscosity force is not used at all. 
+
+
+
 ____
 
 #### Classes
@@ -415,6 +421,8 @@ ____
 Currently emit a square of fluid
 
 Will use random to add some jitter to the 2D positions to eliminate the grid discretisation the particles are visibly in. 
+
+Even though we pass a ptr/reference to Fluid_Solver of the Fluid_Object instance we will also do the same but inversely where we pass a ptr of the Fluid_Solver instance to Fluid_Object so there is kind of bidirectional access between them, that way we can get the min and max particle quantity ranges for shading etc. 
 
 ____
 
@@ -455,6 +463,117 @@ If Cell size matches Kernel Radius $h$ we end up with too large cells and the $O
 It becomes visible in the resulting density a hash grid is used as we have square regions of varying densities corresponding to each cell location, specially the nodes of the grid. This should be less of an issue with higher particle counts. However the other issue is that particles form into discrete cell groups as oppose to based on their smoothing kernel. 
 
 My original approach of just using the cell the particle lies within was stupid, because if  the particle is near the edge of the cell, then the smoothing kernel will only be able to eval the particles that lie within the steradian of the cell, while it should be evaling over the neighbouring cells adjacent to cover the full circumference of the kernel. 
+
+##### Get Adjacent Cells of Particle
+
+This is one of the downsides of a Spatial Hash grid that we cant just offset the indices in either direction $(i,j)$ using each particles own cell index as spatially local cells are not contiguous in memory like a regular 2D grid would be. However we can still retrieve adjacent indices using a different method : Given that we know the cell size $cs$ we can take the current particles postion, and offset it in $x,y$ by $cs + eps$ (need some epsilon in case particle is at centre of cell thus offset of cell size would just take it to edge of cell), we then hash this position and return the index (or a pointer to that cells particle array (if allocated, else return nullptr for that cell)). Because we need all neighbours including on the diagonal (so groups of 9 cells, 8 excluding the current cell) so will offset by cell size on each axis individually and both to get diag cells.
+
+Note even though Kernel size is smaller, we can't just get away with using larger cell sizes maybe and only searching same cell particles because particles near the edges of the cells will only search a small angle, oppose to particles in the centre who can find all neighbours within the same cell, so adjacent cell access is needed (and then we can use smaller cell size ofc).
+
+Still possibly use Uniform grid if adjacent lookup is costly. Even with cell size twice the kernel radius it seems there is still visible cells in the resulting pressure, not sure why. 
+
+`std::vector<std::vector<Particle*>*> Hash_Grid::get_adjacent_cells(const Particle &curPt)` will take in a particle and return the up to 8 adjacent cells particle vectors (lists) pointers based on its current position within a vector. Of course some of these may be nullptr if not allocated, note indices will not be out of bounds, because they wrap around (via mod in hash function) this is quite cool as we don't need to worry about bounds checking, however we probably should because we dont want wrap around of indices if cell is at edge, we dont want to treat the cell on the other side as a neighbour. 
+
+Thing is now we have to loop over 8 individual arrays (checking if their not nullptr first), ideally we could concat all adjacent cells particles into a single vector, but this would be costly, but much nicer, it also makes sense to include the current particles cells otherwise that would have to  be searched separately : 
+
+```C++
+// Info : Return (upto) 8 neighbouring cells, particles of current particle along with self cell particles.
+std::vector<Particle*> Hash_Grid::get_adjacent_cells(const Particle &pt) const
+{
+	// Store adj cell particle lists 
+	std::vector<std::vector<Particle*>*> AdjCells(8, nullptr);
+
+	const glm::vec3 &PtPos = pt.P;
+	// Pos Offsets from Current Particle
+	float cell_eps = cell_size + 1e-02f; // Eps to ensure next cell is hashed. 
+	// (-x, y) | (+x, y)
+	glm::vec2 x_n(PtPos.x - cell_eps, PtPos.y);
+    glm::vec2 x_p(PtPos.x + cell_eps, PtPos.y);
+	// (x, -y) | (x, +y) | 
+	glm::vec2 y_n(PtPos.x, PtPos.y - cell_eps);
+    glm::vec2 y_p(PtPos.x, PtPos.y + cell_eps);
+	// (-x, +y) | (+x, -y)
+	glm::vec2 nx_py(PtPos.x - cell_eps, PtPos.y + cell_eps); 
+    glm::vec2 px_ny(PtPos.x + cell_eps, PtPos.y - cell_eps);
+	// (-x, -y) | (+x, +y)
+	glm::vec2 nx_ny(PtPos.x - cell_eps, PtPos.y - cell_eps); 
+    glm::vec2 px_py(PtPos.x + cell_eps, PtPos.y + cell_eps);
+
+	// Get Adj Cell lists from hashes (ignore idx wrap-around from now)
+	AdjCells[0] = grid[hash_pos(x_n)],   AdjCells[1] = grid[hash_pos(x_p)];
+	AdjCells[2] = grid[hash_pos(y_n)],   AdjCells[3] = grid[hash_pos(y_p)];
+	AdjCells[4] = grid[hash_pos(nx_py)], AdjCells[5] = grid[hash_pos(px_ny)];
+	AdjCells[6] = grid[hash_pos(nx_ny)], AdjCells[7] = grid[hash_pos(px_py)];
+
+	// Concat neighbour cells into single Particle List vector
+	std::vector<Particle*> concat;
+	// First add particles own cell neighbour particles (which include self particle) 
+	std::vector<Particle*> *selfcell_pts = grid[pt.cell_idx];
+    // Assumed to be non null
+	concat.insert(concat.begin(), selfcell_pts->begin(), selfcell_pts->end()); 
+	for (auto *cell : AdjCells)
+	{
+		if (!cell) continue; // Adj Cell is empty, skip.
+		concat.insert(concat.end(), cell->begin(), cell->end());
+	}
+	return concat;
+}
+```
+
+Yup so this is much better, when we do our inner j loop over neighbours for the kernel evaluation for quantity evaluation we only have a single `std::vector<Particle*>` to loop over (as if it were a single cell) oppose to another inner loop going over each individual adjacent cells particles.  Complexity is now $O(n \:8m)$ but still far better than $O(n^2)$. 
+
+We could even store this resulting array in particles members (would need a copy though), makes more sense to just fetch it each time, but at the cost of needing to eval `get_adjacent_cells()` each time. It would of made more sense to store an array per particle of pointers to adjacent cell vectors, then we wouldn't need to copy (but then we'd have non contacted neighbour vectors, which we'd need to loop over or concat first).
+
+We could also set a limit on total number of particles within neighbourhood, but this would need to be evenly split across all cells.
+
+Adapted version, with wrap around checking (eliminated need to store in temp array, we concat directly after retrieving hashed offset positions particle list vectors) : 
+
+```C++
+// Info : Return (upto) 8 neighbouring cells, particles of current particle along with self cell particles.
+std::vector<Particle*> Hash_Grid::get_adjacent_cells(const Particle &pt) const
+{
+	// Store adj cell particle lists 
+	std::vector<std::vector<Particle*>*> AdjCells(8, nullptr);
+
+	const glm::vec3 &PtPos = pt.P;
+	// Pos Offsets from Current Particle
+	float cell_eps = cell_size + 1e-02f; 
+	// (-x, y) | (+x, y)
+	glm::vec2 x_n(PtPos.x - cell_eps, PtPos.y); 
+    glm::vec2 x_p(PtPos.x + cell_eps, PtPos.y);
+	// (x, -y) | (x, +y) | 
+	glm::vec2 y_n(PtPos.x, PtPos.y - cell_eps); 
+    glm::vec2 y_p(PtPos.x, PtPos.y + cell_eps);
+	// (-x, +y) | (+x, -y)
+	glm::vec2 nx_py(PtPos.x - cell_eps, PtPos.y + cell_eps); 
+    glm::vec2 px_ny(PtPos.x + cell_eps, PtPos.y - cell_eps);
+	// (-x, -y) | (+x, +y)
+	glm::vec2 nx_ny(PtPos.x - cell_eps, PtPos.y - cell_eps); 
+    glm::vec2 px_py(PtPos.x + cell_eps, PtPos.y + cell_eps);
+
+	// Hash Indices into tmp array; 
+	std::size_t idx_arr[8] = { hash_pos(x_n), hash_pos(x_p), hash_pos(y_n), hash_pos(y_p), hash_pos(nx_py), hash_pos(px_ny), hash_pos(nx_ny), hash_pos(px_py) };
+	// Check if out of bounds (to prevent idx wrap-around) if not store 
+    //into concat'd particle array if not null ptr. 
+	std::vector<Particle*> concat;
+	for (std::size_t c = 0; c < 8; ++c)
+	{
+		// Hashed Adj Cell Idx larger than cell count ? Skip. (prevent wrap-around) 
+		if (idx_arr[c] > (cell_count - 1)) continue; 
+		std::cout << idx_arr[c] << "\n";
+		std::vector<Particle*> *cell_list = grid[idx_arr[c]];
+		// Adj Cell List null ? Skip.
+		if (cell_list) concat.insert(concat.end(), cell_list->begin(), cell_list->end());
+	}
+	// Also add pt's own cell particle list to concated array. 	
+	std::vector<Particle*> *selfcell_pts = grid[pt.cell_idx];
+	concat.insert(concat.end(), selfcell_pts->begin(), selfcell_pts->end());
+
+	return concat;
+}
+```
+
+
 
 ___
 
@@ -585,7 +704,11 @@ In Debug mode we have problems are with the render time been bottleneck when par
 
 ###### Rendering via Implicit Functions in Fragment Shader 
 
-###### Rendering via Grid Rasterize Density
+###### Rendering via Grid Rasterize Density (2D Grid / Colour Field)
 
 ###### Rendering via Marching Squares
+
+###### Rendering via Anisotropic Kernels
+
+If I had time I'd use this approach for rendering fluid surfaces, oppose to using isotropic implicit functions, using anisotropic kernels that stretch along the directions of change calculated via PCA of particle neighbourhood, the resulting surfaces are much nicer than standard Isotropic surfaces or Zhu Bridson like surfacing (which could be fun to try and do in 2D also), this would be adopted to 2D. The idea to use this approach is from Benedikt Bitterlis SPH Solver which uses this approach for extracting the particle surface in 2D. To be fair though for such a simple sim, typical spherical isotropic kernels / implicit functions should be fine (especially if we add stuff like scaling radii by velocity etc), or a similar 2D adapted Zhu Bridson approach.
 

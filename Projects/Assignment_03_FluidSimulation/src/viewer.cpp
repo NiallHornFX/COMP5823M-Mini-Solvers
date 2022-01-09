@@ -55,7 +55,10 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
-	fluid_solver = new Fluid_Solver((1.f / 256.f), 100.f, 1.5f, fluid_object);
+	fluid_solver = new Fluid_Solver((1.f / 196.f), 100.f, 1.5f, fluid_object);
+
+	// Get Neighbours Initally for Hash Debug
+	fluid_solver->get_neighbours();
 }
 
 Viewer::~Viewer() 
@@ -365,9 +368,13 @@ void Viewer::gui_render()
 		}
 		if (ImGui::SliderFloat("Fluid Spc", &spc, 0.f, 1.f))
 		{
+			Fluid_Object::Colour_Viz old_pc = fluid_object->particle_colour;
 			delete fluid_object;
 			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc);
+			fluid_object->particle_colour = old_pc;
 			fluid_solver->fluidData = fluid_object;
+			// Get Neighbours Initally for Hash Debug
+			fluid_solver->get_neighbours();
 		}
 
 		// Causes rebuild of Fluid_Solver if changed (this is so kernels can be pre-computed) 
@@ -381,7 +388,7 @@ void Viewer::gui_render()
 
 
 		// Free parameters 
-		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 500.f);
+		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 1000.f);
 		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 1000.f);
 		ImGui::SliderFloat("Gravity", &fluid_solver->gravity, -10.f, 10.f);
 

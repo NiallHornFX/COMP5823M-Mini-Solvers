@@ -5,12 +5,14 @@
 
 // Std Headers
 #include <vector>
+#include <tuple>
 
 // Ext Headers 
 #include "ext/glm/glm.hpp" // GLM
 
 struct Particle; 
 class Fluid_Object; 
+
 
 #define INLINE __forceinline 
 
@@ -23,6 +25,8 @@ public:
 	~Hash_Grid(); 
 
 	void hash();
+
+	std::vector<Particle*> get_adjacent_cells(const Particle &pt) const;
 
 	INLINE std::size_t hash_pos(const glm::vec2 &PtPos) const;
 

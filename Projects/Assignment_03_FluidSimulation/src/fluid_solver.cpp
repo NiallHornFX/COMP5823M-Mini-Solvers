@@ -166,6 +166,12 @@ void Fluid_Solver::integrate()
 
 		// Artifcial Damping
 		//pt.V *= 0.999f; 
+
+
+		// Store Min/Max force
+		float f_s = glm::dot(a_1, a_1);
+		if (f_s < min_force) min_force = f_s; 
+		if (f_s > max_force) max_force = f_s; 
 	}
 }
 
@@ -176,12 +182,24 @@ void Fluid_Solver::get_neighbours()
 	if (hg) delete hg;
 
 	// Cell Size based on Kernel Radius
-	float cs = kernel_radius * 1.f; 
+	float cs = kernel_radius * 0.5f; 
 
 	// New Hash Grid 
 	hg = new Hash_Grid(fluidData, 10, cs);
 	hg->hash();
 	got_neighbours = true; 
+
+	// Adjacent Hash Test, viz adj cells of Particle[32]
+	auto pts = hg->get_adjacent_cells(fluidData->particles[32]);
+
+	std::size_t idx = fluidData->particles[32].cell_idx;
+	// Rm all pts cell indices first
+	for (Particle &pt : fluidData->particles) pt.cell_idx = 0; 
+	// Fill Adj particle list cell_idx with same idx for viz debgging.
+	for (Particle *pt : pts)
+	{
+		pt->cell_idx = idx; 
+	}
 }
 
 // ================================== Eval Attrib Functions ===============================
@@ -203,13 +221,13 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		Particle &Pt_i = fluidData->particles[p_i];
 		float dens_tmp = 0.f; 
 
-		//std::vector<Particle*> *neighbours = hg->grid[Pt_i.cell_idx];
+		std::vector<Particle*> *neighbours = hg->grid[Pt_i.cell_idx];
 		//std::cout << "Particle_" << Pt_i.id << "Neighbour Cell Count = " << neighbours->size() << "\n";
-		//for (std::size_t p_j = 0; p_j < neighbours->size(); ++p_j)
-		for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
+		for (std::size_t p_j = 0; p_j < neighbours->size(); ++p_j)
+		//for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
 		{
-			//const Particle &Pt_j = *((*neighbours)[p_j]);
-			const Particle &Pt_j = fluidData->particles[p_j]; 
+			const Particle &Pt_j = *((*neighbours)[p_j]);
+			//const Particle &Pt_j = fluidData->particles[p_j]; 
 			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
@@ -223,9 +241,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		if (Pt_i.density  > max_dens) max_dens = Pt_i.density;
 		if (Pt_i.pressure > max_pres) max_pres = Pt_i.pressure;
 	}
-
-	//if (frame == 0) rest_density = max_dens; // Use as rest_dens
-
+	if (frame == 0) rest_density = max_dens * 1.25f; // Use as inital rest_dens
 }
 
 glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
@@ -237,8 +253,6 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 		return glm::vec3(0.f);
 	}
 
-	//min_force = 1e06, max_force = 0.f; 
-
 	glm::vec3 force_pressure (0.f); 
 	//glm::vec3 force_surftension;
 	//glm::vec3 force_viscosity; 
@@ -249,31 +263,28 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 	// Cache neighbour cell ptr
 	std::vector<Particle*> *neighbours = hg->grid[Pt_i.cell_idx];
 
-	// Compute Pressure Gradient
+	// =============== Compute Pressure Gradient --> Pressure Force ===============
 	glm::vec2 pressure_grad(0.f);
-	//for (std::size_t j = 0; j < neighbours->size(); ++j)
-	for (std::size_t j = 0; j < fluidData->particles.size(); ++j)
+	for (std::size_t j = 0; j < neighbours->size(); ++j)
+	//for (std::size_t j = 0; j < fluidData->particles.size(); ++j)
 	{
-		//Particle &Pt_j = *((*neighbours)[j]);
-		Particle &Pt_j = fluidData->particles[j];
+		Particle &Pt_j = *((*neighbours)[j]);
+		//Particle &Pt_j = fluidData->particles[j];
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
-		if (Pt_j.density == 0.f) continue; // Skip 0 dens else (-0 = nan). 
 		glm::vec2 tmp =  Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
-		if (std::isnan(glm::dot(tmp, tmp))) throw std::runtime_error("nan");
 		pressure_grad += tmp; 
 	}
 	force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
 
-	if (std::isnan(glm::dot(force_pressure, force_pressure))) throw std::runtime_error("nan");
+	// =============== Compute Viscosity Laplacian --> Viscosity Force ===============
+
+
+	// =============== Compute Surface Gradient --> Surface Tension Force ===============
+
 
 	// Accumulate forces
 	// ret instead of write to Pt.F
 	return force_pressure; 
-
-	// Store Min/Max Dens (Debug)
-	//float f_s = glm::dot(force_pressure, force_pressure);
-	//if (f_s < min_force) min_force = f_s; 
-	//if (f_s > max_force) max_force = f_s; 
 }
 
 

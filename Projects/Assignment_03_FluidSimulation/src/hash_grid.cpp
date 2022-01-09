@@ -16,7 +16,7 @@ Hash_Grid::Hash_Grid(Fluid_Object *FluidData, std::size_t DimSqr, float CellSize
 	// Total x,y Cell Count, assumed dim_sqr is the dimension squared of the HG. 
 	cell_count = std::powf((dim_sqr / cell_size), 2.f); 
 
-	//std::cout << "DEBUG::Hash_Grid::Cell_Count = " << cell_count << " | Cell_Size = " << cell_size << " | Dimensions " << dim_sqr << "^2\n";
+	std::cout << "DEBUG::Hash_Grid::Cell_Count = " << cell_count << " | Cell_Size = " << cell_size << " | Dimensions " << dim_sqr << "^2\n";
 
 	// Allocate Outer Hash Grid Array (Pointer to inner cell list vectors) 
 	grid = new std::vector<Particle*>*[cell_count];
@@ -61,4 +61,40 @@ void Hash_Grid::hash()
 	}
 }
 
+// Info : Return (upto) 8 neighbouring cells, particles of current particle along with self cell particles.
+std::vector<Particle*> Hash_Grid::get_adjacent_cells(const Particle &pt) const
+{
+	// Store adj cell particle lists 
+	std::vector<std::vector<Particle*>*> AdjCells(8, nullptr);
 
+	const glm::vec3 &PtPos = pt.P;
+	// Pos Offsets from Current Particle
+	float cell_eps = cell_size + 1e-02f; 
+	// (-x, y) | (+x, y)
+	glm::vec2 x_n(PtPos.x - cell_eps, PtPos.y); glm::vec2 x_p(PtPos.x + cell_eps, PtPos.y);
+	// (x, -y) | (x, +y) | 
+	glm::vec2 y_n(PtPos.x, PtPos.y - cell_eps); glm::vec2 y_p(PtPos.x, PtPos.y + cell_eps);
+	// (-x, +y) | (+x, -y)
+	glm::vec2 nx_py(PtPos.x - cell_eps, PtPos.y + cell_eps); glm::vec2 px_ny(PtPos.x + cell_eps, PtPos.y - cell_eps);
+	// (-x, -y) | (+x, +y)
+	glm::vec2 nx_ny(PtPos.x - cell_eps, PtPos.y - cell_eps); glm::vec2 px_py(PtPos.x + cell_eps, PtPos.y + cell_eps);
+
+	// Hash Indices into tmp array; 
+	std::size_t idx_arr[8] = { hash_pos(x_n), hash_pos(x_p), hash_pos(y_n), hash_pos(y_p), hash_pos(nx_py), hash_pos(px_ny), hash_pos(nx_ny), hash_pos(px_py) };
+	// Check if out of bounds (to prevent idx wrap-around) if not store into concat'd particle array if not null ptr. 
+	std::vector<Particle*> concat;
+	for (std::size_t c = 0; c < 8; ++c)
+	{
+		// Hashed Adj Cell Idx larger than cell count ? Skip. 
+		if (idx_arr[c] > (cell_count - 1)) continue; 
+		std::cout << idx_arr[c] << "\n";
+		std::vector<Particle*> *cell_list = grid[idx_arr[c]];
+		// Adj Cell List null ? Skip.
+		if (cell_list) concat.insert(concat.end(), cell_list->begin(), cell_list->end());
+	}
+	// Also add pt's own cell particle list to concated array. 	
+	std::vector<Particle*> *selfcell_pts = grid[pt.cell_idx];
+	concat.insert(concat.end(), selfcell_pts->begin(), selfcell_pts->end());
+
+	return concat;
+}

@@ -25,8 +25,10 @@ public:
 	Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_Object *Data);
 	~Fluid_Solver() = default; 
 
-	using kernel_func = float(Fluid_Solver::*) (const glm::vec3 &r);
+	// Kernel Function Pointers
+	using kernel_func      = float(Fluid_Solver::*) (const glm::vec3 &r);
 	using kernel_grad_func = glm::vec2(Fluid_Solver::*)(const glm::vec3 &r);
+	using kernel_lapl_func = float(Fluid_Solver::*) (const glm::vec3 &r);
 
 	// ======= Operations =======
 	void reset();

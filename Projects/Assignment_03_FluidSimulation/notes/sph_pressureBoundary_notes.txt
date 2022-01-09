@@ -52,6 +52,7 @@ a collision issue, where when using projection the volume presevation fails, thi
 ghost particles at boundaries everyone else seems to use position projection fine. However the Houdini version was producing the exact same beahviour when projection collisions were used vs whatever
 approach Houdini uses via DOPs (I think they use projection but are doing something addiotnal on the vel, I tried all sorts to replicate this like removing normal vel but keeping tang etc, still couldnt replactate it). 
 
-Houdinis delta might be due to my projection been done as a post solve step, where as in C++ its done before integration so the pressure force is applied within the same timestep post projection. 
+Houdinis delta might be due to projection been done as a post solve step, where as in C++ its done before integration so the pressure force is applied within the same timestep post projection. Yeah so if I apply it within
+the Particle Fluid Solver, before the pressure force I get better results (still doesnt match Houdnis native collisions but their probs doing something different with their post collision velocity). 
 
 Anyhow reducing the Kernel Radius < 1 seems to fix my issues in the C++ solver, my bad for thinking there Kernel Radius could not be below 1.0 
