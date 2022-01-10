@@ -382,7 +382,7 @@ Note if the rest density is too high and the fluid density never exceeds it even
 
 However I may leave the negative density as is, and limit the negative pressure (oppose to clamping it to 0) so we can have some negative pressure but heavily reduced. That way we don't need to have another parameter ie min density. As stated above Surface Tension forces are what should be responsible for bringing the particles closer together in a parametrizable manner, oppose to the negative density and thus pressure from the pressure calculation which should be limited. 
 
-Density should be used to scale forces (not external forces). 
+Density should be used to scale forces (not external forces). Do this instead of dividing by mass, ie divide by density instead. 
 
 ##### Viscosity 
 
@@ -570,9 +570,21 @@ std::vector<Particle*> Hash_Grid::get_adjacent_cells(const Particle &pt) const
 }
 ```
 
-We should check for duplicates though in case same cell was hashed twice from an offset position (because we cannot count on it been regular). Also I think the eps is too large, or should be omitted ? 
+We should check for duplicates though in case same cell was hashed twice from an offset position (because we cannot count on it been regular). This is not too expensive to do as regardless of the particle spacing (and thus count) we still only have 8 neighbour cells which is super quick to check for duplicates its worst case is $O(8^2)$ but less if there is duplicates as the array is been shrunk each inner iteration if their is duplicates. 
 
-We cannot guarantee locality of adjacent cells anyway because of possible hash collisions. 
+```C++
+// Hash Pos offsets to cell indices.
+std::vector<std::size_t> idx_arr = { hash_pos(x_n), hash_pos(x_p), hash_pos(y_n), hash_pos(y_p), hash_pos(nx_py), hash_pos(px_ny), hash_pos(nx_ny), hash_pos(px_py) };
+// Remove Duplicate Indices 
+for (std::size_t i = 0; i < idx_arr.size(); ++i)
+{
+for (std::size_t j = i+1; j < idx_arr.size(); ++j) if (idx_arr[j] == idx_arr[i]) idx_arr.erase(idx_arr.begin() + j);
+}
+```
+
+We cannot guarantee locality of adjacent cells because of hash collisions also the fact that hash cells are not always spatially local anyway, so maybe uniform grid is better. However it does seem not too bad but for some configurations / spacing we do get particles that are not spatially local and thus just a product of spatial hashing, doesn't guarantee all particles that are spatially local, lie within the same cell index and thus we may have particles not spatially local with the particles current cell which can increase the neighbour lookup cost as we would be using particles who are not even within the smoothing radius $h$ (and thats fine they'd just return 0) but is a waste of memory lookups. 
+
+I seem to have to use a cell size that is still equal to the kernel radius, because of the not so great adjacent cells spatial locality, otherwise there is visible cell discontinuities in the resulting density and pressure at cell edges.  I will implemented uniform grid spatial acceleration and see what its like in comparison. 
 
 ___
 
@@ -586,7 +598,7 @@ However we still need to make sure that the Kernel radius is smaller than all ad
 
 However oppose to just doing a hash step, we need a per cell gather step : per cell gather particles within cell, transformation from index space to world space, gather particles etc. this is slower than hashing but will be worth it. As we can deal with explicit spatial indices for adjacent cell access oppose Hashing where indices are not ordered based on spatial locality. Function to get neighbour grid cell indices / pointers which is easy to do. The grid array itself will be 1D flat and indexed using standard $i \cdot m + j$ function. 
 
-
+Sparse grid would have to be re-calculated each frame (dealloc empty cells), we need the cells to gather particles, so unlike a hash grid we cannot only allocate cells that particles hash to as we need all cells first to gather particles if within distance of ${1\over 2}\:cellsize$ . 
 
 
 

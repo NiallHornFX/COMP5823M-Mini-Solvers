@@ -20,11 +20,13 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 	: fluidData(Data), rest_density(RestDens), kernel_radius(KernelRad), dt(Sim_Dt), at(0.f)
 {
 	// ===== Init Solver =====
-	gravity = -1.0f;
-	viscosity = 0.f; 
-	force_coeff = 1.f; 
-	frame = 0, timestep = 0; 
-	simulate = false;
+	gravity     = -10.0f;
+	air_resist  = 0.5f;
+	k_viscosity = 0.f; 
+	k_surftens  = 0.f; 
+	frame       = 0; 
+	timestep    = 0;
+	simulate    = false;
 	got_neighbours = false; 
 	kernel_radius_sqr = kernel_radius * kernel_radius;
 	rest_density = 8.f; 
@@ -42,12 +44,12 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 	// ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
 	// Poly 6
 	poly6_s      =  315.f  / (64.f * M_PI  * std::powf(kernel_radius, 9.f));
-	poly6_grad_s = -(945.f / (32.f * M_PI  * std::powf(kernel_radius, 9.f)));
+	poly6_grad_s = -945.f  / (32.f * M_PI  * std::powf(kernel_radius, 9.f));
 	// Spiky
-	spiky_s      = 15.f / (M_PI * std::powf(kernel_radius, 6.f));
+	spiky_s      = 15.f  / (M_PI * std::powf(kernel_radius, 6.f));
 	spiky_grad_s = -45.f / (M_PI * std::powf(kernel_radius, 6.f));
 	// Viscosity
-	visc_lapl_s  = 45.f / (M_PI * std::powf(kernel_radius, 5.f));
+	visc_lapl_s  = 45.f  / (M_PI * std::powf(kernel_radius, 5.f));
 }
 
 // Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler
@@ -136,7 +138,7 @@ void Fluid_Solver::integrate()
 	kernel_grad_func grad = &Fluid_Solver::kernel_spiky_gradient;
 
 	// Ext Forces 
-	glm::vec3 g(0.f, gravity, 0.f);
+	glm::vec3 g(0.f, gravity, 0.f); 
 
 	/*
 	// Semi Implicit Euler Integration (testing)
@@ -154,21 +156,21 @@ void Fluid_Solver::integrate()
 	// Leapfrog integration
 	for (Particle &pt : fluidData->particles)
 	{
+		// Pre-calc
+		float r_dens = 1.f / pt.density; 
+		glm::vec3 air_res = -air_resist * pt.V; 
+		
 		// Eval RHS forces 0 
-		glm::vec3 a_0 = (eval_forces(pt, kernel, grad) / pt.density) + g;
+		glm::vec3 a_0 = (eval_forces(pt, kernel, grad) * r_dens) + g + air_res;
 		// Integrate P 
 		pt.P += (pt.V * dt) + (0.5f * a_0 * (dt*dt));
 
 		// Eval RHS forces 1
-		glm::vec3 a_1 = (eval_forces(pt, kernel, grad) / pt.density) + g;
+		glm::vec3 a_1 = (eval_forces(pt, kernel, grad) * r_dens) + g + air_res;
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
 
-		// Artifcial Damping
-		//pt.V *= 0.999f; 
-
-
-		// Store Min/Max force
+		// Store Min/Max sqr_force
 		float f_s = glm::dot(a_1, a_1);
 		if (f_s < min_force) min_force = f_s; 
 		if (f_s > max_force) max_force = f_s; 
@@ -182,17 +184,18 @@ void Fluid_Solver::get_neighbours()
 	if (hg) delete hg;
 
 	// Cell Size based on Kernel Radius
-	float cs = kernel_radius * 0.5f; 
+	float cs = kernel_radius * 1.5f; 
 
 	// New Hash Grid 
 	hg = new Hash_Grid(fluidData, 10, cs);
 	hg->hash();
 	got_neighbours = true; 
 
-	// Adjacent Hash Test, viz adj cells of Particle[32]
-	auto pts = hg->get_adjacent_cells(fluidData->particles[32]);
-
-	std::size_t idx = fluidData->particles[32].cell_idx;
+	
+	// Test : Adjacent Hash of single particle, viz adj cells. 
+	std::size_t testPt = 35; 
+	auto pts = hg->get_adjacent_cells(fluidData->particles[testPt]);
+	std::size_t idx = fluidData->particles[testPt].cell_idx;
 	// Rm all pts cell indices first
 	for (Particle &pt : fluidData->particles) pt.cell_idx = 0; 
 	// Fill Adj particle list cell_idx with same idx for viz debgging.
@@ -200,6 +203,7 @@ void Fluid_Solver::get_neighbours()
 	{
 		pt->cell_idx = idx; 
 	}
+	fluidData->particles[testPt].cell_idx = 5;
 }
 
 // ================================== Eval Attrib Functions ===============================
@@ -222,7 +226,6 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		float dens_tmp = 0.f; 
 
 		std::vector<Particle*> *neighbours = hg->grid[Pt_i.cell_idx];
-		//std::cout << "Particle_" << Pt_i.id << "Neighbour Cell Count = " << neighbours->size() << "\n";
 		for (std::size_t p_j = 0; p_j < neighbours->size(); ++p_j)
 		//for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
 		{
@@ -241,7 +244,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		if (Pt_i.density  > max_dens) max_dens = Pt_i.density;
 		if (Pt_i.pressure > max_pres) max_pres = Pt_i.pressure;
 	}
-	if (frame == 0) rest_density = max_dens * 1.25f; // Use as inital rest_dens
+	if (frame == 0) rest_density = max_dens * 1.025f; // Use as inital rest_dens
 }
 
 glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
@@ -286,7 +289,15 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 	// ret instead of write to Pt.F
 	return force_pressure; 
 }
-
+// ================================== Util Functions ===============================
+// Info : Calc an estimate of the rest density from the maxium density value * some offset. 
+//        This can be called external of solve step, to get inital estimate of rest_density. 
+void Fluid_Solver::calc_restdens()
+{
+	get_neighbours();
+	compute_dens_pres(&Fluid_Solver::kernel_poly6);
+	rest_density = max_dens * 1.025f; 
+}
 
 // ================================== Kernel Functions ===============================
 
