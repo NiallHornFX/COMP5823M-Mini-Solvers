@@ -52,6 +52,9 @@
     <ClCompile Include="src\fluid_solver.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="src\grid_2d.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="incl\mesh.h">

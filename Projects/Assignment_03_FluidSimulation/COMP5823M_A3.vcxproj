@@ -96,6 +96,7 @@
     <ClCompile Include="src\fluid_collider.cpp" />
     <ClCompile Include="src\fluid_object.cpp" />
     <ClCompile Include="src\fluid_solver.cpp" />
+    <ClCompile Include="src\grid_2d.cpp" />
     <ClCompile Include="src\hash_grid.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\primitive.cpp" />

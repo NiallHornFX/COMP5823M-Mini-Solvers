@@ -5,7 +5,6 @@
 
 // Std Headers
 #include <vector>
-#include <tuple>
 
 // Ext Headers 
 #include "ext/glm/glm.hpp" // GLM

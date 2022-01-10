@@ -590,7 +590,9 @@ ___
 
 #### Uniform 2D Grid
 
-This class will be used as an alternate spatial acceleration structure as well as for rasterizing the particles for surface tension calculation and possible rendering via rasterized grid and marching squares from this. Thus will add methods to extract 2D textures later etc, primary implementation is for spatial acceleration. 
+This class will be used as an alternate spatial acceleration structure as well as for rasterizing the particles for surface tension calculation and possible rendering via rasterized grid and marching squares from this. Thus will add methods to extract 2D textures later etc, primary implementation is for spatial acceleration. Could have polymorphic 2D grid so we have specific grids for spatial accel or scalar,vector quantities etc. But for now will focus on single class as use for spatial accel. May just make a separate grid class for colour field.  
+
+Spatial Accel grid contains flat array of size of total cell count containing `std::vector<Particle*>` as the inner particle lists. Unlike hash grid we do not store pts to these vectors which we allocate only if particle hashes to cell, as we cannot do that here as cells gather particles. 
 
 The benefit over Spatial Hash grid been we can access neighbouring cells of each particle (along with its current cell) which means we no longer need to ensure the cell size of the hash grid is larger than the kernel radius. 
 
@@ -599,8 +601,6 @@ However we still need to make sure that the Kernel radius is smaller than all ad
 However oppose to just doing a hash step, we need a per cell gather step : per cell gather particles within cell, transformation from index space to world space, gather particles etc. this is slower than hashing but will be worth it. As we can deal with explicit spatial indices for adjacent cell access oppose Hashing where indices are not ordered based on spatial locality. Function to get neighbour grid cell indices / pointers which is easy to do. The grid array itself will be 1D flat and indexed using standard $i \cdot m + j$ function. 
 
 Sparse grid would have to be re-calculated each frame (dealloc empty cells), we need the cells to gather particles, so unlike a hash grid we cannot only allocate cells that particles hash to as we need all cells first to gather particles if within distance of ${1\over 2}\:cellsize$ . 
-
-
 
 
 
