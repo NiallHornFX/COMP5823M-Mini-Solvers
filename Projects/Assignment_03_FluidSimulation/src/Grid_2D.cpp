@@ -9,7 +9,7 @@ Grid_2D::Grid_2D(Fluid_Object *FluidData, float CellSize, float WsSize)
 	: fluid_data(FluidData), cell_size(CellSize), ws_size(WsSize)
 {
 	cell_dim = static_cast<std::size_t>(ws_size / cell_size);
-	r_cell_dim = 1.f / cell_dim;
+	r_cell_dim = 1.f / float(cell_dim - 1);
 	cell_count = cell_dim * cell_dim;
 	cell_ext = ws_size * cell_size;
 	cell_ext_sqr = cell_ext * cell_ext;

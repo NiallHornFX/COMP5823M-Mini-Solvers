@@ -6,7 +6,6 @@
 #include <vector>
 
 // Project Headers
-#include "hash_grid.h"
 
 // Ext Headers 
 // GLM
@@ -14,6 +13,8 @@
 
 class Fluid_Object; 
 class Fluid_Collider; 
+class Hash_Grid;
+class Grid_2D;
 
 struct Particle; 
 
@@ -68,6 +69,7 @@ public:
 	float at, dt; // Acumulated Time, Fixed Physics timestep. 
 	std::size_t frame, timestep;
 	Hash_Grid *hg;
+	Grid_2D *accel_grid; 
 	bool got_neighbours; 
 
 	// ======= Forces =======

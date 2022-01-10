@@ -12,6 +12,7 @@
 #include "fluid_object.h"
 #include "fluid_collider.h"
 #include "hash_grid.h"
+#include "grid_2d.h"
 
 
 // ================================== Fluid_Solver Class Implementation ===============================
@@ -179,6 +180,7 @@ void Fluid_Solver::integrate()
 
 void Fluid_Solver::get_neighbours()
 {
+	/* =========== Spatial Accel : Hash Grid ===========
 	// Delete old Hash Grid
 	got_neighbours = false; 
 	if (hg) delete hg;
@@ -191,7 +193,6 @@ void Fluid_Solver::get_neighbours()
 	hg->hash();
 	got_neighbours = true; 
 
-	
 	// Test : Adjacent Hash of single particle, viz adj cells. 
 	std::size_t testPt = 35; 
 	auto pts = hg->get_adjacent_cells(fluidData->particles[testPt]);
@@ -204,6 +205,29 @@ void Fluid_Solver::get_neighbours()
 		pt->cell_idx = idx; 
 	}
 	fluidData->particles[testPt].cell_idx = 5;
+	*/
+
+	// =========== Spatial Accel : Uniform Grid ===========
+	// Delete Grid
+	got_neighbours = false;
+	if (accel_grid) delete accel_grid;
+	accel_grid = new Grid_2D(fluidData, 1.f, 10.f);
+	accel_grid->gather_particles();
+	got_neighbours = true; 
+
+	/*
+	// Test : Adjacent Hash of single particle, viz adj cells. 
+	Particle &testPt = fluidData->particles[32];
+	auto pts = accel_grid->get_adjcell_particles(testPt);
+	// Rm all pts cell indices first
+	for (Particle &pt : fluidData->particles) pt.cell_idx = 0;
+	// Fill Adj particle list cell_idx with same idx for viz debgging.
+	for (Particle *pt : pts)
+	{
+		pt->cell_idx = 3;
+	}
+	testPt.cell_idx = 20; */
+
 }
 
 // ================================== Eval Attrib Functions ===============================
