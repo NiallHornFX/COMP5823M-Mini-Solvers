@@ -8,12 +8,19 @@
 Grid_2D::Grid_2D(Fluid_Object *FluidData, float CellSize, float WsSize)
 	: fluid_data(FluidData), cell_size(CellSize), ws_size(WsSize)
 {
+	// Cells Per Dimension
 	cell_dim = static_cast<std::size_t>(ws_size / cell_size);
 	r_cell_dim = 1.f / float(cell_dim - 1);
+	// Total Cell Count
 	cell_count = cell_dim * cell_dim;
-	cell_ext = ws_size * cell_size;
+	// Cell Extents
+	cell_ext = ws_size / float(cell_dim);
 	cell_ext_sqr = cell_ext * cell_ext;
 	h_cell_ext = 0.5f * cell_ext;
+	h_cell_ext_sqr = h_cell_ext * h_cell_ext; 
+
+	// Debug
+	std::cout << "Cell Dim = " << cell_dim << "  Cell Count = " << cell_count << "  Cell Ext = " << cell_ext << "\n";
 
 	// Allocate Grid Fields
 	cell_pts = new std::vector<Particle*>[cell_count]; // Per Cell, list of particles within.
@@ -46,19 +53,19 @@ void Grid_2D::gather_particles()
 			float gs_x = float(i) * r_cell_dim, gs_y = float(j) * r_cell_dim;
 
 			// Grid --> World Space
-			float ws_x = gs_x * ws_size, ws_y = gs_y * ws_size;
-			// Offset to cell centre from nodes.
-			glm::vec3 cell_ws(ws_x + h_cell_ext, ws_y + h_cell_ext, 0.f);
+			float ws_x = gs_x * ws_size, ws_y = gs_y * ws_size; // Node Position
+			// Get Cell Min Max Node Positions
+			float eps = cell_ext * 0.25f;
+			glm::vec3 min(ws_x, ws_y, 0.f); 
+			glm::vec3 max(ws_x + (cell_ext + eps), ws_y + (cell_ext + eps), 0.f); 
 
 			// Gather Particles if within cell bounds
 			for (std::size_t p = 0; p < fluid_data->particles.size(); ++p)
 			{
 				Particle &pt = fluid_data->particles[p];
-				float sqr_dist = square_dist(cell_ws, pt.P);
-
-				if (sqr_dist <= h_cell_ext)
+				if (pt.P.x > min.x && pt.P.x < max.x && pt.P.y > min.y && pt.P.y < max.y)
 				{
-					cell_pts[idx_1d].push_back(&pt);
+					cell_pts[idx_1d].push_back(&pt); // Append particle to cell list.
 					pt.cell_idx = idx_1d; // Store 1D index. 
 				}
 			}
@@ -93,6 +100,7 @@ std::vector<Particle*> Grid_2D::get_adjcell_particles(const Particle &pt) const
 	std::vector<Particle*> concat(cell_pts[pt.cell_idx]);
 	for (std::size_t c = 0; c < 8; ++c)
 	{
+		std::cout << adj_cells[c] << "\n";
 		// If cell is out of bounds, skip. 
 		if (adj_cells[c] > (cell_count - 1)) continue;
 		// Else concat cell particle list 

@@ -602,6 +602,56 @@ However oppose to just doing a hash step, we need a per cell gather step : per c
 
 Sparse grid would have to be re-calculated each frame (dealloc empty cells), we need the cells to gather particles, so unlike a hash grid we cannot only allocate cells that particles hash to as we need all cells first to gather particles if within distance of ${1\over 2}\:cellsize$ . 
 
+We treat grid nodes as cells, technically if there was 10 cells there would be 11 grid nodes etc. 
+
+The gather function tests if each particles square distance to the cell centre is $\leq {1\over 2}\:cellsize$. This is essentially a sphere around each cell centre, so its not perfectly gathering particles within cell bounds, we could do a better job using AABB test for each cell (which is easy as we define min and max as current node and next node up), note some epsilon is needed for the AABB test, however this is a more correct way of checking if particles lies within cells, also there is no distance calculation, just checking if particle position is within min and max of AABB : 
+
+```C++
+// Info : Transform Grid into WS, gather particles per cell if they lie within cell bounds O(n). 
+void Grid_2D::gather_particles()
+{
+	// (2D) Square Distance Between 2 position vectors (3D). 
+	auto square_dist = [](const glm::vec3 &A, const glm::vec3 &B) -> float
+	{ 
+		float xx = B.x - A.x, yy = B.y - A.y; 
+		return (xx*xx) + (yy*yy);
+	};
+
+	// Loop over 2D Grid
+	for (std::size_t i = 0; i < cell_dim; ++i)
+	{
+		for (std::size_t j = 0; j < cell_dim; ++j)
+		{
+			// 1D Index
+			const std::size_t idx_1d = idx_2Dto1D(i, j);
+
+			// Index --> Grid Space
+			float gs_x = float(i) * r_cell_dim, gs_y = float(j) * r_cell_dim;
+
+			// Grid --> World Space
+			float ws_x = gs_x * ws_size, ws_y = gs_y * ws_size; // Node Position
+			// Get Cell Min Max Node Positions
+			float eps = cell_ext * 0.25f;
+			glm::vec3 min(ws_x, ws_y, 0.f); 
+			glm::vec3 max(ws_x + (cell_ext + eps), ws_y + (cell_ext + eps), 0.f); 
+
+			// Gather Particles if within cell bounds
+			for (std::size_t p = 0; p < fluid_data->particles.size(); ++p)
+			{
+				Particle &pt = fluid_data->particles[p];
+				if (pt.P.x > min.x && pt.P.x < max.x && pt.P.y > min.y && pt.P.y < max.y)
+				{
+					cell_pts[idx_1d].push_back(&pt); // Append particle to cell list.
+					pt.cell_idx = idx_1d; // Store 1D index. 
+				}
+			}
+		}
+	}
+}
+```
+
+There is issues with misshaped cells, if the bounds of the fluid crops a cell, we get smaller slivers of cells, this was an issue with spatial hash grid also. A possible solution is we could fit the grid to the fluid bounds each tick but this may cause issues with temporal variation of quantities, but theoretically it should work, as we only care about the neighbours on a per tick anyway.
+
 
 
 

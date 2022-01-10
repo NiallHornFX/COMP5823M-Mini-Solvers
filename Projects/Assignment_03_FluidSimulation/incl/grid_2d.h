@@ -36,7 +36,7 @@ public:
 private:
 	Fluid_Object *fluid_data; 
 	float cell_size, ws_size, r_cell_dim;
-	float cell_ext, cell_ext_sqr, h_cell_ext; // extent : cell size in WS. 
+	float cell_ext, cell_ext_sqr, h_cell_ext, h_cell_ext_sqr; // extent : cell size in WS. 
 	std::size_t cell_count, cell_dim; 
 	std::vector<Particle*> *cell_pts; 
 
