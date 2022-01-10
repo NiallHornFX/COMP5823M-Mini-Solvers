@@ -80,20 +80,22 @@ std::vector<Particle*> Spatial_Grid::get_adjcell_particles(const Particle &pt) c
 	// Index Offsets from current cell (could do this on 1D indices instead)
 	std::size_t adj_cells [8] = {
 	//            (-i, j)             |            (+i, j)
-	idx_2Dto1D(idx_c.x-1, idx_c.y)       ,idx_2Dto1D(idx_c.x+1, idx_c.y),
+	idx_2Dto1D(idx_c.x-1, idx_c.y)         ,idx_2Dto1D(idx_c.x+1, idx_c.y),
 	//            (i, -j)             |            (i, +j) 
-	idx_2Dto1D(idx_c.x, idx_c.y-1)       ,idx_2Dto1D(idx_c.x, idx_c.y+1),
+	idx_2Dto1D(idx_c.x, idx_c.y-1)         ,idx_2Dto1D(idx_c.x, idx_c.y+1),
 	//           (-i, +j)             |            (+i, -j)
 	idx_2Dto1D(idx_c.x-1, idx_c.y+1)     ,idx_2Dto1D(idx_c.x+1, idx_c.y-1),
 	//           (-i, -j)             |            (+i, +j)
 	idx_2Dto1D(idx_c.x-1, idx_c.y-1)     ,idx_2Dto1D(idx_c.x+1, idx_c.y+1)};
 
+	
 	// Check if cell indices out of bounds if not store into concat'd particle array.
 	// First also add particles of pt's own cell. 
 	std::vector<Particle*> concat(cell_pts[pt.cell_idx]);
+	//std::vector<Particle*> concat;
+	concat.reserve(500);
 	for (std::size_t c = 0; c < 8; ++c)
 	{
-		std::cout << adj_cells[c] << "\n";
 		// If cell is out of bounds, skip. 
 		if (adj_cells[c] > (cell_count - 1)) continue;
 		// Else concat cell particle list 
@@ -112,5 +114,5 @@ std::size_t Spatial_Grid::idx_2Dto1D(std::size_t i, std::size_t j) const
 // Info : Map 1D flat index to 2D cell index. 
 glm::ivec2 Spatial_Grid::idx_1Dto2D(std::size_t i) const
 {
-	return glm::ivec2(i % cell_dim, i / cell_dim);
+	return glm::ivec2(i / cell_dim, i % cell_dim);
 }

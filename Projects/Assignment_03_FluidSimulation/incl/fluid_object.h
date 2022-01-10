@@ -47,6 +47,7 @@ public:
 	Colour_Viz particle_colour;
 	// ======== Fluid Data ========
 	std::vector<Particle> particles; 
+	std::vector<std::vector<Particle*>> particle_neighbours; 
 	glm::vec2 pos, dim; 
 	float spc; 
 

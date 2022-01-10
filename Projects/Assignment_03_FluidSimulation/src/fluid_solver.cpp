@@ -209,14 +209,22 @@ void Fluid_Solver::get_neighbours()
 
 	// =========== Spatial Accel : Uniform Grid ===========
 	// Delete Grid
-	got_neighbours = false;
+	got_neighbours = false; 
 	if (accel_grid) delete accel_grid;
 	float cs = kernel_radius;
-	accel_grid = new Spatial_Grid(fluidData, kernel_radius * 1.5f, 10.f);
+	accel_grid = new Spatial_Grid(fluidData, kernel_radius * 1.f, 10.f);
 	accel_grid->gather_particles();
 	got_neighbours = true; 
 
-	
+	// Cache Particle Neighbours into array per particle. 
+	fluidData->particle_neighbours.clear();
+	fluidData->particle_neighbours.resize(fluidData->particles.size());
+	for (std::size_t p = 0; p < fluidData->particles.size(); ++p)
+	{
+		fluidData->particle_neighbours[p] = accel_grid->get_adjcell_particles(fluidData->particles[p]);
+	} 
+
+	/*
 	// Test : Adjacent Hash of single particle, viz adj cells. 
 	Particle &testPt = fluidData->particles[128];
 	auto pts = accel_grid->get_adjcell_particles(testPt);
@@ -228,7 +236,7 @@ void Fluid_Solver::get_neighbours()
 		pt->cell_idx = 3;
 	}
 	testPt.cell_idx = 20; 
-
+	*/
 }
 
 // ================================== Eval Attrib Functions ===============================
@@ -250,12 +258,10 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		Particle &Pt_i = fluidData->particles[p_i];
 		float dens_tmp = 0.f; 
 
-		std::vector<Particle*> *neighbours = hg->grid[Pt_i.cell_idx];
-		for (std::size_t p_j = 0; p_j < neighbours->size(); ++p_j)
-		//for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
+		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
+		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
 		{
-			const Particle &Pt_j = *((*neighbours)[p_j]);
-			//const Particle &Pt_j = fluidData->particles[p_j]; 
+			const Particle &Pt_j = *(neighbours[p_j]);
 			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
@@ -289,15 +295,13 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 	Pt_i.F.x = 0.f, Pt_i.F.y = 0.f, Pt_i.F.z = 0.f;
 
 	// Cache neighbour cell ptr
-	std::vector<Particle*> *neighbours = hg->grid[Pt_i.cell_idx];
+	std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
 
 	// =============== Compute Pressure Gradient --> Pressure Force ===============
 	glm::vec2 pressure_grad(0.f);
-	for (std::size_t j = 0; j < neighbours->size(); ++j)
-	//for (std::size_t j = 0; j < fluidData->particles.size(); ++j)
+	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
 	{
-		Particle &Pt_j = *((*neighbours)[j]);
-		//Particle &Pt_j = fluidData->particles[j];
+		const Particle &Pt_j = *(neighbours[p_j]);
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 		glm::vec2 tmp =  Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
 		pressure_grad += tmp; 
@@ -321,7 +325,7 @@ void Fluid_Solver::calc_restdens()
 {
 	get_neighbours();
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
-	rest_density = max_dens * 1.025f; 
+	rest_density = max_dens * 1.0f; 
 }
 
 // ================================== Kernel Functions ===============================

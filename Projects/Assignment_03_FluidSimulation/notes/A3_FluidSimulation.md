@@ -654,9 +654,13 @@ There is issues with misshaped cells, if the bounds of the fluid crops a cell, w
 
 Could use smaller cells and use further away neighbours to try and prevent this. 
 
+I now cache the particle neighbours (concatenated vector returned from above func) each tick's call of `get_neighbours()` and store it in a `std::vector<std::vector<Particle*>> particle_neighbours; ` within `Fluid_Object` so we don't need to re-fetch adjacent cells concatenated for each particle when computing fluid quantities. Also, make sure to remove the cout calls from debugging, fun mistake I made debugging a bottleneck which was coming from console output ! 
 
+##### Issues : 
 
+Conversion of 1D (flat array) to 2D (cell) index should be done using : $i = k / cdim, \:\: j = k \mod cdim$ make sure mod is for the j index (because of row major access (i,j), because 1D indices are calculated as : $ k = i \cdot m + j$ where $m = cdim$. Note that $cdim$ is the number of cells for one dimension $cdim = wssize / cellsize$. 
 
+Got the same issue again now where fluid volume is lost, not sure why the accel grid causes this, is it just discontinuites ? 
 
 ____
 
