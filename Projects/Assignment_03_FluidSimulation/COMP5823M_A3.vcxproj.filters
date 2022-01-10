@@ -52,7 +52,7 @@
     <ClCompile Include="src\fluid_solver.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="src\grid_2d.cpp">
+    <ClCompile Include="src\spatial_grid.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -84,7 +84,7 @@
     <ClInclude Include="incl\fluid_object.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="incl\grid_2d.h">
+    <ClInclude Include="incl\spatial_grid.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

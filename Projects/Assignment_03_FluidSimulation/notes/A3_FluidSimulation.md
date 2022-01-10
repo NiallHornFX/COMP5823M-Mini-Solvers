@@ -652,7 +652,7 @@ void Grid_2D::gather_particles()
 
 There is issues with misshaped cells, if the bounds of the fluid crops a cell, we get smaller slivers of cells, this was an issue with spatial hash grid also. A possible solution is we could fit the grid to the fluid bounds each tick but this may cause issues with temporal variation of quantities, but theoretically it should work, as we only care about the neighbours on a per tick anyway.
 
-
+Could use smaller cells and use further away neighbours to try and prevent this. 
 
 
 

@@ -12,7 +12,7 @@
 #include "fluid_object.h"
 #include "fluid_collider.h"
 #include "hash_grid.h"
-#include "grid_2d.h"
+#include "Spatial_Grid.h"
 
 
 // ================================== Fluid_Solver Class Implementation ===============================
@@ -212,11 +212,11 @@ void Fluid_Solver::get_neighbours()
 	got_neighbours = false;
 	if (accel_grid) delete accel_grid;
 	float cs = kernel_radius;
-	accel_grid = new Grid_2D(fluidData, kernel_radius * 1.f, 10.f);
+	accel_grid = new Spatial_Grid(fluidData, kernel_radius * 1.5f, 10.f);
 	accel_grid->gather_particles();
 	got_neighbours = true; 
 
-	/*
+	
 	// Test : Adjacent Hash of single particle, viz adj cells. 
 	Particle &testPt = fluidData->particles[128];
 	auto pts = accel_grid->get_adjcell_particles(testPt);
@@ -227,7 +227,7 @@ void Fluid_Solver::get_neighbours()
 	{
 		pt->cell_idx = 3;
 	}
-	testPt.cell_idx = 20; */
+	testPt.cell_idx = 20; 
 
 }
 
