@@ -89,11 +89,6 @@ public:
 	// Pressure
 	float rest_density, stiffness_coeff;
 
-	// Min/Max Attrib Ranges
-	float min_dens,  max_dens;
-	float min_pres,  max_pres; 
-	float min_force, max_force; 
-
 	// Fluid Colliders
 	std::vector<Fluid_Collider*> colliders;
 

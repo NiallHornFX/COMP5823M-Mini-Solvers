@@ -32,7 +32,6 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 	kernel_radius_sqr = kernel_radius * kernel_radius;
 	rest_density = 8.f; 
 	stiffness_coeff = 1.f; 
-	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f, min_force = 0.f, max_force = 0.f; 
 
 	// ===== Setup Tank Collider Planes =====
 	Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left",  glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
@@ -87,9 +86,6 @@ void Fluid_Solver::reset()
 {
 	// Reset Time state
 	frame = 0, timestep = 0;
-
-	// Reset Attrib Ranges
-	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f; min_force = 0.f, max_force = 0.f; 
 
 	// Reset Fluid State
 	fluidData->reset_fluid();
@@ -173,8 +169,8 @@ void Fluid_Solver::integrate()
 
 		// Store Min/Max sqr_force
 		float f_s = glm::dot(a_1, a_1);
-		if (f_s < min_force) min_force = f_s; 
-		if (f_s > max_force) max_force = f_s; 
+		if (f_s < fluidData->min_force) fluidData->min_force = f_s; 
+		if (f_s > fluidData->max_force) fluidData->max_force = f_s; 
 	}
 }
 
@@ -224,9 +220,9 @@ void Fluid_Solver::get_neighbours()
 		fluidData->particle_neighbours[p] = accel_grid->get_adjcell_particles(fluidData->particles[p]);
 	} 
 
-	/*
+	/**/
 	// Test : Adjacent Hash of single particle, viz adj cells. 
-	Particle &testPt = fluidData->particles[128];
+	Particle &testPt = fluidData->particles[fluidData->particles.size()-1];
 	auto pts = accel_grid->get_adjcell_particles(testPt);
 	// Rm all pts cell indices first
 	for (Particle &pt : fluidData->particles) pt.cell_idx = 0;
@@ -236,7 +232,7 @@ void Fluid_Solver::get_neighbours()
 		pt->cell_idx = 3;
 	}
 	testPt.cell_idx = 20; 
-	*/
+	
 }
 
 // ================================== Eval Attrib Functions ===============================
@@ -252,7 +248,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		return; 
 	}
 
-	min_dens = 1e06f, max_dens = 0.f, min_pres = 1e06f, max_pres = 0.f;
+	fluidData->min_dens = 1e06f, fluidData->max_dens = 0.f, fluidData->min_pres = 1e06f, fluidData->max_pres = 0.f;
 	for (std::size_t p_i = 0; p_i < fluidData->particles.size(); ++p_i)
 	{
 		Particle &Pt_i = fluidData->particles[p_i];
@@ -260,8 +256,10 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 
 		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
 		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+		//for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
 		{
 			const Particle &Pt_j = *(neighbours[p_j]);
+			//const Particle &Pt_j = fluidData->particles[p_j];
 			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
@@ -270,12 +268,12 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		Pt_i.pressure = std::max((stiffness_coeff * (Pt_i.density - rest_density)), 0.f); 
 
 		// Store Min/Max Dens (Debug) 
-		if (Pt_i.density  < min_dens) min_dens = Pt_i.density;
-		if (Pt_i.pressure < min_pres) min_pres = Pt_i.pressure;
-		if (Pt_i.density  > max_dens) max_dens = Pt_i.density;
-		if (Pt_i.pressure > max_pres) max_pres = Pt_i.pressure;
+		if (Pt_i.density  < fluidData->min_dens) fluidData->min_dens = Pt_i.density;
+		if (Pt_i.pressure < fluidData->min_pres) fluidData->min_pres = Pt_i.pressure;
+		if (Pt_i.density  > fluidData->max_dens) fluidData->max_dens = Pt_i.density;
+		if (Pt_i.pressure > fluidData->max_pres) fluidData->max_pres = Pt_i.pressure;
 	}
-	if (frame == 0) rest_density = max_dens * 1.025f; // Use as inital rest_dens
+	if (frame == 0) rest_density = fluidData->max_dens * 1.025f; // Use as inital rest_dens
 }
 
 glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
@@ -300,8 +298,10 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 	// =============== Compute Pressure Gradient --> Pressure Force ===============
 	glm::vec2 pressure_grad(0.f);
 	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+	//for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
 	{
 		const Particle &Pt_j = *(neighbours[p_j]);
+		//const Particle &Pt_j = fluidData->particles[p_j];
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 		glm::vec2 tmp =  Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
 		pressure_grad += tmp; 
@@ -325,7 +325,7 @@ void Fluid_Solver::calc_restdens()
 {
 	get_neighbours();
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
-	rest_density = max_dens * 1.0f; 
+	rest_density = fluidData->max_dens * 1.0f; 
 }
 
 // ================================== Kernel Functions ===============================

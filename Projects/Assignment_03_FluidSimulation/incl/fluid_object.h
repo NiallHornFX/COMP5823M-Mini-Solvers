@@ -5,6 +5,7 @@
 // Std Headers
 #include <vector>
 #include <random>
+#include <tuple>
 
 // Project Headers
 #include "primitive.h"
@@ -20,9 +21,10 @@
 #define DEF_XS 2.f
 #define DEF_YS 3.f
 #define DEF_SPC 0.2f
-
+#define DEF_JIT 0.5f
 // FD
 struct Particle; 
+class Fluid_Solver; 
 
 // =================================== Fluid Object Class ===================================
 // Info : Class containing fluid state and data, also responsible for rendering the fluid. 
@@ -30,12 +32,15 @@ struct Particle;
 class Fluid_Object
 {
 public:
-	Fluid_Object(const glm::vec2 &P = glm::vec2(DEF_XP, DEF_YP), const glm::vec2 &Dim = glm::vec2(DEF_XS, DEF_YS), float Spc = DEF_SPC);
+	Fluid_Object(const glm::vec2 &P = glm::vec2(DEF_XP, DEF_YP), const glm::vec2 &Dim = glm::vec2(DEF_XS, DEF_YS), float Spc = DEF_SPC, float Jitter = DEF_JIT);
 	~Fluid_Object(); 
 
 	// ======== Emit + Reset ========
 	void emit_square();
 	void reset_fluid();
+
+	// ======== Util ========
+	std::pair<glm::vec2, glm::vec2> get_fluid_bounds() const; 
 
 	// ======== Render ========
 	enum render_type {POINT_VERTS = 0, FRAGMENT = 1};
@@ -45,11 +50,18 @@ public:
 public: 
 	enum Colour_Viz {Standard = 0, Density, Pressure, Velocity, GridCell};
 	Colour_Viz particle_colour;
+
+
 	// ======== Fluid Data ========
 	std::vector<Particle> particles; 
 	std::vector<std::vector<Particle*>> particle_neighbours; 
 	glm::vec2 pos, dim; 
-	float spc; 
+	float spc, jitter; 
+
+	// Min/Max Attrib Ranges
+	float min_dens,  max_dens;
+	float min_pres,  max_pres;
+	float min_force, max_force;
 
 	// View State
 	bool ptColour_ = false;
@@ -62,6 +74,11 @@ public:
 	Primitive *fsQuad; 
 
 	// Marching Squares ... 
+
+
+	// Fluid Solver ref (for bidir access)
+	Fluid_Solver *solver; 
+
 };
 
 

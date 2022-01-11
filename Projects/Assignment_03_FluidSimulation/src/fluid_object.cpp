@@ -1,11 +1,12 @@
 // COMP5823M - A3 : Niall Horn - fluid_object.cpp
 // Implements
 #include "fluid_object.h"
+#include "fluid_solver.h"
 
 // Std Headers
 
-Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc)
-	: pos(P), dim(Dim), spc(Spc)
+Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc, float Jitter)
+	: pos(P), dim(Dim), spc(Spc), jitter(Jitter)
 {
 	// Emission
 	emit_square();
@@ -15,6 +16,9 @@ Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc)
 
 	// Init 
 	particle_colour = Colour_Viz::Standard;
+	min_dens = 0.f, max_dens = 0.f;
+	min_pres = 0.f, max_pres = 0.f;
+	//min_force = 0.f, max_force = 0.f;
 }
 
 Fluid_Object::~Fluid_Object()
@@ -32,6 +36,9 @@ void Fluid_Object::reset_fluid()
 		pt.P = pt.rest; float mass = pt.mass;
 		pt = Particle(pt.P, mass, pt.id);
 	}
+
+	// Reset Attrib Ranges
+	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f; min_force = 0.f, max_force = 0.f;
 }
 
 // Info : Emit Fluid in square at P, defined by Dim with spacing h.
@@ -53,8 +60,9 @@ void Fluid_Object::emit_square()
 			float yy = (float(j) / float(n_y-1)) * dim.y;
 			//xx -= h_dim_x, yy -= h_dim_y; // Center
 			xx += pos.x, yy += pos.y; 
-			
-			particles.emplace_back(glm::vec3(xx,yy,0.f), mass, (i*n_x+j));
+			std::size_t id = i * n_x + j;
+			glm::vec3 r = randRange((id+1), -jitter, jitter); r.z = 0.f; 
+			particles.emplace_back(glm::vec3(xx,yy,0.f) + r, mass, id);
 		}
 	}
 
@@ -105,13 +113,13 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 				case Colour_Viz::Pressure:
 				{
 					// Colour Particles by Pressure 
-					col[p] = glm::vec3(fitRange(particles[p].pressure, 1.f, 100.f, 0.f, 1.f));
+					col[p] = glm::vec3(fitRange(particles[p].pressure, 0.f, max_pres, 0.f, 1.f));
 					break;
 				}
 				case Colour_Viz::Density:
 				{
 					// Colour Particles by Density 
-					col[p] = glm::vec3(fitRange(particles[p].density, 1.f, 50.f, 0.f, 1.f));
+					col[p] = glm::vec3(fitRange(particles[p].density, 0.f, max_dens, 0.f, 1.f));
 					break;
 				}
 				case Colour_Viz::Velocity: 
@@ -134,4 +142,11 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 	// Render
 	ren_points->point_size = spc * 55.f;
 	ren_points->render();
+}
+
+std::pair<glm::vec2, glm::vec2> Fluid_Object::get_fluid_bounds() const
+{
+	glm::vec2 min(particles[0].P.x, particles[0].P.y); 
+	glm::vec2 max(particles[particles.size()-1].P.x, particles[particles.size()-1].P.y);
+	return std::pair<glm::vec2, glm::vec2>(min, max); 
 }

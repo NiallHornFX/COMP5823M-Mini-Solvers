@@ -294,6 +294,8 @@ float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
 
 For the Gradients, we should also add in checks if length (or square) of $r$ is zero, we return $0$ as if the position was out of range of the kernel radius $h$. Otherwise we will get nans when the normalized vector $\hat{r}$ is calculated. 
 
+Some recommendations for $h$ is twice the particle distance / spacing. 
+
 ____
 
 #### Computing Fluid Quantities :
@@ -660,7 +662,15 @@ I now cache the particle neighbours (concatenated vector returned from above fun
 
 Conversion of 1D (flat array) to 2D (cell) index should be done using : $i = k / cdim, \:\: j = k \mod cdim$ make sure mod is for the j index (because of row major access (i,j), because 1D indices are calculated as : $ k = i \cdot m + j$ where $m = cdim$. Note that $cdim$ is the number of cells for one dimension $cdim = wssize / cellsize$. 
 
-Got the same issue again now where fluid volume is lost, not sure why the accel grid causes this, is it just discontinuites ? 
+Got the same issue again now where fluid volume is lost, not sure why the accel grid causes this, is it just discontinuities ? Low density areas show grid cell bounds. 
+
+might be due to cell size been too big. Didn't think this would be an issue because the kernel rejects particles beyond $h$ but maybe its due to something else. 
+
+Just generally seem to get incorrect kernel quantities when using a fixed grid, even though cell size is larger than kernel radius. 
+
+It should work if kernel radius is less than distance to edge of neighbouring cells ...
+
+Make grid bigger than simulation domain to stop cell edges aligning to boundary of tank bottom...
 
 ____
 

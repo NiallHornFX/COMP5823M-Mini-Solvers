@@ -48,7 +48,7 @@ void Spatial_Grid::gather_particles()
 			float ws_x = gs_x * ws_size, ws_y = gs_y * ws_size; // Node Position
 
 			// Get Cell Min Max Node Positions
-			float eps = cell_ext * 0.25f;
+			float eps = cell_ext * 0.3f;
 			glm::vec3 min(ws_x, ws_y, 0.f); 
 			glm::vec3 max(ws_x + (cell_ext + eps), ws_y + (cell_ext + eps), 0.f); 
 

@@ -56,6 +56,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
 	fluid_solver = new Fluid_Solver((1.f / 196.f), 100.f, 0.5f, fluid_object);
+	fluid_object->solver = fluid_solver; 
 
 	// Get Neighbours Initally for Hash Debug
 	fluid_solver->get_neighbours();
@@ -299,6 +300,7 @@ void Viewer::gui_render()
 
 	// Fluid Object Core parameters (Reconstruct if changed)
 	static float spc = DEF_SPC;
+	static float jit = DEF_JIT;
 	static float pos [2] = { DEF_XP, DEF_YP };
 	static float dim [2] = { DEF_XS, DEF_YS };
 
@@ -344,8 +346,8 @@ void Viewer::gui_render()
 		ImGui::Text("Particle Count = %d", fluid_object->particles.size());
 		ImGui::PopStyleColor();
 		ImGui::Text("Mass : %f", fluid_object->particles[0].mass);
-		ImGui::Text("Density : min = %f | max = %f",  fluid_solver->min_dens, fluid_solver->max_dens);
-		ImGui::Text("Pressure : min = %f | max = %f", fluid_solver->min_pres, fluid_solver->max_pres);
+		ImGui::Text("Density : min = %f | max = %f",  fluid_object->min_dens, fluid_object->max_dens);
+		ImGui::Text("Pressure : min = %f | max = %f", fluid_object->min_pres, fluid_object->max_pres);
 		//ImGui::Text("Forcesqr : min = %f | max = %f", fluid_solver->min_force, fluid_solver->max_force);
 
 		// ========== Fluid State Controls ==========
@@ -359,24 +361,46 @@ void Viewer::gui_render()
 		{
 			fluid_solver->simulate = false; 
 			delete fluid_object;
-			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc);
+			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
 			fluid_solver->fluidData = fluid_object;
+			fluid_object->solver = fluid_solver;
+
+			// Get Neighbours Initally for Hash Debug
+			fluid_solver->get_neighbours();
 		}
 		if (ImGui::SliderFloat2("Fluid Dim", dim, 0.f, 10.f))
 		{
 			fluid_solver->simulate = false;
 			delete fluid_object;
-			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc);
+			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
 			fluid_solver->fluidData = fluid_object;
+			fluid_object->solver = fluid_solver;
+
+			// Get Neighbours Initally for Hash Debug
+			fluid_solver->get_neighbours();
 		}
 		if (ImGui::SliderFloat("Fluid Spc", &spc, 0.0001f, 0.5f))
 		{
 			fluid_solver->simulate = false;
 			Fluid_Object::Colour_Viz old_pc = fluid_object->particle_colour;
 			delete fluid_object;
-			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc);
+			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
 			fluid_object->particle_colour = old_pc;
 			fluid_solver->fluidData = fluid_object;
+			fluid_object->solver = fluid_solver;
+
+			// Get Neighbours Initally for Hash Debug
+			fluid_solver->get_neighbours();
+		}
+		if (ImGui::SliderFloat("Fluid Jitter", &jit, 0.f, 2.f))
+		{
+			fluid_solver->simulate = false;
+			Fluid_Object::Colour_Viz old_pc = fluid_object->particle_colour;
+			delete fluid_object;
+			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
+			fluid_object->particle_colour = old_pc;
+			fluid_solver->fluidData = fluid_object; // Pass FluidObj ref to FluidSolver
+			fluid_object->solver = fluid_solver;    // Pass FluidSolver ref to FluidObj
 
 			// Get Neighbours Initally for Hash Debug
 			fluid_solver->get_neighbours();
@@ -394,6 +418,7 @@ void Viewer::gui_render()
 			fluid_solver->stiffness_coeff = stiff, fluid_solver->gravity = g, fluid_solver->air_resist = ar;
 			// Calc Rest_Density.
 			//fluid_solver->calc_restdens();
+			fluid_object->solver = fluid_solver;
 		}
 
 		// Free parameters 
