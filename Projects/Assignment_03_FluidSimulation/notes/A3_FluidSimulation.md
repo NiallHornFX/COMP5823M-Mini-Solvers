@@ -672,6 +672,16 @@ It should work if kernel radius is less than distance to edge of neighbouring ce
 
 Make grid bigger than simulation domain to stop cell edges aligning to boundary of tank bottom...
 
+I can see aliasing of the grid on the resulting density values, this should not happen as particles only calculate density based on particles within smoothing radius $h$ which cell size is equal to and no particle should ever hit the edge of its adjacent cells as they are also size $h$. Something is wrong somewhere. 
+
+Make sure when calculating cell extent (ie world space size of cells in each direction) you use :
+
+```
+float cell_ext = ws_size / float(cell_dim-1);
+```
+
+With neg 1 subtracted from cell dim (the total number of cells per dimension/direction). This is a noob mistake to forget when indices will range from $0-n_{-1}$.  
+
 ____
 
 #### Fluid Solver
