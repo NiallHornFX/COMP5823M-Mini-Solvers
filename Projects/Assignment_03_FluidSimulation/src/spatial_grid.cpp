@@ -92,7 +92,7 @@ std::vector<Particle*> Spatial_Grid::get_adjcell_particles(const Particle &pt) c
 	// Check if cell indices out of bounds if not store into concat'd particle array.
 	// First also add particles of pt's own cell. 
 	std::vector<Particle*> concat(cell_pts[pt.cell_idx]);
-	//concat.reserve(100);
+	concat.reserve(80); 
 	for (std::size_t c = 0; c < 8; ++c)
 	{
 		// If cell is out of bounds, skip. 

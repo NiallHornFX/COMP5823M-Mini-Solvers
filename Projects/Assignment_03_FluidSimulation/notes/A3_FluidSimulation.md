@@ -662,16 +662,6 @@ I now cache the particle neighbours (concatenated vector returned from above fun
 
 Conversion of 1D (flat array) to 2D (cell) index should be done using : $i = k / cdim, \:\: j = k \mod cdim$ make sure mod is for the j index (because of row major access (i,j), because 1D indices are calculated as : $ k = i \cdot m + j$ where $m = cdim$. Note that $cdim$ is the number of cells for one dimension $cdim = wssize / cellsize$. 
 
-Got the same issue again now where fluid volume is lost, not sure why the accel grid causes this, is it just discontinuities ? Low density areas show grid cell bounds. 
-
-might be due to cell size been too big. Didn't think this would be an issue because the kernel rejects particles beyond $h$ but maybe its due to something else. 
-
-Just generally seem to get incorrect kernel quantities when using a fixed grid, even though cell size is larger than kernel radius. 
-
-It should work if kernel radius is less than distance to edge of neighbouring cells ...
-
-Make grid bigger than simulation domain to stop cell edges aligning to boundary of tank bottom...
-
 I can see aliasing of the grid on the resulting density values, this should not happen as particles only calculate density based on particles within smoothing radius $h$ which cell size is equal to and no particle should ever hit the edge of its adjacent cells as they are also size $h$. Something is wrong somewhere. 
 
 Make sure when calculating cell extent (ie world space size of cells in each direction) you use :
@@ -680,7 +670,15 @@ Make sure when calculating cell extent (ie world space size of cells in each dir
 float cell_ext = ws_size / float(cell_dim-1);
 ```
 
-With neg 1 subtracted from cell dim (the total number of cells per dimension/direction). This is a noob mistake to forget when indices will range from $0-n_{-1}$.  
+With neg 1 subtracted from cell dim (the total number of cells per dimension/direction). This is a noob mistake to forget when indices will range from $0-n_{-1}$.  This was the issue behind the grid aliasing as the cell min/max test was not working correctly within `gather()` ! 
+
+Need to update neighbours after half step integration ? Doing eval neighbours per call is too expensive, so need a nicer way to deal with this Would need to split integration to two loops so I can re-eval accel grid half way through Cannot do it per eval forces call, because this is done per particle. I'm surprised though I didn't think we'd need to update the grid after a single integration step, yet without it we get nans in the spiky gradient calc for pressure. 
+
+Spiky Gradient getting nan's when using accel grid. Density is 0, seems to be a divide by zero caused nan,  why is density 0, is particle not evaling self in neighbourhood density calc with grid, particle should be part of its own cell ? 
+
+Move neighbour calc to integration (after Position is updated before second eval_forces() call) But If frame == 0 do neighbour get at start of solve step operations (as no prev frame / integration call), else do it after half step integration so its only done once (apart from frame 0 done twice) per solve step. 
+
+
 
 ____
 
@@ -744,6 +742,8 @@ Do eval forces calls within integration (2 steps) dont even need to store force 
 Min/Max ranges won't work no more, need to eval these separately over all pts.
 
 Yep so Integrate now calls `Eval_Forces()` per particle within its particle for loop, `Eval_Forces()` takes in a single particle input to calculate forces onto, thus it can be called multiple times within a single integrate loop to eval the forces for multistep integration methods, without needing separate calls and separate particle for loops over all particles to get new forces based on half step integrated postions etc. 
+
+Not we do not recompute density and pressure after half step integration, just forces so density will be based on the pre-integration positions but saves another eval of computing density and pressure (twice in a solve step).
 
 ##### Simulation behaviour
 

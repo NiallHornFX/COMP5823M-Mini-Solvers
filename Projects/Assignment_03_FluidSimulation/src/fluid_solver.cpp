@@ -14,6 +14,8 @@
 #include "hash_grid.h"
 #include "Spatial_Grid.h"
 
+#define INTEGRATE_LEAPFROG 1
+
 
 // ================================== Fluid_Solver Class Implementation ===============================
 
@@ -96,7 +98,7 @@ void Fluid_Solver::step()
 {
 	get_neighbours();
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
-	//eval_colliders();
+	eval_colliders();
 	integrate();
 
 	// Get Particle Neighbours (HashGrid)
@@ -137,7 +139,7 @@ void Fluid_Solver::integrate()
 	// Ext Forces 
 	glm::vec3 g(0.f, gravity, 0.f); 
 
-	
+#if INTEGRATE_LEAPFROG == 0
 	// Semi Implicit Euler Integration (testing)
 	for (Particle &p : fluidData->particles)
 	{
@@ -148,9 +150,7 @@ void Fluid_Solver::integrate()
 		p.V += a_0 * dt; 
 		p.P += p.V * dt; 
 	} 
-	
-
-	/*
+#else	
 	// Leapfrog integration
 	for (Particle &pt : fluidData->particles)
 	{
@@ -172,7 +172,8 @@ void Fluid_Solver::integrate()
 		float f_s = glm::dot(a_1, a_1);
 		if (f_s < fluidData->min_force) fluidData->min_force = f_s; 
 		if (f_s > fluidData->max_force) fluidData->max_force = f_s; 
-	} */
+	} 
+#endif
 }
 
 void Fluid_Solver::get_neighbours()
@@ -221,7 +222,7 @@ void Fluid_Solver::get_neighbours()
 		fluidData->particle_neighbours[p] = accel_grid->get_adjcell_particles(fluidData->particles[p]);
 	} 
 
-	
+	/*
 	// Test : Adjacent Hash of single particle, viz adj cells. 
 	Particle &testPt = fluidData->particles[100];
 	auto pts = accel_grid->get_adjcell_particles(testPt);
@@ -232,7 +233,7 @@ void Fluid_Solver::get_neighbours()
 	{
 		pt->cell_idx = 1;
 	}
-	testPt.cell_idx = 2; 
+	testPt.cell_idx = 2;  */
 	
 }
 
@@ -241,7 +242,7 @@ void Fluid_Solver::get_neighbours()
 // Can be safely multithreaded 
 
 void Fluid_Solver::compute_dens_pres(kernel_func w)
-{
+{	
 	// Check Hash Grid has been evaulated
 	if (!got_neighbours)
 	{
@@ -254,6 +255,10 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 	{
 		Particle &Pt_i = fluidData->particles[p_i];
 		float dens_tmp = 0.f; 
+
+		// Debug 
+		float test = glm::dot(Pt_i.P, Pt_i.P);
+		if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
 
 		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
 		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
@@ -279,6 +284,8 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 
 glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
 {
+	//get_neighbours();
+	
 	// Check Hash Grid has been evaulated
 	if (!got_neighbours)
 	{
@@ -292,6 +299,10 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 
 	// Reset Particle forces 
 	Pt_i.F.x = 0.f, Pt_i.F.y = 0.f, Pt_i.F.z = 0.f;
+
+	// Debug 
+	float test = glm::dot(Pt_i.P, Pt_i.P);
+	if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
 
 	// Cache neighbour cell ptr
 	std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
