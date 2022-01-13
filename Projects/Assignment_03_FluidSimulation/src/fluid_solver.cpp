@@ -14,7 +14,8 @@
 #include "hash_grid.h"
 #include "Spatial_Grid.h"
 
-#define INTEGRATE_LEAPFROG 1
+#define INTEGRATE_LEAPFROG  0
+#define DEBUG_TEST_ADJACENT 0 
 
 
 // ================================== Fluid_Solver Class Implementation ===============================
@@ -96,7 +97,8 @@ void Fluid_Solver::reset()
 // Info : Single Simulation Step of Cloth Solver 
 void Fluid_Solver::step()
 {
-	get_neighbours();
+	//get_neighbours();
+	got_neighbours = true;
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
 	eval_colliders();
 	integrate();
@@ -143,9 +145,11 @@ void Fluid_Solver::integrate()
 	// Semi Implicit Euler Integration (testing)
 	for (Particle &p : fluidData->particles)
 	{
+		float test = glm::dot(p.P, p.P);
+		if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
 		// Eval RHS forces 0 
-		//glm::vec3 a_0 = g + eval_forces(p, kernel, grad);
-		glm::vec3 a_0 = g;
+		glm::vec3 a_0 = g + eval_forces(p, kernel, grad);
+		//glm::vec3 a_0 = g;
 		// Integrate Accel and Vel
 		p.V += a_0 * dt; 
 		p.P += p.V * dt; 
@@ -157,6 +161,10 @@ void Fluid_Solver::integrate()
 		// Pre-calc
 		float r_dens = 1.f / pt.density; 
 		glm::vec3 air_res = -air_resist * pt.V; 
+
+		// Debug 
+		float test = glm::dot(pt.P, pt.P);
+		if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
 		
 		// Eval RHS forces 0 
 		glm::vec3 a_0 = (eval_forces(pt, kernel, grad) * r_dens) + g + air_res;
@@ -178,38 +186,11 @@ void Fluid_Solver::integrate()
 
 void Fluid_Solver::get_neighbours()
 {
-	/* =========== Spatial Accel : Hash Grid ===========
-	// Delete old Hash Grid
-	got_neighbours = false; 
-	if (hg) delete hg;
-
-	// Cell Size based on Kernel Radius
-	float cs = kernel_radius * 1.5f; 
-
-	// New Hash Grid 
-	hg = new Hash_Grid(fluidData, 10, cs);
-	hg->hash();
-	got_neighbours = true; 
-
-	// Test : Adjacent Hash of single particle, viz adj cells. 
-	std::size_t testPt = 35; 
-	auto pts = hg->get_adjacent_cells(fluidData->particles[testPt]);
-	std::size_t idx = fluidData->particles[testPt].cell_idx;
-	// Rm all pts cell indices first
-	for (Particle &pt : fluidData->particles) pt.cell_idx = 0; 
-	// Fill Adj particle list cell_idx with same idx for viz debgging.
-	for (Particle *pt : pts)
-	{
-		pt->cell_idx = idx; 
-	}
-	fluidData->particles[testPt].cell_idx = 5;
-	*/
-
 	// =========== Spatial Accel : Uniform Grid ===========
-	// Delete Grid
+	// Delete old grid
 	got_neighbours = false; 
 	if (accel_grid) delete accel_grid;
-	float cs = kernel_radius;
+	// Allocate New Grid
 	accel_grid = new Spatial_Grid(fluidData, kernel_radius, 10.f);
 	accel_grid->gather_particles();
 	got_neighbours = true; 
@@ -222,7 +203,7 @@ void Fluid_Solver::get_neighbours()
 		fluidData->particle_neighbours[p] = accel_grid->get_adjcell_particles(fluidData->particles[p]);
 	} 
 
-	/*
+#if DEBUG_TEST_ADJACENT == 1
 	// Test : Adjacent Hash of single particle, viz adj cells. 
 	Particle &testPt = fluidData->particles[100];
 	auto pts = accel_grid->get_adjcell_particles(testPt);
@@ -233,8 +214,8 @@ void Fluid_Solver::get_neighbours()
 	{
 		pt->cell_idx = 1;
 	}
-	testPt.cell_idx = 2;  */
-	
+	testPt.cell_idx = 2; 
+#endif
 }
 
 // ================================== Eval Attrib Functions ===============================
@@ -254,18 +235,19 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 	for (std::size_t p_i = 0; p_i < fluidData->particles.size(); ++p_i)
 	{
 		Particle &Pt_i = fluidData->particles[p_i];
-		float dens_tmp = 0.f; 
+		float dens_tmp = 0.0f; 
 
 		// Debug 
-		float test = glm::dot(Pt_i.P, Pt_i.P);
-		if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
+		//float test = glm::dot(Pt_i.P, Pt_i.P);
+		//if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
 
-		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
-		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
-		//for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
+
+		//std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
+		//for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+		for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
 		{
-			const Particle &Pt_j = *(neighbours[p_j]);
-			//const Particle &Pt_j = fluidData->particles[p_j];
+			//const Particle &Pt_j = *(neighbours[p_j]);
+			const Particle &Pt_j = fluidData->particles[p_j];
 			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
@@ -280,6 +262,8 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		if (Pt_i.pressure > fluidData->max_pres) fluidData->max_pres = Pt_i.pressure;
 	}
 	if (frame == 0) rest_density = fluidData->max_dens * 1.025f; // Use as inital rest_dens
+
+	for (Particle &pt : fluidData->particles) if (pt.density == 0.f) throw std::runtime_error("0 Dens");
 }
 
 glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
@@ -301,19 +285,19 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 	Pt_i.F.x = 0.f, Pt_i.F.y = 0.f, Pt_i.F.z = 0.f;
 
 	// Debug 
-	float test = glm::dot(Pt_i.P, Pt_i.P);
-	if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
+	//float test = glm::dot(Pt_i.P, Pt_i.P);
+	//if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
 
-	// Cache neighbour cell ptr
-	std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
+	// Get Neighbour list
+	//std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
 
 	// =============== Compute Pressure Gradient --> Pressure Force ===============
 	glm::vec2 pressure_grad(0.f);
-	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
-	//for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
+	//for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+	for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
 	{
-		const Particle &Pt_j = *(neighbours[p_j]);
-		//const Particle &Pt_j = fluidData->particles[p_j];
+		//const Particle &Pt_j = *(neighbours[p_j]);
+		const Particle &Pt_j = fluidData->particles[p_j];
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 		glm::vec2 tmp =  Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
 		pressure_grad += tmp; 
@@ -345,11 +329,10 @@ void Fluid_Solver::calc_restdens()
 float Fluid_Solver::kernel_poly6(const glm::vec3 &r)
 {
 	float r_sqr = glm::dot(r, r);
-
 	if (std::isnan(r_sqr)) throw std::runtime_error("nan");
 
-	if (r_sqr == 0.f || r_sqr > kernel_radius_sqr) return 0.f;
-	
+	// Outside smoothing radius ? Ret 0f
+	if (r_sqr > kernel_radius_sqr) return 0.f;
 	return poly6_s * std::powf((kernel_radius_sqr - r_sqr), 3.f);
 }
 
@@ -358,22 +341,18 @@ glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	float r_sqr = glm::dot(r, r);
 
-	// Outside Smoothing Radius or zero vector ? Ret 0.
+	// Outside Smoothing Radius or zero vector ? Ret 0 vec
 	if (r_sqr == 0.f || r_sqr > kernel_radius_sqr ) return glm::vec2(0.f);
-
 	glm::vec2 val = poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
-
 	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
-
 	return val;
 }
 
 float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
-	// Outside Smoothing Radius ? Ret 0.
+	// Outside Smoothing Radius ? Ret 0f
 	if (r_l > kernel_radius) return 0.f; 
-
 	return spiky_s * std::powf((kernel_radius - r_l), 3.f);
 }
 
@@ -383,12 +362,10 @@ glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 
 	// Outside Smoothing Radius or zero vector ? Ret 0.
 	if (r_l == 0.f || r_l > kernel_radius) return glm::vec2(0.f);
-
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	glm::vec2 val = spiky_grad_s * std::powf((kernel_radius - r_l), 3.f) * r_n2; 
 
 	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
-
 	return val; 
 }
 

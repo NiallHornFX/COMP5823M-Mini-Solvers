@@ -674,11 +674,27 @@ With neg 1 subtracted from cell dim (the total number of cells per dimension/dir
 
 Need to update neighbours after half step integration ? Doing eval neighbours per call is too expensive, so need a nicer way to deal with this Would need to split integration to two loops so I can re-eval accel grid half way through Cannot do it per eval forces call, because this is done per particle. I'm surprised though I didn't think we'd need to update the grid after a single integration step, yet without it we get nans in the spiky gradient calc for pressure. 
 
+###### Zero Density Issue : 
+
 Spiky Gradient getting nan's when using accel grid. Density is 0, seems to be a divide by zero caused nan,  why is density 0, is particle not evaling self in neighbourhood density calc with grid, particle should be part of its own cell ? 
 
-Move neighbour calc to integration (after Position is updated before second eval_forces() call) But If frame == 0 do neighbour get at start of solve step operations (as no prev frame / integration call), else do it after half step integration so its only done once (apart from frame 0 done twice) per solve step. 
+Move neighbour calc to integration (after Position is updated before second eval_forces() call) But If frame == 0 do neighbour get at start of solve step operations (as no prev frame / integration call), else do it after half step integration so its only done once (apart from frame 0 done twice) per solve step.
 
+So 0 density is one issue (on some particles, but also eval forces is producing nans, something is wrong, with the grid accel)
 
+it is 0 dens causes div by zero in eval forces when first j pt (id 11 in this case) pressure grad is accumulated on inner loop whom has zero density. 
+
+I added r_sqr == 0 return 0 to Poly6 Kernel (to match other kernel/grad/lapl functions to check for r = 0) but for poly6 this is not good as we want to eval over all particles including self particle (where r will equal 0, we only do this check on the gradient) when we calculate the density quantity.
+
+r_sqr == 0 return on Poly6 kernel might be the issue, as this would return 0 when eval'd over self. Yes this is the issue ! Use
+
+```
+if (r_sqr > kernel_radius_sqr) return 0.f;
+// NOT
+if (r_sqr == 0.f || r_sqr > kernel_radius_sqr) return 0.f;
+```
+
+Only for gradients do we need this check because it uses r_length which if zero will cause a divide by zero nan for normalization of the r vector to form the gradient direction. Pressure calc should not eval over self particles $pt_i \neq pt_j$ so there is no need to check within the kernel func, these checks ideally should be assumed within the kernel function itself and handled externally before passing the r vector (ie that the r vector will never be 0 as the eval forces/pressure neighbour loop excludes self particle). Regardless this issue was not related to the acceleration grid, it was due to me adding the same r vector check to all kernel functions without remembering that density also evals over $Pt_i == Pt_j$. 
 
 ____
 
