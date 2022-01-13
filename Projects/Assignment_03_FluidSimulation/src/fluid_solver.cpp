@@ -14,7 +14,7 @@
 #include "hash_grid.h"
 #include "Spatial_Grid.h"
 
-#define INTEGRATE_LEAPFROG  0
+#define INTEGRATE_LEAPFROG  1
 #define DEBUG_TEST_ADJACENT 0 
 
 
@@ -97,8 +97,7 @@ void Fluid_Solver::reset()
 // Info : Single Simulation Step of Cloth Solver 
 void Fluid_Solver::step()
 {
-	//get_neighbours();
-	got_neighbours = true;
+	get_neighbours();
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
 	eval_colliders();
 	integrate();
@@ -237,17 +236,12 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		Particle &Pt_i = fluidData->particles[p_i];
 		float dens_tmp = 0.0f; 
 
-		// Debug 
-		//float test = glm::dot(Pt_i.P, Pt_i.P);
-		//if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
-
-
-		//std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
-		//for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
-		for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
+		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
+		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+		//for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
 		{
-			//const Particle &Pt_j = *(neighbours[p_j]);
-			const Particle &Pt_j = fluidData->particles[p_j];
+			const Particle &Pt_j = *(neighbours[p_j]);
+			//const Particle &Pt_j = fluidData->particles[p_j];
 			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
@@ -261,15 +255,13 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		if (Pt_i.density  > fluidData->max_dens) fluidData->max_dens = Pt_i.density;
 		if (Pt_i.pressure > fluidData->max_pres) fluidData->max_pres = Pt_i.pressure;
 	}
-	if (frame == 0) rest_density = fluidData->max_dens * 1.025f; // Use as inital rest_dens
+	if (frame == 0) rest_density = fluidData->max_dens * 1.01f; // Use as inital rest_dens
 
 	for (Particle &pt : fluidData->particles) if (pt.density == 0.f) throw std::runtime_error("0 Dens");
 }
 
 glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
 {
-	//get_neighbours();
-	
 	// Check Hash Grid has been evaulated
 	if (!got_neighbours)
 	{
@@ -284,12 +276,8 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 	// Reset Particle forces 
 	Pt_i.F.x = 0.f, Pt_i.F.y = 0.f, Pt_i.F.z = 0.f;
 
-	// Debug 
-	//float test = glm::dot(Pt_i.P, Pt_i.P);
-	//if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
-
 	// Get Neighbour list
-	//std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
+	std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
 
 	// =============== Compute Pressure Gradient --> Pressure Force ===============
 	glm::vec2 pressure_grad(0.f);
@@ -321,7 +309,7 @@ void Fluid_Solver::calc_restdens()
 {
 	get_neighbours();
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
-	rest_density = fluidData->max_dens * 1.0f; 
+	rest_density = fluidData->max_dens * 1.01f; 
 }
 
 // ================================== Kernel Functions ===============================

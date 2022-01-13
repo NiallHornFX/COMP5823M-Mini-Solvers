@@ -44,23 +44,23 @@ void Fluid_Object::reset_fluid()
 // Info : Emit Fluid in square at P, defined by Dim with spacing h.
 void Fluid_Object::emit_square()
 {
-	std::size_t n_x = std::size_t(dim.x / spc); 
-	std::size_t n_y = std::size_t(dim.y / spc);
+	std::size_t n_j = std::size_t(dim.x / spc); 
+	std::size_t n_i = std::size_t(dim.y / spc);
 	float h_dim_x = dim.x * 0.5f, h_dim_y = dim.y * 0.5f; 
 
 	// Compute particle mass
-	float mass = 100.f / std::sqrtf(n_x * n_y);
+	float mass = 100.f / std::sqrtf(n_i * n_j);
 	mass = 1.f; // Debug.
 
-	for (std::size_t i = 0; i < n_x; ++i)
+	for (std::size_t i = 0; i < n_i; ++i)
 	{
-		for (std::size_t j = 0; j < n_y; ++j)
+		for (std::size_t j = 0; j < n_j; ++j)
 		{
-			float xx = (float(i) / float(n_x-1)) * dim.x;
-			float yy = (float(j) / float(n_y-1)) * dim.y;
+			float xx = (float(j) / float(n_j-1)) * dim.x;
+			float yy = (float(i) / float(n_i-1)) * dim.y;
 			//xx -= h_dim_x, yy -= h_dim_y; // Center
 			xx += pos.x, yy += pos.y; 
-			std::size_t id = i * n_x + j;
+			std::size_t id = i * n_j + j;
 			glm::vec3 r = randRange((id+1), -jitter, jitter); r.z = 0.f; 
 			particles.emplace_back(glm::vec3(xx,yy,0.f) + r, mass, id);
 		}

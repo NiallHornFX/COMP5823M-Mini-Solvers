@@ -386,11 +386,25 @@ However I may leave the negative density as is, and limit the negative pressure 
 
 Density should be used to scale forces (not external forces). Do this instead of dividing by mass, ie divide by density instead. 
 
+____
+
 ##### Viscosity 
 
 I may have some general damping that's done by multiplying velocity by $0.999$ each timestep or something similar, just to ensure the fluid does settle even if viscosity force is not used at all. 
 
+The Kernel function we use in the Viscosity Kernel Laplacian derived by Muller in the reference paper. 
 
+
+
+
+
+
+
+____
+
+##### Surface Tension
+
+For surface tension we are asked to follow Mullers implementation which uses the concept of a "Colour Field" which is essentially scalar / binary grid which is 1 everywhere where fluid is and zero elsewhere (over the whole scene / simulation domain), this can then be differentiated to define a gradient to the surface to use for the surface tension force. 
 
 ____
 
@@ -658,7 +672,7 @@ Could use smaller cells and use further away neighbours to try and prevent this.
 
 I now cache the particle neighbours (concatenated vector returned from above func) each tick's call of `get_neighbours()` and store it in a `std::vector<std::vector<Particle*>> particle_neighbours; ` within `Fluid_Object` so we don't need to re-fetch adjacent cells concatenated for each particle when computing fluid quantities. Also, make sure to remove the cout calls from debugging, fun mistake I made debugging a bottleneck which was coming from console output ! 
 
-##### Issues : 
+##### Issues (That came up when implementing Accel Grid, not directly related) : 
 
 Conversion of 1D (flat array) to 2D (cell) index should be done using : $i = k / cdim, \:\: j = k \mod cdim$ make sure mod is for the j index (because of row major access (i,j), because 1D indices are calculated as : $ k = i \cdot m + j$ where $m = cdim$. Note that $cdim$ is the number of cells for one dimension $cdim = wssize / cellsize$. 
 
@@ -674,7 +688,62 @@ With neg 1 subtracted from cell dim (the total number of cells per dimension/dir
 
 Need to update neighbours after half step integration ? Doing eval neighbours per call is too expensive, so need a nicer way to deal with this Would need to split integration to two loops so I can re-eval accel grid half way through Cannot do it per eval forces call, because this is done per particle. I'm surprised though I didn't think we'd need to update the grid after a single integration step, yet without it we get nans in the spiky gradient calc for pressure. 
 
-###### Zero Density Issue : 
+Issue because Particle ID does not equal iteration order (0-ParticleCount-1) so in eval_forces() where single particle is passed, indexing by particle ID will yield incorrect index of neighbouring cells (cached within fluidObj, from the get_neighbours()). Ok in `fluid_object::emit_square()` I had the indexing incorrect for the particle IDs (again not a grid issue). This is because the fluid square is not actually square, iteration over fluid "Square" is row major, so index function to define particle indices needs to match this. I messed up the x,y to i,j mapping! X should be j not i, how stupid. 
+
+```C++
+// Cartesian Fluid --> Indices
+// ========= OLD - Wrong =========
+std::size_t n_x = std::size_t(dim.x / spc); 
+std::size_t n_y = std::size_t(dim.y / spc);
+for (std::size_t i = 0; i < n_x; ++i)
+	for (std::size_t j = 0; j < n_y; ++j)
+		float xx = (float(i) / float(n_x-1)) * dim.x;
+		float yy = (float(j) / float(n_y-1)) * dim.y;
+		// 1D Particle ID
+		std::size_t id = i * n_y + j;	
+
+// ========= New - Correct =========
+std::size_t n_j = std::size_t(dim.x / spc); 
+std::size_t n_i = std::size_t(dim.y / spc);
+for (std::size_t i = 0; i < n_i; ++i)
+	for (std::size_t j = 0; j < n_j; ++j)
+		float xx = (float(j) / float(n_j-1)) * dim.x;
+		float yy = (float(i) / float(n_i-1)) * dim.y;
+		// 1D Particle ID
+		std::size_t id = i * n_j + j;
+```
+
+Now when in `eval_forces()` we get the particle_neighbours[p] from the fluid object array the ID matches the iteration order of the particles in get_neighbours. Ie in `Fluid_Solver::get_neighbours()` we cache  the Particle Neighbours via Grid adjacent and self cell : 
+
+```C++
+// Fluid_Solver::get_neighbours()
+// [..]
+// Cache Particle Neighbours into array per particle. 
+fluidData->particle_neighbours.clear();
+fluidData->particle_neighbours.resize(fluidData->particles.size());
+for (std::size_t p = 0; p < fluidData->particles.size(); ++p)
+{
+	fluidData->particle_neighbours[p] = accel_grid->get_adjcell_particles \
+	(fluidData-	>particles[p]);
+} 
+```
+
+Which is done in a 1D iter order. Now with the correct particle 2D-1D IDs that match `1:1` with the original particle creation order, we can correctly get the corresponding `std::vector<Particle*>` vector/list within `Fluid_Solver::eval_forces()` when a single particle is passed in via its `.id` member oppose to using a matching for loop as the array (of vectors) was built within `get_neighbours()` as above : 
+
+```c++
+glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
+{
+	// [..]
+	// Get Neighbour list (Using particle ID which 1:1 matches particle iter indices)
+	std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
+    // [..]
+```
+
+Now as the particle creation indices (within emit_square) are correctly laid flat 1D indices they match the resulting particle ID members we use to access the corresponding particle_neighbour vector. 
+
+Non of this was a Accel_Grid issue but the problem came up when debugging this. 
+
+###### Zero Density Issue (Also not actually related to Accel_Grid) : 
 
 Spiky Gradient getting nan's when using accel grid. Density is 0, seems to be a divide by zero caused nan,  why is density 0, is particle not evaling self in neighbourhood density calc with grid, particle should be part of its own cell ? 
 
@@ -770,6 +839,8 @@ Rest Density is a key parameter ofcourse, if there is a larger rest density, the
 Increasing Viscosity and Surface Tension forces won't stop expanding / collapsing behaviours they are usually a product of the smoothing kernel radius been incorrect. It could also be due to integration, initially I was testing with Explicit Euler but need to use Leapfrog. 
 
 Houdini uses a mixed Runge Kutta 1 and 2 Method for integration which seems quite stable compared to leapfrog. 
+
+I think relative to my units Houdini is scaled by 10, because $h = 0.1$ gets similar behaviour to Particle Kernel Radius of $1.0$ in Houdini (Particle Fluid Solver). 
 
 It makes sense for there to be particles that align to the boundaries, this isn't an error. The particles atop of these are then what maintains volume. A way to avoid this would be to use ghost particles along the boundaries that enforce density and thus pressure along the boundaries so all simulated particles react to these directly. Ideally we'd use an approach where we push apart particles further to maintain a more even distribution and stop the particles aligning along the boundary. Its also to do with scaling the velocity after collision but that's needed to stop excessive restitution hence why decomposing to normal and tangential could help as we'd keep tangential vel at full strength but dampen normal velocity (post projection out of boundary).
 
