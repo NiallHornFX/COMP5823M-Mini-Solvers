@@ -418,7 +418,7 @@ float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
 $$
 f_i^{visc} = \mu \sum_j m_j {\textbf{v}_j - \textbf{v}_i \over \rho_j} \nabla^2\omega(r-r_j, h)
 $$
-Where $\mu$ is the kinematic viscosity coefficient as defined in the momentum equation. If viscosity is pushed beyond some value , around 300 but this depends on the fluid resolution (spacing) and kernel radius $h$ we seem to run into nan's occurring not entirely sure the source of these.
+Where $\mu$ is the kinematic viscosity coefficient as defined in the momentum equation. If viscosity is pushed beyond some value , around 300 but this depends on the fluid resolution (spacing) and kernel radius $h$ we seem to run into nan's occurring not entirely sure the source of these. Note I enforce a upper max of the viscosity parameter (as I do for all parameters) within the GUI itself apart from pressure (which is clamped to be positive only) all other values are passed as is, and its assumed they lie within parameter bounds defined by the GUI Slider ranges, I don't do additional value bounds checking within the functions using these parameters themselves. 
 
 The Viscosity force vector is calculated within `Fluid_Solver::eval_forces()` as shown : 
 
@@ -435,13 +435,43 @@ for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
 force_viscosity = k_viscosity * visc_vec;
 ```
 
+Note, as well as viscosity computed as a fluid quantity, we also have "Air Viscosity" aka air reistance force which is calculated prior to integration simply as : $f_i^{airres} = -k\vec{v}$ aka:
 
+ `glm::vec3 air_res = -air_resist * pt.V;`  
+
+This is more of a global force like typical air resistance and generally a small value is used by default to stop any crazy fluid motion, without heavily damping the resulting fluid. 
 
 ____
 
 ##### Surface Tension
 
-For surface tension we are asked to follow Mullers implementation which uses the concept of a "Colour Field" which is essentially scalar / binary grid which is 1 everywhere where fluid is and zero elsewhere (over the whole scene / simulation domain), this can then be differentiated to define a gradient to the surface to use for the surface tension force. 
+For surface tension we are asked to follow Mullers implementation which uses the concept of a "Colour Field" which is defines a field which is 1 everywhere where fluid is and zero elsewhere to define two phases (water and air) over the world space domain / simulation domain, this can then be differentiated to define a gradient to the surface to use for the surface tension force. 
+
+The Colour field is calculated on the particles as : 
+$$
+c(r) = \sum_j m_j {1\over \rho_j}\omega(r-r_j, h)
+$$
+The gradient is then calculated which defines the normal in the direction of the fluid surface. 
+$$
+\nabla c = \hat{n}
+$$
+Curvature is then calculated as : 
+$$
+\kappa = {-\nabla^2 c \over |\nabla c|}
+$$
+Where $- \nabla^2 c$ is the negative divergence of $c$ the colour field. 
+
+The resulting surface tension force is then :
+$$
+f_i^{surf} = -\sigma \nabla^2c {\nabla c \over |\nabla c|}
+$$
+Where $\sigma$ is the surface tension coefficient. 
+
+Stronger curvature yields stronger surface tension force. 
+
+###### Implementation : 
+
+I'm not entirely sure if this is grid based (as shown in the lecture slides) or differentiated as a smoothed quantity, the former would be easier (use a scalar grid), then use FDM to calc the gradient and divergence and Laplacian..
 
 ____
 
@@ -865,7 +895,7 @@ I implemented this and it works fine. The cost of rebuilding is hidden by the UI
 
 Would be nice to visually draw the radius of the kernel via a circle, but this is not a prio. 
 
-The paper reccomends that $h$ is twice the particle spacing, however in my tests, this leads to too much noise, perhaps because of my scene scale, so I default the kernel radius to be twice $h$ but then the user can change this, it will only do this default value on the program start, after this it will be up to the user to change it. Unlike rest_density which gets recomputed on each solver reset by using the max_density store in the fluid_object multiplied by some small epsilon to make it slightly larger than the max density, unless user then changes it. 
+The paper recommends that $h$ is twice the particle spacing, however in my tests, this leads to too much noise, perhaps because of my scene scale, so I default the kernel radius to be twice $h$ but then the user can change this, it will only do this default value on the program start, after this it will be up to the user to change it. Unlike rest_density which gets recomputed on each solver reset by using the max_density store in the fluid_object multiplied by some small epsilon to make it slightly larger than the max density, unless user then changes it. 
 
 ##### Integration
 

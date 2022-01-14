@@ -140,7 +140,7 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 	}
 
 	// Render
-	ren_points->point_size = spc * 55.f;
+	ren_points->point_size = spc * 75.f;
 	ren_points->render();
 }
 

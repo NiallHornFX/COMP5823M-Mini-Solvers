@@ -304,6 +304,10 @@ void Viewer::gui_render()
 	static float pos [2] = { DEF_XP, DEF_YP };
 	static float dim [2] = { DEF_XS, DEF_YS };
 
+	// Get current Kernels
+	std::string kern_pres = ""; 
+	if (fluid_solver->pressure_kernel == Fluid_Solver::kernel::POLY6) kern_pres = "Pressure Kernel : Poly6"; else kern_pres = "Pressure Kernel : Spiky";
+
 	// Fluid Solver Core parameters (Reconstruct if changed)
 	static float kernel_radius = 0.5f;
 
@@ -342,8 +346,9 @@ void Viewer::gui_render()
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Fluid Attributes");
-		ImGui::Text("Particle Count = %d", fluid_object->particles.size());
 		ImGui::PopStyleColor();
+		ImGui::Text("Particle Count : %d", fluid_object->particles.size());
+		ImGui::Text(kern_pres.c_str());
 		ImGui::Text("Mass : %f", fluid_object->particles[0].mass);
 		ImGui::Text("Density : min = %f | max = %f",  fluid_object->min_dens, fluid_object->max_dens);
 		ImGui::Text("Pressure : min = %f | max = %f", fluid_object->min_pres, fluid_object->max_pres);
@@ -372,8 +377,8 @@ void Viewer::gui_render()
 			fluid_solver->simulate = false;
 			delete fluid_object;
 			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
-			fluid_solver->fluidData = fluid_object;
-			fluid_object->solver = fluid_solver;
+			fluid_solver->fluidData = fluid_object; // Pass FluidObj ref to FluidSolver
+			fluid_object->solver = fluid_solver;    // Pass FluidSolver ref to FluidObj
 
 			// Get Neighbours Initally for Hash Debug
 			fluid_solver->get_neighbours();
@@ -421,6 +426,10 @@ void Viewer::gui_render()
 		}
 
 		// Kernel Selection
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Kernel Selection");
+		ImGui::PopStyleColor();
 		if (ImGui::Button("Poly6 Pressure"))
 		{
 			fluid_solver->pressure_kernel = Fluid_Solver::kernel::POLY6;
@@ -433,6 +442,10 @@ void Viewer::gui_render()
 		}
 
 		// Free parameters (min,max enforced here)
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Fluid Solver Controls");
+		ImGui::PopStyleColor();
 		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density,    1.f, 1000.f);
 		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 1000.f);
 		ImGui::SliderFloat("Viscosity", &fluid_solver->k_viscosity,     0.f, 100.f);
@@ -440,6 +453,10 @@ void Viewer::gui_render()
 		ImGui::SliderFloat("AirResist", &fluid_solver->air_resist,       0.f, 5.f);
 
 		// ========== Fluid Rendering ==========
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Render Controls");
+		ImGui::PopStyleColor();
 		// Draw Axis
 		if (ImGui::Button("Draw Origin Axis"))
 		{
