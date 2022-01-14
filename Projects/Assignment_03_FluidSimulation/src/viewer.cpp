@@ -55,7 +55,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 
 	// ============= Fluid Setup =============
 	fluid_object = new Fluid_Object;
-	fluid_solver = new Fluid_Solver((1.f / 196.f), 100.f, 0.5f, fluid_object);
+	fluid_solver = new Fluid_Solver((1.f / 196.f), 0.5f, fluid_object);
 	fluid_object->solver = fluid_solver; 
 
 	// Get Neighbours Initally for Hash Debug
@@ -305,7 +305,7 @@ void Viewer::gui_render()
 	static float dim [2] = { DEF_XS, DEF_YS };
 
 	// Fluid Solver Core parameters (Reconstruct if changed)
-	static float kernel_radius = 0.5; 
+	static float kernel_radius = 0.5f;
 
 	// Get Dt 1/n. 
 	float n = 1.f / fluid_solver->dt;
@@ -414,7 +414,7 @@ void Viewer::gui_render()
 			float dt = fluid_solver->dt, rest_dens = fluid_solver->rest_density, stiff = fluid_solver->stiffness_coeff, g = fluid_solver->gravity, ar = fluid_solver->air_resist;
 			delete fluid_solver;
 			// Alloc solver with updated kernel size
-			fluid_solver = new Fluid_Solver(dt, rest_dens, kernel_radius, fluid_object);
+			fluid_solver = new Fluid_Solver(dt, kernel_radius, fluid_object);
 			fluid_solver->stiffness_coeff = stiff, fluid_solver->gravity = g, fluid_solver->air_resist = ar;
 			// Calc Rest_Density.
 			//fluid_solver->calc_restdens();

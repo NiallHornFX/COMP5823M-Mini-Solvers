@@ -22,6 +22,7 @@
 #define DEF_YS 3.f
 #define DEF_SPC 0.2f
 #define DEF_JIT 0.0f
+
 // FD
 struct Particle; 
 class Fluid_Solver; 

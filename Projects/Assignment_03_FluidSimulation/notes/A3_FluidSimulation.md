@@ -765,6 +765,12 @@ if (r_sqr == 0.f || r_sqr > kernel_radius_sqr) return 0.f;
 
 Only for gradients do we need this check because it uses r_length which if zero will cause a divide by zero nan for normalization of the r vector to form the gradient direction. Pressure calc should not eval over self particles $pt_i \neq pt_j$ so there is no need to check within the kernel func, these checks ideally should be assumed within the kernel function itself and handled externally before passing the r vector (ie that the r vector will never be 0 as the eval forces/pressure neighbour loop excludes self particle). Regardless this issue was not related to the acceleration grid, it was due to me adding the same r vector check to all kernel functions without remembering that density also evals over $Pt_i == Pt_j$. 
 
+Ok with the IDs sorted and the kernel fix (so poly6 doesn't return 0 when r_sqr is 0) and the cell_ext corrected, the spatial acceleration grid is working well. Cell size is fixed to kernel_radius $h$ as recommended in paper. I will also be default kernel_radius $h$ to 2*particle_spacing. 
+
+##### Drawing Grid : 
+
+Want to draw the grid for debug sake (and to show the implementation) but will come back to this later. 
+
 ____
 
 #### Fluid Solver
@@ -812,23 +818,17 @@ I implemented this and it works fine. The cost of rebuilding is hidden by the UI
 
 Would be nice to visually draw the radius of the kernel via a circle, but this is not a prio. 
 
+The paper reccomends that $h$ is twice the particle spacing, however in my tests, this leads to too much noise, perhaps because of my scene scale, so I default the kernel radius to be twice $h$ but then the user can change this, it will only do this default value on the program start, after this it will be up to the user to change it. Unlike rest_density which gets recomputed on each solver reset by using the max_density store in the fluid_object multiplied by some small epsilon to make it slightly larger than the max density, unless user then changes it. 
+
 ##### Integration
 
 We are required to use the Leap Frog integration scheme which while been second order, has the property of been symplectic, which for SPH based solvers (and others like mass spring that have oscillatory Hamilton motion) creates much more stable solves as it can be evaluated forwards and backwards in time (preserves area in phase) even more so than using a higher order integrator. 
 
-Re-Eval forces ? 
+Oppose to doing eval forces as a operation that itself loops over all particles, its done within integration per particle loop via a func call taking in a single particle. This means we don't need to split the Leapfrog integration into two seperate for particle loops. As we calculate per particles forces, we can just return the force, rather than storing it on particle attribute member, but we can do both for now, as we may want to viz / debug it outside the scope of integrate. 
 
-Oppose to doing eval forces as a sepreate per particle operation, its done within integration per particle loop via a func call taking in a single particle. 
+So `Fluid_Solver::integrate()` now calls `Fluid_Solver::eval_forces()` per particle within its particle for loop, `Fluid_Solver::eval_forces(Particle &pt)` takes in a single particle input to calculate forces onto, thus it can be called multiple times within a single integrate loop to eval the forces for multistep integration methods, without needing separate calls and separate particle for loops over all particles to get new forces based on half step integrated positions etc. 
 
-Eval forces should be per particle so we don't need to spilt integration into two particle loops ? 
-
-Do eval forces calls within integration (2 steps) dont even need to store force on pts now (but still will) could just return it directly to body of integrate callee.
-
-Min/Max ranges won't work no more, need to eval these separately over all pts.
-
-Yep so Integrate now calls `Eval_Forces()` per particle within its particle for loop, `Eval_Forces()` takes in a single particle input to calculate forces onto, thus it can be called multiple times within a single integrate loop to eval the forces for multistep integration methods, without needing separate calls and separate particle for loops over all particles to get new forces based on half step integrated postions etc. 
-
-Not we do not recompute density and pressure after half step integration, just forces so density will be based on the pre-integration positions but saves another eval of computing density and pressure (twice in a solve step).
+Note: We do not recompute density and pressure after half step integration, just forces so density will be based on the pre-integration positions but saves another eval of computing density and pressure (twice in a solve step). Likewise we do not rebuild the spatial acceleration grid post integration for the second `Fluid_Solver::eval_forces()` call within `integrate()`, thus the neighbour particles (and thus cells) are based on the particles previous position prior to the half step integration of position (of course the latter half step is purely for velocity integration). Thus I don't think it makes sense to move the accel grid construction each step to be done at the end of the timestep, as doing it as the first thing on the next timestep will then update ready for the new density,pressure and forces calc. 
 
 ##### Simulation behaviour
 
@@ -846,11 +846,7 @@ It makes sense for there to be particles that align to the boundaries, this isn'
 
 Bounce is needed on collisions to avoid fluid becoming compressible too easily, however rather than just flipping velocity as I'm currently doing, will probs decompose into normal and tangential reflection components and control these. 
 
-Also still have the issue that smoothing radius is too large, so probs will need to scale up scene units so that  minimum $h$ of $1.0$ is not an issue. 
-
-##### Issues
-
-Density or Pressure is tending to infinity after some x number of timesteps, not sure what's causing this, results in pressure force been incorrect and exploding...
+Also still have the issue that smoothing radius is too large, so probs will need to scale up scene units so that  minimum $h$ of $1.0$ is not an issue. (As resolved elsewhere, we can use $h \leq 1$ and we do so, to avoid changing the scene scale, but either option would have worked). 
 
 ____
 

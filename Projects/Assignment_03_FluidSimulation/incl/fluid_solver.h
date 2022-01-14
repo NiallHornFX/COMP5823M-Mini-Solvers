@@ -11,11 +11,11 @@
 // GLM
 #include "ext/glm/glm.hpp"
 
+// Forward Decls 
 class Fluid_Object; 
 class Fluid_Collider; 
 class Hash_Grid;
 class Spatial_Grid;
-
 struct Particle; 
 
 #define INLINE __forceinline 
@@ -23,13 +23,15 @@ struct Particle;
 class Fluid_Solver
 {
 public: 
-	Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_Object *Data);
+	Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data);
 	~Fluid_Solver() = default; 
 
 	// Kernel Function Pointers
 	using kernel_func      = float(Fluid_Solver::*) (const glm::vec3 &r);
 	using kernel_grad_func = glm::vec2(Fluid_Solver::*)(const glm::vec3 &r);
 	using kernel_lapl_func = float(Fluid_Solver::*) (const glm::vec3 &r);
+
+	enum kernel { POLY6 = 0, SPIKY, VISC };
 
 	// ======= Operations =======
 	void reset();
@@ -46,6 +48,7 @@ public:
 	void eval_colliders();
 
 	void compute_dens_pres(kernel_func w);
+
 
 	glm::vec3 eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g);
 
@@ -71,6 +74,9 @@ public:
 	Hash_Grid *hg;
 	Spatial_Grid *accel_grid; 
 	bool got_neighbours; 
+
+	// Kernel Selection
+	kernel pressure_kernel, viscosity_kernel, surftens_kernel;
 
 	// ======= Forces =======
 	// Ext Forces

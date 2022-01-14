@@ -15,15 +15,16 @@
 #include "Spatial_Grid.h"
 
 #define INTEGRATE_LEAPFROG  1
-#define DEBUG_TEST_ADJACENT 0 
+#define DEBUG_TEST_ADJACENT 0
 
 
 // ================================== Fluid_Solver Class Implementation ===============================
 
-Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_Object *Data)
-	: fluidData(Data), rest_density(RestDens), kernel_radius(KernelRad), dt(Sim_Dt), at(0.f)
+Fluid_Solver::Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data)
+	: fluidData(Data), kernel_radius(KernelRad), dt(Sim_Dt), at(0.f)
 {
 	// ===== Init Solver =====
+	rest_density = 100.f; 
 	gravity     = -10.0f;
 	air_resist  = 0.5f;
 	k_viscosity = 0.f; 
@@ -34,25 +35,28 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float RestDens, float KernelRad, Fluid_
 	got_neighbours = false; 
 	kernel_radius_sqr = kernel_radius * kernel_radius;
 	rest_density = 8.f; 
-	stiffness_coeff = 1.f; 
+	stiffness_coeff = 500.f; 
 
+	// Default Kernels 
+	pressure_kernel  = kernel::SPIKY; // (Should be default poly6 for assignment demo, then switch to spiky)
+	viscosity_kernel = kernel::VISC;
+	surftens_kernel  = kernel::POLY6;
+	
 	// ===== Setup Tank Collider Planes =====
 	Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left",  glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(7.5f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *floor = new Fluid_Collider_Plane("Tank_Floor", glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec2(5.0f, 0.f));
-	colliders.push_back(std::move(left));
-	colliders.push_back(std::move(right));
-	colliders.push_back(std::move(floor));
+	colliders.push_back(std::move(left)); colliders.push_back(std::move(right)); colliders.push_back(std::move(floor));
 
 	// ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
-	// Poly 6
+	// Poly6
 	poly6_s      =  315.f  / (64.f * M_PI  * std::powf(kernel_radius, 9.f));
 	poly6_grad_s = -945.f  / (32.f * M_PI  * std::powf(kernel_radius, 9.f));
 	// Spiky
 	spiky_s      = 15.f  / (M_PI * std::powf(kernel_radius, 6.f));
 	spiky_grad_s = -45.f / (M_PI * std::powf(kernel_radius, 6.f));
 	// Viscosity
-	visc_lapl_s  = 45.f  / (M_PI * std::powf(kernel_radius, 5.f));
+	visc_lapl_s  = 45.f  / (M_PI * std::powf(kernel_radius, 6.f));
 }
 
 // Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler
@@ -98,6 +102,7 @@ void Fluid_Solver::reset()
 void Fluid_Solver::step()
 {
 	get_neighbours();
+
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
 	eval_colliders();
 	integrate();
@@ -224,11 +229,7 @@ void Fluid_Solver::get_neighbours()
 void Fluid_Solver::compute_dens_pres(kernel_func w)
 {	
 	// Check Hash Grid has been evaulated
-	if (!got_neighbours)
-	{
-		std::cerr << "ERROR::Frame::" << frame << " Fluid_Solver::Particles Neighbours not caluclated via Hash Grid" << std::endl;
-		return; 
-	}
+	if (!got_neighbours) { std::cerr << "ERROR::Frame::" << frame << " Fluid_Solver::Particles Neighbours not retrived from grid" << std::endl; return; }
 
 	fluidData->min_dens = 1e06f, fluidData->max_dens = 0.f, fluidData->min_pres = 1e06f, fluidData->max_pres = 0.f;
 	for (std::size_t p_i = 0; p_i < fluidData->particles.size(); ++p_i)
@@ -238,10 +239,8 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 
 		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
 		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
-		//for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
 		{
 			const Particle &Pt_j = *(neighbours[p_j]);
-			//const Particle &Pt_j = fluidData->particles[p_j];
 			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
@@ -263,44 +262,53 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
 {
 	// Check Hash Grid has been evaulated
-	if (!got_neighbours)
-	{
-		std::cerr << "ERROR::Frame::" << frame << " Fluid_Solver::Particles Neighbours not caluclated via Hash Grid" << std::endl;
-		return glm::vec3(0.f);
-	}
-
-	glm::vec3 force_pressure (0.f); 
-	//glm::vec3 force_surftension;
-	//glm::vec3 force_viscosity; 
+	if (!got_neighbours) { std::cerr << "ERROR::Frame::" << frame << " Fluid_Solver::Particles Neighbours not retrived from grid" << std::endl;  return glm::vec3(0.f); }
 
 	// Reset Particle forces 
 	Pt_i.F.x = 0.f, Pt_i.F.y = 0.f, Pt_i.F.z = 0.f;
 
+	glm::vec3 force_pressure    (0.f); 
+	glm::vec3 force_viscosity   (0.f);
+	glm::vec3 force_surftension (0.f);
+
 	// Get Neighbour list
 	std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
 
+	// Use sep loops for now...
+
 	// =============== Compute Pressure Gradient --> Pressure Force ===============
 	glm::vec2 pressure_grad(0.f);
-	//for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
-	for (std::size_t p_j = 0; p_j < fluidData->particles.size(); ++p_j)
+	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
 	{
-		//const Particle &Pt_j = *(neighbours[p_j]);
-		const Particle &Pt_j = fluidData->particles[p_j];
+		const Particle &Pt_j = *(neighbours[p_j]);
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
-		glm::vec2 tmp =  Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
-		pressure_grad += tmp; 
+
+		// Compute Symmetric Pressure gradient for particle pair
+		pressure_grad += Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
 	}
 	force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
 
+	/*
 	// =============== Compute Viscosity Laplacian --> Viscosity Force ===============
+	glm::vec3 visc_vec(0.f);
+	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+	{
+		const Particle &Pt_j = *(neighbours[p_j]);
+		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 
+		// Compute Symmetric Viscosity for particle pair
+		visc_vec += Pt_j.mass * ((Pt_j.V - Pt_i.V) / Pt_j.density) * kernel_visc_laplacian(Pt_i.P - Pt_j.P);
+	}
+	force_viscosity = k_viscosity * visc_vec;
 
 	// =============== Compute Surface Gradient --> Surface Tension Force ===============
-
+	// tbd ...
 
 	// Accumulate forces
+	glm::vec3 acc_force = force_pressure + force_viscosity;
 	// ret instead of write to Pt.F
-	return force_pressure; 
+	*/
+	return force_pressure;
 }
 // ================================== Util Functions ===============================
 // Info : Calc an estimate of the rest density from the maxium density value * some offset. 
@@ -313,7 +321,10 @@ void Fluid_Solver::calc_restdens()
 }
 
 // ================================== Kernel Functions ===============================
+// Info : Smoothing Kernel functions and their derivatives, using pre-caluclated scalar coefficents, based on
+// kernel radius h.
 
+// ========== Smooting Kernel - Poly6 ==========
 float Fluid_Solver::kernel_poly6(const glm::vec3 &r)
 {
 	float r_sqr = glm::dot(r, r);
@@ -336,6 +347,7 @@ glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
 	return val;
 }
 
+// ========== Smooting Kernel - Spiky ==========
 float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
@@ -357,10 +369,12 @@ glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 	return val; 
 }
 
+// ========== Smooting Kernel - Viscosity ==========
 float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
 	// Outside Smoothing Radius ? Ret 0.
 	if (r_l > kernel_radius) return 0.f; 
-	return visc_lapl_s * (1.f - (r_l / kernel_radius));
+	//return visc_lapl_s * (1.f - (r_l / kernel_radius));
+	return visc_lapl_s * (kernel_radius - r_l);
 }
