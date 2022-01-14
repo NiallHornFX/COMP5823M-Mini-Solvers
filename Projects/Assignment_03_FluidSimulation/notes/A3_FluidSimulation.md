@@ -197,7 +197,7 @@ $$
 
 (Will derive Later...)
 $$
-\nabla^2\omega_{visc}(r,h) = {45\over \pi h^5}\cdot (1 - {||r||\over h})
+\nabla^2\omega_{visc}(r,h) = {45\over \pi h^5}\cdot (h-||r||)
 $$
 
 
@@ -336,6 +336,8 @@ Using the above Smoothing Kernels and Weighted Average function to computes quan
 
 This will be done within `Fluid_Solver::eval_forces()` which itself will invoke separate force eval functions. 
 
+Pressure, Viscosity and Surface Tension forces are each computed individually, and then summed together to define the particle force (these will then be scaled by the density prior to integration). 
+
 ##### Pressure
 
 As we don't use the Projection method for SPH, we use pressure computed from density, to define the negative pressure gradient force to apply to the particles to approximate incompressibility. To calculate this we need to get the density at each particle via the smoothing kernel from this we can derive areas of high pressure from high density and use a negative pressure gradient based force to move particles to areas of lower pressure. 
@@ -394,11 +396,44 @@ ____
 
 I may have some general damping that's done by multiplying velocity by $0.999$ each timestep or something similar, just to ensure the fluid does settle even if viscosity force is not used at all. 
 
-The Kernel function we use in the Viscosity Kernel Laplacian derived by Muller in the reference paper. 
+The Kernel function we use in the Viscosity Kernel Laplacian derived by Muller in the reference paper, and denoted above. Also shown here : 
+$$
+\nabla^2\omega_{visc}(r,h) = {45\over \pi h^5}\cdot (h - ||r||)
+$$
+This is implemented via : 
+
+```C++
+float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
+{
+	float r_l = glm::length(r);
+	// Outside Smoothing Radius ? Ret 0.
+	if (r_l > kernel_radius) return 0.f; 
+	return visc_lapl_s * (kernel_radius - r_l);
+}
+```
 
 
 
+ The computation of the viscosity force is done symmetrically by using both particles velocity to define velocity difference : 
+$$
+f_i^{visc} = \mu \sum_j m_j {\textbf{v}_j - \textbf{v}_i \over \rho_j} \nabla^2\omega(r-r_j, h)
+$$
+Where $\mu$ is the kinematic viscosity coefficient as defined in the momentum equation. If viscosity is pushed beyond some value , around 300 but this depends on the fluid resolution (spacing) and kernel radius $h$ we seem to run into nan's occurring not entirely sure the source of these.
 
+The Viscosity force vector is calculated within `Fluid_Solver::eval_forces()` as shown : 
+
+```C++
+glm::vec3 visc_vec(0.f);
+for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+{
+    const Particle &Pt_j = *(neighbours[p_j]);
+    if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
+
+    // Compute Symmetric Viscosity for particle pair
+    visc_vec += Pt_j.mass * ((Pt_j.V - Pt_i.V) / Pt_j.density) * (this->*w_visc_lapl) (Pt_i.P - Pt_j.P);
+}
+force_viscosity = k_viscosity * visc_vec;
+```
 
 
 
@@ -859,6 +894,8 @@ It makes sense for there to be particles that align to the boundaries, this isn'
 Bounce is needed on collisions to avoid fluid becoming compressible too easily, however rather than just flipping velocity as I'm currently doing, will probs decompose into normal and tangential reflection components and control these. 
 
 Also still have the issue that smoothing radius is too large, so probs will need to scale up scene units so that  minimum $h$ of $1.0$ is not an issue. (As resolved elsewhere, we can use $h \leq 1$ and we do so, to avoid changing the scene scale, but either option would have worked). 
+
+If kernel radius $h$ is too larger for the particle spacing, you will see a visible gap between the particles that define the "free surface" and that lie on the boundaries vs the interior particles. 
 
 ____
 

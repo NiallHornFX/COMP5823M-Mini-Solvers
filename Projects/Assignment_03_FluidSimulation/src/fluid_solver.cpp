@@ -295,8 +295,6 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 	force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
 
 
-
-	/*
 	// =============== Compute Viscosity Laplacian --> Viscosity Force ===============
 	glm::vec3 visc_vec(0.f);
 	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
@@ -315,8 +313,7 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 	// Accumulate forces
 	glm::vec3 acc_force = force_pressure + force_viscosity;
 	// ret instead of write to Pt.F
-	*/
-	return force_pressure;
+	return acc_force;
 }
 // ================================== Util Functions ===============================
 // Info : Calc an estimate of the rest density from the maxium density value * some offset. 
@@ -383,6 +380,5 @@ float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
 	float r_l = glm::length(r);
 	// Outside Smoothing Radius ? Ret 0.
 	if (r_l > kernel_radius) return 0.f; 
-	//return visc_lapl_s * (1.f - (r_l / kernel_radius));
 	return visc_lapl_s * (kernel_radius - r_l);
 }
