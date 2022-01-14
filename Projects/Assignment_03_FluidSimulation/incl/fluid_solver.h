@@ -49,8 +49,7 @@ public:
 
 	void compute_dens_pres(kernel_func w);
 
-
-	glm::vec3 eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g);
+	glm::vec3 eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad, kernel_grad_func w_surf_grad, kernel_lapl_func w_visc_lapl);
 
 	void integrate();
 
@@ -76,7 +75,7 @@ public:
 	bool got_neighbours; 
 
 	// Kernel Selection
-	kernel pressure_kernel, viscosity_kernel, surftens_kernel;
+	kernel pressure_kernel, surftens_kernel;
 
 	// ======= Forces =======
 	// Ext Forces

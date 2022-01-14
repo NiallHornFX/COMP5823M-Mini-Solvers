@@ -320,6 +320,8 @@ The smoothing Kernel used in this case will be the Poly6.
 
 As noted elsewhere, unlike for pressure calculation, we do want to evaluate the $j'th$ particle when it equals the $i'th$ particle that defines the $x$ position, ie we don't skip when $pt_j = pt_i$ otherwise if $pt_i$ is seperated it will yield zero density value on its self, it should always still evaluate its own density as the resulting $\rho_i$ value. Zero density on particles also creates problems elsewhere as we use density for weighting having $\rho = 0 $ can result in nans from divide by zero. 
 
+Because we need to demonstrate the pressure gradient calculated using Poly6 Gradient and this leads to density yielding 0 for some particles (not sure why as Poly6 is always used for density regardless of the chosen kernel gradient used for pressure or surf tens calc), the solution to this is enforce a small minimum density of some epsilon to prevent divide by zero errors, we start with this $\rho = 1e-02f$ value for example and then accumulate the particle density atop of this. 
+
 ##### Adding Mass 
 
 Its not a correct way to go about it by assuming if mass is 1 for all particles, we can neglect it. Because Mass itself should be calculated from total particle count (or particle neighbour count) so that as particle spacing decreases the resulting density and behaviour is more correctly scaled, without needing to retune the parameters. 
@@ -801,6 +803,10 @@ Integrate(P)
 ```
 
 It will actually be a mix of approaches, ie I need `EvalForces()` to operate on single particles passed in, oppose to looping itself internally, so I can call it within the Integration function to eval the RHS forces twice within a single Integration call (for multi-step integrators ie Leap-Frog, Runge Kutta etc) without splitting into multiple for (all particle) calls. 
+
+##### Time Stepping
+
+Initially I was going to use the same approach I did for the cloth solver, where we have an accumulated time approach to ensure the number of solver timesteps (substeps) taken per solver tick, is relative to the viewer applications delta time. However for this, with the solve step been much more costly, I may just use a fixed single step per tick. The Physics timestep can still be changed via the viewer, but the number of solve steps per ticks is no longer tied to the viewer application (game threads) delta time. This is not an ideal approach, but this is a dummy project and I'd rather suffice accurate time stepping for faster solve time as optimization time is very limited.  
 
 ##### Simulation Loop Implementation
 

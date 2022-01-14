@@ -39,7 +39,6 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data)
 
 	// Default Kernels 
 	pressure_kernel  = kernel::SPIKY; // (Should be default poly6 for assignment demo, then switch to spiky)
-	viscosity_kernel = kernel::VISC;
 	surftens_kernel  = kernel::POLY6;
 	
 	// ===== Setup Tank Collider Planes =====
@@ -98,20 +97,17 @@ void Fluid_Solver::reset()
 	fluidData->reset_fluid();
 }
 
-// Info : Single Simulation Step of Cloth Solver 
+// Info : Single simulation step of SPH Solver
 void Fluid_Solver::step()
 {
+	// Build Acceleration Grid and cache particle neighbours
 	get_neighbours();
-
+	// Compute Density and from this pressure using some smoothing kernel.
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
+	// Check for collisions and project offending particles. 
 	eval_colliders();
+	// Calculcate resulting forces and integrate
 	integrate();
-
-	// Get Particle Neighbours (HashGrid)
-	// Compute Particle Density + Pressure
-	// Compute Particle Forces
-	// Integrate Particle Forces
-	// Eval Particle Collisions
 }
 
 // Info : Evaulate Collisions using passed colliders.
@@ -137,10 +133,12 @@ void Fluid_Solver::render_colliders(const glm::mat4 &ortho)
 
 void Fluid_Solver::integrate()
 {
-	// Chosen Kernel Functions
-	kernel_func      kernel = &Fluid_Solver::kernel_poly6;
-	//kernel_grad_func grad = &Fluid_Solver::kernel_poly6_gradient;
-	kernel_grad_func grad = &Fluid_Solver::kernel_spiky_gradient;
+	// Chosen Kernel Functions based on GUI 
+	kernel_func      attr_kernel = &Fluid_Solver::kernel_poly6;          // Attribs always sampled using Poly6. 
+	kernel_lapl_func visc_lapl_k = &Fluid_Solver::kernel_visc_laplacian; // Viscosity always uses Visc Kernel Laplacian. 
+	// Pressure and Surface Tension may use ethier Poly6 or Spiky Gradient kernel functions. 
+	kernel_grad_func pres_grad = pressure_kernel == kernel::POLY6 ? &Fluid_Solver::kernel_poly6_gradient : &Fluid_Solver::kernel_spiky_gradient;
+	kernel_grad_func surf_grad = surftens_kernel == kernel::POLY6 ? &Fluid_Solver::kernel_poly6_gradient : &Fluid_Solver::kernel_spiky_gradient;
 
 	// Ext Forces 
 	glm::vec3 g(0.f, gravity, 0.f); 
@@ -171,16 +169,16 @@ void Fluid_Solver::integrate()
 		if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
 		
 		// Eval RHS forces 0 
-		glm::vec3 a_0 = (eval_forces(pt, kernel, grad) * r_dens) + g + air_res;
+		glm::vec3 a_0 = (eval_forces(pt, pres_grad, surf_grad, visc_lapl_k) * r_dens) + g + air_res;
 		// Integrate P 
 		pt.P += (pt.V * dt) + (0.5f * a_0 * (dt*dt));
 
 		// Eval RHS forces 1
-		glm::vec3 a_1 = (eval_forces(pt, kernel, grad) * r_dens) + g + air_res;
+		glm::vec3 a_1 = (eval_forces(pt, pres_grad, surf_grad, visc_lapl_k) * r_dens) + g + air_res;
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
 
-		// Store Min/Max sqr_force
+		// Store Min/Max Attribs, post integration
 		float f_s = glm::dot(a_1, a_1);
 		if (f_s < fluidData->min_force) fluidData->min_force = f_s; 
 		if (f_s > fluidData->max_force) fluidData->max_force = f_s; 
@@ -235,7 +233,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 	for (std::size_t p_i = 0; p_i < fluidData->particles.size(); ++p_i)
 	{
 		Particle &Pt_i = fluidData->particles[p_i];
-		float dens_tmp = 0.0f; 
+		float dens_tmp = 0.0f; // Start w small min density. 
 
 		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
 		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
@@ -256,10 +254,10 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 	}
 	if (frame == 0) rest_density = fluidData->max_dens * 1.01f; // Use as inital rest_dens
 
-	for (Particle &pt : fluidData->particles) if (pt.density == 0.f) throw std::runtime_error("0 Dens");
+	//for (Particle &pt : fluidData->particles) if (pt.density == 0.f) throw std::runtime_error("0 Dens");
 }
 
-glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_func w_g)
+glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad, kernel_grad_func w_surf_grad, kernel_lapl_func w_visc_lapl)
 {
 	// Check Hash Grid has been evaulated
 	if (!got_neighbours) { std::cerr << "ERROR::Frame::" << frame << " Fluid_Solver::Particles Neighbours not retrived from grid" << std::endl;  return glm::vec3(0.f); }
@@ -284,7 +282,7 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 
 		// Compute Symmetric Pressure gradient for particle pair
-		pressure_grad += Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_g)(Pt_i.P - Pt_j.P);
+		pressure_grad += Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_pres_grad)(Pt_i.P - Pt_j.P);
 	}
 	force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
 
@@ -297,7 +295,7 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_func w, kernel_grad_f
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 
 		// Compute Symmetric Viscosity for particle pair
-		visc_vec += Pt_j.mass * ((Pt_j.V - Pt_i.V) / Pt_j.density) * kernel_visc_laplacian(Pt_i.P - Pt_j.P);
+		visc_vec += Pt_j.mass * ((Pt_j.V - Pt_i.V) / Pt_j.density) * (this->*w_visc_lapl)(Pt_i.P - Pt_j.P);
 	}
 	force_viscosity = k_viscosity * visc_vec;
 

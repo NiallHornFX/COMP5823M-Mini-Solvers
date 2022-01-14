@@ -311,7 +311,6 @@ void Viewer::gui_render()
 	float n = 1.f / fluid_solver->dt;
 	static int tmp_count = 90;
 
-
 	// ============= Imgui layout =============
 	{
 		// Begin ImGui
@@ -419,6 +418,18 @@ void Viewer::gui_render()
 			// Calc Rest_Density.
 			//fluid_solver->calc_restdens();
 			fluid_object->solver = fluid_solver;
+		}
+
+		// Kernel Selection
+		if (ImGui::Button("Poly6 Pressure"))
+		{
+			fluid_solver->pressure_kernel = Fluid_Solver::kernel::POLY6;
+			std::cout << "Fluid Solver::Pressure Kernel = Poly6 Gradient\n";
+		}
+		if (ImGui::Button("Spiky Pressure"))
+		{
+			fluid_solver->pressure_kernel = Fluid_Solver::kernel::SPIKY;
+			std::cout << "Fluid Solver::Pressure Kernel = Spiky Gradient\n";
 		}
 
 		// Free parameters 
