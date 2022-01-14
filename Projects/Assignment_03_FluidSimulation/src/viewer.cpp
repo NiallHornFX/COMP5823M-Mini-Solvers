@@ -385,8 +385,8 @@ void Viewer::gui_render()
 			delete fluid_object;
 			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
 			fluid_object->particle_colour = old_pc;
-			fluid_solver->fluidData = fluid_object;
-			fluid_object->solver = fluid_solver;
+			fluid_solver->fluidData = fluid_object;  // Pass FluidObj ref to FluidSolver
+			fluid_object->solver = fluid_solver;     // Pass FluidSolver ref to FluidObj
 
 			// Get Neighbours Initally for Hash Debug
 			fluid_solver->get_neighbours();

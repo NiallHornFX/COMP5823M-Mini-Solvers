@@ -34,18 +34,23 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data)
 	simulate    = false;
 	got_neighbours = false; 
 	kernel_radius_sqr = kernel_radius * kernel_radius;
-	rest_density = 8.f; 
 	stiffness_coeff = 500.f; 
 
 	// Default Kernels 
 	pressure_kernel  = kernel::SPIKY; // (Should be default poly6 for assignment demo, then switch to spiky)
 	surftens_kernel  = kernel::POLY6;
 	
-	// ===== Setup Tank Collider Planes =====
+	// ===== Setup Tank Boundary Collider Planes =====
 	Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left",  glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(7.5f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *floor = new Fluid_Collider_Plane("Tank_Floor", glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec2(5.0f, 0.f));
 	colliders.push_back(std::move(left)); colliders.push_back(std::move(right)); colliders.push_back(std::move(floor));
+
+	// ===== Setup Domain Boundary Collider Planes =====
+	Fluid_Collider_Plane *py_bnd = new Fluid_Collider_Plane("Y_PosBnd", glm::vec3(0.f,  10.0f, 0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec2(10.0f, 0.f));
+	Fluid_Collider_Plane *nx_bnd = new Fluid_Collider_Plane("X_NegBnd", glm::vec3(0.f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f), glm::vec2(0.0f, 10.f));
+	Fluid_Collider_Plane *px_bnd = new Fluid_Collider_Plane("X_PosBnd", glm::vec3(10.f, 0.0f, 0.f), glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 10.f));
+	colliders.push_back(std::move(nx_bnd)); colliders.push_back(std::move(px_bnd)); colliders.push_back(std::move(py_bnd));
 
 	// ===== Pre Compute Kernel + Derivative Scalar Coeffecints =====
 	// Poly6
@@ -133,7 +138,7 @@ void Fluid_Solver::render_colliders(const glm::mat4 &ortho)
 
 void Fluid_Solver::integrate()
 {
-	// Chosen Kernel Functions based on GUI 
+	// ======= Chosen Kernel Functions based on GUI =======
 	kernel_func      attr_kernel = &Fluid_Solver::kernel_poly6;          // Attribs always sampled using Poly6. 
 	kernel_lapl_func visc_lapl_k = &Fluid_Solver::kernel_visc_laplacian; // Viscosity always uses Visc Kernel Laplacian. 
 	// Pressure and Surface Tension may use ethier Poly6 or Spiky Gradient kernel functions. 
@@ -203,6 +208,8 @@ void Fluid_Solver::get_neighbours()
 	for (std::size_t p = 0; p < fluidData->particles.size(); ++p)
 	{
 		fluidData->particle_neighbours[p] = accel_grid->get_adjcell_particles(fluidData->particles[p]);
+		// if particle has no neighbours, delete it. 
+		//if (!fluidData->particle_neighbours[p].size()) fluidData->particles.erase(fluidData->particles.begin() + p);
 	} 
 
 #if DEBUG_TEST_ADJACENT == 1
@@ -239,7 +246,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
 		{
 			const Particle &Pt_j = *(neighbours[p_j]);
-			dens_tmp += Pt_j.mass * (this->*w)(Pt_i.P - Pt_j.P);
+			dens_tmp += Pt_j.mass * kernel_poly6(Pt_i.P - Pt_j.P);
 		}
 		Pt_i.density = dens_tmp; 
 
@@ -254,7 +261,8 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 	}
 	if (frame == 0) rest_density = fluidData->max_dens * 1.01f; // Use as inital rest_dens
 
-	//for (Particle &pt : fluidData->particles) if (pt.density == 0.f) throw std::runtime_error("0 Dens");
+	// Debug Ensure no particle has zero density...
+	//if (fluidData->min_dens == 0.f) throw std::runtime_error("0 Dens Error");
 }
 
 glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad, kernel_grad_func w_surf_grad, kernel_lapl_func w_visc_lapl)
@@ -280,11 +288,13 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 	{
 		const Particle &Pt_j = *(neighbours[p_j]);
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
-
+		if (Pt_j.density == 0.f) throw std::runtime_error("0 Dens pt");
 		// Compute Symmetric Pressure gradient for particle pair
 		pressure_grad += Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_pres_grad)(Pt_i.P - Pt_j.P);
 	}
 	force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
+
+
 
 	/*
 	// =============== Compute Viscosity Laplacian --> Viscosity Force ===============
