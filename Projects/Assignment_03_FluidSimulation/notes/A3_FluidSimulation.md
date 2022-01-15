@@ -459,15 +459,25 @@ Stronger curvature yields stronger surface tension force, curvature is then calc
 
 Curvature is then calculated as : 
 $$
-\kappa = {-\nabla^2 c \over |\nabla c|}
+\kappa = -\nabla^2c
 $$
-Where $- \nabla^2 c$ is the Laplacian ie the negative divergence of the gradient of $c$ the colour field. 
+I.e. The Laplacian / negative divergence of the gradient of $c$ the colour field. 
 
 The resulting surface tension force is then :
 $$
 f_i^{surf} = -\sigma \nabla^2c {\nabla c \over |\nabla c|}
 $$
 Where $\sigma$ is the surface tension coefficient. . As per the paper only evaluate the gradient normalization if the length is beyond a certain threshold (to prevent nans when particle is not close to surface and thus normal length is zero or near zero).
+
+Calculate gradient, then Laplacian separately, not using divergence of the gradient. Can still be done in the same loop though.
+
+Sign is wrong $-\sigma$ seems to yield the incorrect direction (thus pushing away from surface).
+
+Because surf tension will ofc pull fluid closer, make the rest_density smaller (perhaps than the min density specified by the solver) so the pressure solve correctly compensates. 
+
+High pressure areas will break the surface tension apart and then cause reformation of those droplets. 
+
+Note my pressure solve is still clamped to positive pressure only (to maintain volume) hence why the surface tension force is needed and can be controlled oppose to using pressure of both signs which is only controllable via rest_density and stiffness and trying to prevent surface tension in the pressure solve can cause the volume of the fluid (via positive pressure) to be lost. 
 
 ###### Implementation : 
 

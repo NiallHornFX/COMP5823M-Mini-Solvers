@@ -89,7 +89,7 @@ public:
 	float kernel_radius, kernel_radius_sqr; // h
 
 	// Precomputed Kernel + Derivative Scalar Coeffecients 
-	float poly6_s, spiky_s; 
+	float poly6_s,      spiky_s; 
 	float poly6_grad_s, spiky_grad_s; 
 	float visc_lapl_s; 
 

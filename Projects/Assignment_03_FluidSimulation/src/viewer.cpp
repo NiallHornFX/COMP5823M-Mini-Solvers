@@ -450,7 +450,8 @@ void Viewer::gui_render()
 		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density,    1.f, 1000.f);
 		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 1000.f);
 		ImGui::SliderFloat("Viscosity", &fluid_solver->k_viscosity,     0.f, 100.f);
-		ImGui::SliderFloat("Gravity"  , &fluid_solver->gravity,        -10.f, 10.f);
+		ImGui::SliderFloat("SurfTens",  &fluid_solver->k_surftens,      0.f, 100.f);
+		ImGui::SliderFloat("Gravity",   &fluid_solver->gravity,        -10.f, 10.f);
 		ImGui::SliderFloat("AirResist", &fluid_solver->air_resist,       0.f, 5.f);
 
 		// ========== Fluid Rendering ==========
