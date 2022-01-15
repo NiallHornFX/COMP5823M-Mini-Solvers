@@ -325,12 +325,10 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 		col_lapl += Pt_j.mass * (Pt_j.cf / Pt_j.density) * kernel_visc_laplacian(Pt_i.P - Pt_j.P);
 	}
 
-	// Check if gradient length is non zero
+	// Check if colour field gradient length is non zero
 	if (!glm::dot(col_grad, col_grad)) force_surftension = glm::vec3(0.f);
 	// Should be neg sigma, but must have a wrong sign somewhere ... 
 	else force_surftension = k_surftens * col_lapl * glm::vec3(glm::normalize(col_grad), 0.f);
-
-	//col_grad *= 1000.f; 
 
 	// Accumulate forces
 	glm::vec3 acc_force = force_pressure + force_viscosity + force_surftension;

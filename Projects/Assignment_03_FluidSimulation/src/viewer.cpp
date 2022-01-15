@@ -393,11 +393,8 @@ void Viewer::gui_render()
 			fluid_object->particle_colour = old_pc;
 			fluid_solver->fluidData = fluid_object;  // Pass FluidObj ref to FluidSolver
 			fluid_object->solver = fluid_solver;     // Pass FluidSolver ref to FluidObj
-
-			// Get Neighbours Initally for Hash Debug
-			fluid_solver->get_neighbours();
 		}
-		if (ImGui::SliderFloat("Fluid Jitter", &jit, 0.f, 2.f))
+		if (ImGui::SliderFloat("Fluid Jitter", &jit, 0.f, 1.f))
 		{
 			fluid_solver->simulate = false;
 			Fluid_Object::Colour_Viz old_pc = fluid_object->particle_colour;
@@ -406,24 +403,19 @@ void Viewer::gui_render()
 			fluid_object->particle_colour = old_pc;
 			fluid_solver->fluidData = fluid_object; // Pass FluidObj ref to FluidSolver
 			fluid_object->solver = fluid_solver;    // Pass FluidSolver ref to FluidObj
-
-			// Get Neighbours Initally for Hash Debug
-			fluid_solver->get_neighbours();
 		}
 
 		// Causes rebuild of Fluid_Solver if changed (this is so kernel coeffs can be pre-computed) 
 		if (ImGui::SliderFloat("Kernel Radius", &kernel_radius, 0.1f, 2.f))
 		{
+			// Store old state and dealloc solver
 			fluid_solver->simulate = false;
-			// Store old data 
 			float dt = fluid_solver->dt, rest_dens = fluid_solver->rest_density, stiff = fluid_solver->stiffness_coeff, g = fluid_solver->gravity, ar = fluid_solver->air_resist;
 			delete fluid_solver;
-			// Alloc solver with updated kernel size
+			// Alloc new solver with updated kernel size
 			fluid_solver = new Fluid_Solver(dt, kernel_radius, fluid_object);
 			fluid_solver->stiffness_coeff = stiff, fluid_solver->gravity = g, fluid_solver->air_resist = ar;
-			// Calc Rest_Density.
-			//fluid_solver->calc_restdens();
-			fluid_object->solver = fluid_solver;
+			fluid_object->solver = fluid_solver; // Pass FluidSolver ref to FluidObj
 		}
 
 		// Kernel Selection

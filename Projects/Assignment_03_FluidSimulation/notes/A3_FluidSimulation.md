@@ -455,37 +455,105 @@ The gradient is then calculated which defines the normal in the direction of the
 $$
 \nabla c = \hat{n}
 $$
-Stronger curvature yields stronger surface tension force, curvature is then calculated using the divergence of the gradient. 
-
-Curvature is then calculated as : 
+Stronger curvature yields stronger surface tension force, curvature is then calculated using the divergence of the gradient. Curvature is then calculated as the Laplacian / negative divergence of the gradient of $c$ the colour field.  : 
 $$
 \kappa = -\nabla^2c
 $$
-I.e. The Laplacian / negative divergence of the gradient of $c$ the colour field. 
-
 The resulting surface tension force is then :
 $$
 f_i^{surf} = -\sigma \nabla^2c {\nabla c \over |\nabla c|}
 $$
 Where $\sigma$ is the surface tension coefficient. . As per the paper only evaluate the gradient normalization if the length is beyond a certain threshold (to prevent nans when particle is not close to surface and thus normal length is zero or near zero).
 
-Calculate gradient, then Laplacian separately, not using divergence of the gradient. Can still be done in the same loop though.
+###### Colour Field
 
-Sign is wrong $-\sigma$ seems to yield the incorrect direction (thus pushing away from surface).
+The Colour field is implemented as a particle quantity and thus a field defined over particles (like any other quantity) the paper uses the term field which initially made me wonder if this should be grid based (and the lecture slides show this) but given that the calculation of the colour field is done over particles it makes no sense using a grid, also field doesn't necessarily mean grid, ie the velocity field of a lagrangian method (eg SPH) is defined on particles as is the density, pressure and so forth. 
+
+I'm not entirely sure if this is grid based (as shown in the lecture slides) or differentiated as a smoothed quantity, the former would be easier (use a scalar grid), then use FDM to calc the gradient and divergence and Laplacian. I think we can do it without a grid, because we just use the poly6 or spiky gradient to calc the gradient of the resulting colour field quantity on particles. Then from this we need to calculate the divergence, but instead it makes more sense to compute the Laplacian directly (as well as the gradient for the direction).
+
+The purposed colour field quantity calculation in the paper does not yield a value that is $[0,1]$ its more like $[0.5,1.5]$. Unless I'm doing something wrong. Visualizing the range does seem to be correctly defining interior fluid region though, with particles that are at the surface edges been near black vs white particles within fluid region. I don't see any gain from using a grid, because we only calculate where there is particles anyway, so we'd have to check for active cells etc. 
+
+As per above, per particle the Colour Field is calculated using the Poly6 Kernel via : 
+$$
+c(r) = \sum_j m_j {1\over \rho_j}\omega(r-r_j, h)
+$$
+I do this in a member function which is called within `Fluid_Solver::step()` so that it only is calculated once per step (if we do it in `Fluid_Solver::eval_forces()` it would be re-calculated each call, per particle). This is implemented as so : 
+
+```C++
+// Info : Calc Colour Field of fluid particls
+void Fluid_Solver::calc_colour_field()
+{
+	fluidData->min_cf = 1e06f, fluidData->max_cf = 0.f;
+	for (std::size_t p_i = 0; p_i < fluidData->particles.size(); ++p_i)
+	{
+		Particle &Pt_i = fluidData->particles[p_i];
+		Pt_i.cf = 0.f; // Reset
+		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
+		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+		{
+			const Particle &Pt_j = *(neighbours[p_j]);
+			Pt_i.cf += Pt_j.mass * (1.f / Pt_j.density) * kernel_poly6(Pt_i.P - Pt_j.P);
+		}
+		// Store min max colour field values for debug / viz sake. 
+		if (Pt_i.cf < fluidData->min_cf) fluidData->min_cf = Pt_i.cf; 
+		if (Pt_i.cf > fluidData->max_cf) fluidData->max_cf = Pt_i.cf;
+	}
+}
+```
+
+Then within `Fluid_Solver::eval_forces()` we need to calculate the Gradient and Laplacian of the the colour field on the particles (per particle) to define the surface tension force. 
+
+Note that we calculate the gradient first, then Laplacian separately, not using divergence of the gradient directly, we use the Laplacian viscosity kernel as its what I have implemented but could use Poly6 Kernel (as its second derivative is non zero at centre, unlike Spiky) note that the calculation of both is done in the same loop though : 
+
+```C++
+glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad, kernel_grad_func w_surf_grad, kernel_lapl_func w_visc_lapl)
+{
+// [..] 
+// =============== Compute Surface Gradient --> Surface Tension Force ===============
+// Calculate gradient of color field. 
+// Calculate divergence of gradient (to yield laplacian)
+float col_lapl = 0.f;
+glm::vec2 col_grad(0.f);
+for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+	{
+		const Particle &Pt_j = *(neighbours[p_j]);
+		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
+
+		// Gradient and Laplacian as per Mullers paper 
+		// Compute Symmetric gradient for particle pair
+		col_grad += Pt_j.mass * (Pt_j.cf / Pt_j.density) * (this->*w_pres_grad)(Pt_i.P - Pt_j.P);
+
+		// Laplacian (use visc kernel for now)
+		col_lapl += Pt_j.mass * (Pt_j.cf / Pt_j.density) * kernel_visc_laplacian(Pt_i.P - Pt_j.P);
+}
+
+// Check if gradient length is non zero
+if (!glm::dot(col_grad, col_grad)) force_surftension = glm::vec3(0.f);
+// Should be neg sigma, must have wrong sign using visc lapl kernel. 
+else force_surftension = k_surftens * col_lapl * glm::vec3(glm::normalize(col_grad), 0.f);
+```
+
+Sign is wrong $-\sigma$ seems to yield the incorrect direction (thus pushing away from surface), I think its because I'm using the viscosity kernel Laplacian, the sign is flipped oppose to the Laplacian of Poly6. 
+
+As per Muller's paper the section on evaluating spatial derivatives shows the Gradient is calculated as : 
+$$
+\nabla c(r) = \sum_j m_j {c_j \over \rho_j} \nabla \omega(r - r_j, h)
+$$
+Note that unlike the pressure gradient, this is non symmetric as symmetry of the quantities in this case is not relevant as it is for pressure. Here $\nabla \omega(r_i - r_j, h)$ is the Spiky Kernel gradient function. 
+
+Likewise the Laplacian is calculated as : 
+$$
+\nabla^2 c(r) = \sum_j m_j {c_j \over \rho_j} \nabla^2 \omega(r - r_j, h)
+$$
+Where $\nabla^2 \omega(r - r_j, h)$ is currently using the Viscosity Kernel Laplacian. 
+
+Note as per the paper we check if the length (or the square in this case to save a sqrt) if zero and if so the surface tension force is zero else we apply the surface tension force as the coefficient multiplied by the Laplacian by the normalized gradient of the colour field. 
 
 Because surf tension will ofc pull fluid closer, make the rest_density smaller (perhaps than the min density specified by the solver) so the pressure solve correctly compensates. 
 
 High pressure areas will break the surface tension apart and then cause reformation of those droplets. 
 
 Note my pressure solve is still clamped to positive pressure only (to maintain volume) hence why the surface tension force is needed and can be controlled oppose to using pressure of both signs which is only controllable via rest_density and stiffness and trying to prevent surface tension in the pressure solve can cause the volume of the fluid (via positive pressure) to be lost. 
-
-###### Implementation : 
-
-I'm not entirely sure if this is grid based (as shown in the lecture slides) or differentiated as a smoothed quantity, the former would be easier (use a scalar grid), then use FDM to calc the gradient and divergence and Laplacian..
-
-I think we can do it without a grid, because we just use the poly6 or spiky gradient to calc the gradient of the resulting colour field quantity on particles. Then from this we need to calculate the divergence...
-
-The purposed colour field quantity calculation in the paper does not yield a value that is $[0,1]$ its more like $[0.5,1.5]$. Unless I'm doing something wrong. Visualizing the range does seem to be correctly defining interior fluid region though, with particles that are at the surface edges been near black vs white particles within fluid region. I don't see any gain from using a grid, because we only calculate where there is particles anyway, so we'd have to check for active cells etc. 
 
 ____
 
@@ -505,9 +573,9 @@ Spatial Hash Grid will also be its own class based on my UE4 Cloth solver hash g
 
 **Fluid_Collider** : Defines a basic polymorphic class who evaluates collisions of some inequality condition against passed particle array (from Fluid_Object, invoked within Fluid_Solver()). Use Primitive Class to render collider via GL_Lines with Line Width. 
 
-**Hash_Grid** : Discretizes Fluids into Spatially coherent cells based on a 2D Spatial Hash Function for accelerating neighbour lookups. Only Cells that have been hashed to are allocated. 
+**Hash_Grid** : Discretizes Fluids into Spatially coherent cells based on a 2D Spatial Hash Function for accelerating neighbour lookups. Only Cells that have been hashed to are allocated. No longer used, in favour of 2D Spatial Grid. 
 
-**Grid_2D** : Uniform 2D Grid for spatial acceleration (as oppose to using Hash_Grid) also used for the colour field and rasterizing the particle densities for rendering. 
+**Spatial_Grid** : Uniform 2D Grid for spatial acceleration (as oppose to using Hash_Grid) also used for the colour field and rasterizing the particle densities for rendering. 
 
 **Viewer** : Contains the OpenGL,Input and GUI code as well as housing the solver and fluid state instances. 
 
@@ -965,11 +1033,25 @@ In Debug mode we have problems are with the render time been bottleneck when par
 
 ###### Rendering via Implicit Functions in Fragment Shader 
 
-###### Rendering via Grid Rasterize Density (2D Grid / Colour Field)
+###### Rendering via Grid Rasterize Density (2D Grid)
+
+Could also rasterize to a 2D Grid based on per cell density using some interpolation (bilinear most likely). We could then even use the density to define an isocontour of the free surface. 
+
+Extract grid data as serialized texture data to pass to OpenGL, would implement GL Calls into grid member function.
 
 ###### Rendering via Marching Squares
 
 ###### Rendering via Anisotropic Kernels
 
 If I had time I'd use this approach for rendering fluid surfaces, oppose to using isotropic implicit functions, using anisotropic kernels that stretch along the directions of change calculated via PCA of particle neighbourhood, the resulting surfaces are much nicer than standard Isotropic surfaces or Zhu Bridson like surfacing (which could be fun to try and do in 2D also), this would be adopted to 2D. The idea to use this approach is from Benedikt Bitterlis SPH Solver which uses this approach for extracting the particle surface in 2D. To be fair though for such a simple sim, typical spherical isotropic kernels / implicit functions should be fine (especially if we add stuff like scaling radii by velocity etc), or a similar 2D adapted Zhu Bridson approach.
+
+____
+
+Ok so I actually have a rush job on my hands to get a nicer fluid rendering implemented, right now we just have standard GL Points which are squares and look ugly. At least I want to have discs/circles instanced rendering. But ideally I want a surface (and then we can just switch to normal point sprites or instanced discs if I get time). 
+
+I will try the Implicit function in fragment shader approach, to pass the particles to the shader I can ethier use a UBO or SSBO. Radius controlled by velocity, colour mapped to a ramp based on speed with density and pressure switches. 
+
+
+
+
 
