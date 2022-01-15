@@ -352,6 +352,7 @@ void Viewer::gui_render()
 		ImGui::Text("Mass : %f", fluid_object->particles[0].mass);
 		ImGui::Text("Density : min = %f | max = %f",  fluid_object->min_dens, fluid_object->max_dens);
 		ImGui::Text("Pressure : min = %f | max = %f", fluid_object->min_pres, fluid_object->max_pres);
+		ImGui::Text("ColorFld : min = %f | max = %f", fluid_object->min_cf,   fluid_object->max_cf);
 		//ImGui::Text("Forcesqr : min = %f | max = %f", fluid_solver->min_force, fluid_solver->max_force);
 
 		// ========== Fluid State Controls ==========

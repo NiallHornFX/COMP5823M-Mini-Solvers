@@ -109,6 +109,8 @@ void Fluid_Solver::step()
 	get_neighbours();
 	// Compute Density and from this pressure using some smoothing kernel.
 	compute_dens_pres(&Fluid_Solver::kernel_poly6);
+	// Compute Colour Field 
+	calc_colour_field();
 	// Check for collisions and project offending particles. 
 	eval_colliders();
 	// Calculcate resulting forces and integrate
@@ -208,8 +210,6 @@ void Fluid_Solver::get_neighbours()
 	for (std::size_t p = 0; p < fluidData->particles.size(); ++p)
 	{
 		fluidData->particle_neighbours[p] = accel_grid->get_adjcell_particles(fluidData->particles[p]);
-		// if particle has no neighbours, delete it. 
-		//if (!fluidData->particle_neighbours[p].size()) fluidData->particles.erase(fluidData->particles.begin() + p);
 	} 
 
 #if DEBUG_TEST_ADJACENT == 1
@@ -308,13 +308,45 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 	force_viscosity = k_viscosity * visc_vec;
 
 	// =============== Compute Surface Gradient --> Surface Tension Force ===============
-	// tbd ...
-
+	// Calculate gradient of color field. 
+	// Calculate divergence of gradient (to yield laplacian)
+	glm::vec2 col_grad(0.f);
+	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+	{
+		const Particle &Pt_j = *(neighbours[p_j]);
+		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
+		// Compute Symmetric gradient for particle pair
+		col_grad += Pt_j.mass * ((Pt_i.cf + Pt_j.cf) / (2.f * Pt_j.density)) * (this->*w_pres_grad)(Pt_i.P - Pt_j.P);
+	}
+	col_grad *= 1000.f; 
 	// Accumulate forces
-	glm::vec3 acc_force = force_pressure + force_viscosity;
+	glm::vec3 acc_force = force_pressure + force_viscosity + glm::vec3(col_grad.x, col_grad.y, 0.f);
 	// ret instead of write to Pt.F
 	return acc_force;
 }
+
+// Info : Calc Colour Field of fluid particls
+void Fluid_Solver::calc_colour_field()
+{
+	fluidData->min_cf = 1e06f, fluidData->max_cf = 0.f;
+	for (std::size_t p_i = 0; p_i < fluidData->particles.size(); ++p_i)
+	{
+		Particle &Pt_i = fluidData->particles[p_i];
+		Pt_i.cf = 0.f; // Reset
+		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
+
+		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+		{
+			const Particle &Pt_j = *(neighbours[p_j]);
+			Pt_i.cf += Pt_j.mass * (1.f / Pt_j.density) * kernel_poly6(Pt_i.P - Pt_j.P);
+		}
+
+		if (Pt_i.cf < fluidData->min_cf) fluidData->min_cf = Pt_i.cf; 
+		if (Pt_i.cf > fluidData->max_cf) fluidData->max_cf = Pt_i.cf;
+	}
+}
+
+
 // ================================== Util Functions ===============================
 // Info : Calc an estimate of the rest density from the maxium density value * some offset. 
 //        This can be called external of solve step, to get inital estimate of rest_density. 

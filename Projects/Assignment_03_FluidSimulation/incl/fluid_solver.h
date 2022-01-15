@@ -42,6 +42,8 @@ public:
 
 	void render_colliders(const glm::mat4 &ortho);
 
+	void calc_colour_field();
+
 	// ======= Solver =======
 	void get_neighbours();
 

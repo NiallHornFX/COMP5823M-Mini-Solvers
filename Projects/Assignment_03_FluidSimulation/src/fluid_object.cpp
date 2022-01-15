@@ -119,7 +119,8 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 				case Colour_Viz::Density:
 				{
 					// Colour Particles by Density 
-					col[p] = glm::vec3(fitRange(particles[p].density, 0.f, max_dens, 0.f, 1.f));
+					//col[p] = glm::vec3(fitRange(particles[p].density, 0.f, max_dens, 0.f, 1.f));
+					col[p] = glm::vec3(fitRange(particles[p].cf, min_cf, max_cf, 0.f, 1.f)); // CF Test
 					break;
 				}
 				case Colour_Viz::Velocity: 

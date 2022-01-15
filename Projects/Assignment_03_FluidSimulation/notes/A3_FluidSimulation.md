@@ -445,7 +445,7 @@ ____
 
 ##### Surface Tension
 
-For surface tension we are asked to follow Mullers implementation which uses the concept of a "Colour Field" which is defines a field which is 1 everywhere where fluid is and zero elsewhere to define two phases (water and air) over the world space domain / simulation domain, this can then be differentiated to define a gradient to the surface to use for the surface tension force. 
+For surface tension we are asked to follow Mullers implementation which uses the concept of a "Colour Field" which is defines a field which is non zero everywhere where fluid is and zero elsewhere to define two phases (water and air) over the world space domain / simulation domain, this can then be differentiated to define a gradient to the surface to use for the surface tension force. 
 
 The Colour field is calculated on the particles as : 
 $$
@@ -455,23 +455,27 @@ The gradient is then calculated which defines the normal in the direction of the
 $$
 \nabla c = \hat{n}
 $$
+Stronger curvature yields stronger surface tension force, curvature is then calculated using the divergence of the gradient. 
+
 Curvature is then calculated as : 
 $$
 \kappa = {-\nabla^2 c \over |\nabla c|}
 $$
-Where $- \nabla^2 c$ is the negative divergence of $c$ the colour field. 
+Where $- \nabla^2 c$ is the Laplacian ie the negative divergence of the gradient of $c$ the colour field. 
 
 The resulting surface tension force is then :
 $$
 f_i^{surf} = -\sigma \nabla^2c {\nabla c \over |\nabla c|}
 $$
-Where $\sigma$ is the surface tension coefficient. 
-
-Stronger curvature yields stronger surface tension force. 
+Where $\sigma$ is the surface tension coefficient. . As per the paper only evaluate the gradient normalization if the length is beyond a certain threshold (to prevent nans when particle is not close to surface and thus normal length is zero or near zero).
 
 ###### Implementation : 
 
 I'm not entirely sure if this is grid based (as shown in the lecture slides) or differentiated as a smoothed quantity, the former would be easier (use a scalar grid), then use FDM to calc the gradient and divergence and Laplacian..
+
+I think we can do it without a grid, because we just use the poly6 or spiky gradient to calc the gradient of the resulting colour field quantity on particles. Then from this we need to calculate the divergence...
+
+The purposed colour field quantity calculation in the paper does not yield a value that is $[0,1]$ its more like $[0.5,1.5]$. Unless I'm doing something wrong. Visualizing the range does seem to be correctly defining interior fluid region though, with particles that are at the surface edges been near black vs white particles within fluid region. I don't see any gain from using a grid, because we only calculate where there is particles anyway, so we'd have to check for active cells etc. 
 
 ____
 
