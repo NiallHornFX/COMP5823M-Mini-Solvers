@@ -43,6 +43,8 @@ private:
 
 	// Fluid Data Ptr
 	Fluid_Object *fluid_data;
+
+	friend class Fluid_Object; 
 };
 
 #endif 

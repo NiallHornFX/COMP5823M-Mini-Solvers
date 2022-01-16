@@ -90,6 +90,39 @@ void Fluid_Object::render_setup()
 	};
 	fsQuad->set_data_mesh(quad_verts, 6);
 
+	// Texture Alloc
+	glGenTextures(1, &tex_dens);
+	glGenTextures(1, &tex_vel_u);
+	glGenTextures(1, &tex_vel_v);
+	// Set shader Sampler Uniforms to texture units
+	fsQuad->shader.setInt("d_tex"  , 0); // Density     = 0 
+	fsQuad->shader.setInt("v_u_tex", 1); // Velocity u  = 1 
+	fsQuad->shader.setInt("v_v_tex", 2); // Velocity v  = 2 
+	glUseProgram(0); 
+}
+
+void Fluid_Object::get_textures()
+{
+	// Density Grid -> 4 Byte R (tex_dens)
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, tex_dens);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, grid_data.cell_dim, grid_data.cell_dim, 0, GL_RED, GL_FLOAT, grid_data.cell_dens.data());
+
+	// Vel U Grid -> 4 Byte R (tex_vel_u)
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, tex_vel_u);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, grid_data.cell_dim, grid_data.cell_dim, 0, GL_RED, GL_FLOAT, grid_data.cell_u.data());
+
+	// Vel V Grid -> 4 Byte R (tex_vel_v)
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, tex_vel_v);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, grid_data.cell_dim, grid_data.cell_dim, 0, GL_RED, GL_FLOAT, grid_data.cell_v.data());
 }
 
 void Fluid_Object::render(const glm::mat4 &ortho)
