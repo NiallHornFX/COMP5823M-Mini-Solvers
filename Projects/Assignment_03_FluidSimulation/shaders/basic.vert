@@ -3,13 +3,12 @@
 
 // Input 
 layout (location = 0) in vec3 v_P;
-layout (location = 1) in vec3 v_N;
-layout (location = 2) in vec3 v_C;
-layout (location = 3) in vec2 v_UV;
+layout (location = 1) in vec3 v_C;
 
 // Output
 out vec3 colour; 
 
+// Uniform
 uniform mat4 model;
 
 void main()

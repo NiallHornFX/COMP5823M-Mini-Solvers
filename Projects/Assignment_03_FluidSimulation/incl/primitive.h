@@ -45,9 +45,8 @@ public:
 	void set_data_mesh(const float *data, std::size_t vert_n);
 
 	void update_data_position(const std::vector<glm::vec3> &posData);
-	void update_data_position_normals(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &normData);
-	void update_data_position_normals_col(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &normData, const std::vector<glm::vec3> &colData);
 	void update_data_colour(const std::vector<glm::vec3> &colData);
+	void update_data_position_col(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &colData);
 
 	void set_colour(const glm::vec3 &col);
 	void set_shader(const char *vert_path, const char *frag_path);
@@ -90,9 +89,7 @@ public:
 struct vert
 {
 	glm::vec3 pos;
-	glm::vec3 normal;
 	glm::vec3 col;
-	glm::vec2 uv;
 };
 
 #endif

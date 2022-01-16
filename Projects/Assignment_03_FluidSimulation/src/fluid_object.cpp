@@ -73,23 +73,22 @@ void Fluid_Object::render_setup()
 	ren_points->set_shader("../../shaders/fluid_points.vert", "../../shaders/fluid_points.frag");
 	ren_points->mode = Render_Mode::RENDER_POINTS;
 
-
 	// =========== Grid Render Setup ===========
 	fsQuad = new Primitive("Render Fluid Quad");
 	fsQuad->set_shader("../../shaders/fluid_grid.vert", "../../shaders/fluid_grid.frag");
 	fsQuad->mode = Render_Mode::RENDER_MESH;
-	float quad_verts[44] =
+	float quad_verts[36] =
 	{
 		// Tri 0
-		-1.f, -1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
-		1.f, -1.f,  0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
-		1.f, 1.f,   0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+		-1.f, -1.f, 0.f, 0.f, 0.f, 0.f,
+		1.f,  -1.f, 0.f, 0.f, 0.f, 0.f, 
+		1.f,  1.f,  0.f, 0.f, 0.f, 0.f, 
 		// Tri 1
-		1.f, 1.f,   0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
-		-1.f, 1.f,  0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
-		-1.f, -1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f
+		1.f,   1.f, 0.f, 0.f, 0.f, 0.f, 
+		-1.f,  1.f, 0.f, 0.f, 0.f, 0.f, 
+		-1.f, -1.f, 0.f, 0.f, 0.f, 0.f
 	};
-	axis->set_data_mesh(data, 6);
+	fsQuad->set_data_mesh(quad_verts, 6);
 
 }
 
@@ -106,7 +105,6 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 		for (std::size_t p = 0; p < particles.size(); ++p)
 		{
 			data[p].pos = particles[p].P;
-			data[p].normal = particles[p].V; // Store Pt vel in vertex normal attrib.
 			data[p].col = glm::vec3(0.1f, 0.1f, 1.f);
 		}
 		ren_points->set_data_mesh(data);
@@ -152,7 +150,7 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 			norm[p] = particles[p].V;
 		}
 		// Pass updated attribute arrays to Primitve::update_data... 
-		ren_points->update_data_position_normals_col(pos, norm, col);
+		ren_points->update_data_position_col(pos, col);
 	}
 
 	// Render

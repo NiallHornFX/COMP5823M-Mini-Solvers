@@ -190,12 +190,12 @@ void Viewer::render_prep()
 	// ============= Create Viewer Primtivies =============
 	// Axis
 	axis = new Primitive("axis");
-	float data[44] =
+	float data[24] =
 	{
-		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
-		0.5f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f,
-		0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
-		0.f, 0.5f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f
+		0.f,  0.f, 0.f, 1.f, 0.f, 0.f, 
+		.5f,  0.f, 0.f, 1.f, 0.f, 0.f, 
+		0.f,  0.f, 0.f, 0.f, 1.f, 0.f, 
+		0.f,  .5f, 0.f, 0.f, 1.f, 0.f 
 	};
 	axis->set_data_mesh(data, 6);
 	axis->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");

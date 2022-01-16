@@ -1043,6 +1043,8 @@ Extract grid data as serialized texture data to pass to OpenGL, would implement 
 
 The rendering code can be kept within Fluid Object but extract texture from grid class.  I also want to store per cell velocity. 
 
+Grid won't match screen res so need to upscale (within frag shader or on host ? )
+
 ###### Rendering via Marching Squares
 
 ###### Rendering via Anisotropic Kernels

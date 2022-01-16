@@ -27,10 +27,10 @@ void Fluid_Collider_Plane::render_setup()
 		// Assume q is start position. 
 		float x_min = q.x;
 		float x_max = q.x + length; 
-		float data[11 * 2]
+		float data[12]
 		{
-			x_min, q.y, 0.f, 0.f, 0.f, 0.f, 0.4f, 0.05f, 0.05f, 0.f, 0.f,
-			x_max, q.y, 0.f, 0.f, 0.f, 0.f, 0.4f, 0.05f, 0.05f, 0.f, 0.f
+			x_min, q.y, 0.f, 0.4f, 0.05f, 0.05f, 
+			x_max, q.y, 0.f, 0.4f, 0.05f, 0.05f
 		};
 		prim->set_data_mesh(data, 2);
 		prim->set_shader("../../shaders/collider.vert", "../../shaders/collider.frag");
@@ -40,16 +40,15 @@ void Fluid_Collider_Plane::render_setup()
 	{
 		float y_min = q.y;
 		float y_max = q.y + height;
-		float data[11 * 2]
+		float data[12]
 		{
-			q.x, y_min, 0.f, 0.f, 0.f, 0.f, 0.05f, 0.4f, 0.05f, 0.f, 0.f,
-			q.x, y_max, 0.f, 0.f, 0.f, 0.f, 0.05f, 0.4f, 0.05f, 0.f, 0.f
+			q.x, y_min, 0.f, 0.05f, 0.4f, 0.05f,
+			q.x, y_max, 0.f, 0.05f, 0.4f, 0.05f
 		};
 		prim->set_data_mesh(data, 2);
 		prim->set_shader("../../shaders/collider.vert", "../../shaders/collider.frag");
 		prim->mode = Render_Mode::RENDER_LINES;
 	}
-
 }
 
 // Info : Project positions of particles directly to satisfy the Plane collision inequality condition : (P-Q) * N >= 0

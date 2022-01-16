@@ -84,9 +84,9 @@ void Primitive::render()
 }
 
 // ======= Info : Mesh Data  =======
-// Mesh Data Assumptions 11 * 4 byte floats. 
-// Stride :    0         3         6       9
-// Data   : (x,y,z) | (x,y,z) | (r,g,b) | (u,v)
+// Mesh Data Assumptions 6 * 4 byte floats. 
+// Stride :  0         3        
+// Data   : (x,y,z) | (r,g,b) | 
 // ================================
 
 void Primitive::set_data_mesh(const std::vector<vert> &data)
@@ -101,14 +101,9 @@ void Primitive::set_data_mesh(const std::vector<vert> &data)
 		const vert &vert = data[v];
 		// Position 
 		vert_data.push_back(vert.pos.x), vert_data.push_back(vert.pos.y), vert_data.push_back(vert.pos.z);
-		// Normal
-		vert_data.push_back(vert.normal.x), vert_data.push_back(vert.normal.y), vert_data.push_back(vert.normal.z);
 		// Colour
 		vert_data.push_back(vert.col.r), vert_data.push_back(vert.col.g), vert_data.push_back(vert.col.b);
-		// UV
-		vert_data.push_back(vert.uv.x),  vert_data.push_back(vert.uv.y);
 	}
-
 	flags.data_set = 1;
 
 	// Setup Buffers
@@ -119,9 +114,9 @@ void Primitive::set_data_mesh(const float *data, std::size_t vert_n)
 	flags.data_set = 0; 
 	// Copy Mesh Data
 	vert_data.clear();
-	vert_data.resize(vert_n * 11);
+	vert_data.resize(vert_n * 6);
 	vert_count = vert_n;
-	std::memcpy(vert_data.data(), data, (vert_n * 11 * sizeof(float)));
+	std::memcpy(vert_data.data(), data, (vert_n * 6 * sizeof(float)));
 
 	flags.data_set = 1; 
 
@@ -142,21 +137,15 @@ void Primitive::create_buffers()
 	// Fill with mesh data (Assumes Mesh is in correct layout within mesh_data float array)
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 6 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
 
 	// Vertex Attribute 
 	// Position (0)
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), reinterpret_cast<void*>(0));
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(0));
 	glEnableVertexAttribArray(0);
-	// Normals (1)
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), reinterpret_cast<void*>(sizeof(float) * 3));
+	// Colour (1)
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(sizeof(float) * 3));
 	glEnableVertexAttribArray(1);
-	// Colours (2)
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), reinterpret_cast<void*>(sizeof(float) * 6));
-	glEnableVertexAttribArray(2);
-	// UVs (3)
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), reinterpret_cast<void*>(sizeof(float) * 9));
-	glEnableVertexAttribArray(3);
 
 	// Clear bound state
 	glBindVertexArray(0);
@@ -172,51 +161,14 @@ void Primitive::update_data_position(const std::vector<glm::vec3> &posData)
 {
 	for (std::size_t v = 0; v < vert_count; ++v)
 	{
-		std::size_t i = v * 11; // Vert Index, Position. 
+		std::size_t i = v * 6; // Vert Index, Position. 
 		vert_data[i++] = posData[v].x;
 		vert_data[i++] = posData[v].y;
 		vert_data[i++] = posData[v].z;
 	}
-
 	// Refill Buffer
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-// Update Pos and Normal Data
-void Primitive::update_data_position_normals(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &normData)
-{
-	for (std::size_t v = 0; v < vert_count; ++v)
-	{
-		std::size_t P_i = v * 11;     // Vert Index, Position Offset 
-		vert_data[P_i++] = posData[v].x, vert_data[P_i++] = posData[v].y, vert_data[P_i++] = posData[v].z;
-		std::size_t N_i = 3 + v * 11; // Vert Index, Normal Offset
-		vert_data[N_i++] = normData[v].x, vert_data[N_i++] = normData[v].y, vert_data[N_i++] = normData[v].z;
-	}
-
-	// Refill Buffer
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-// Update Pos, Normal and Colour Data
-void Primitive::update_data_position_normals_col(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &normData, const std::vector<glm::vec3> &colData)
-{
-	for (std::size_t v = 0; v < vert_count; ++v)
-	{
-		std::size_t P_i = v * 11;     // Vert Index, Position Offset 
-		vert_data[P_i++] = posData[v].x, vert_data[P_i++] = posData[v].y, vert_data[P_i++] = posData[v].z;
-		std::size_t N_i = 3 + v * 11; // Vert Index, Normal Offset
-		vert_data[N_i++] = normData[v].x, vert_data[N_i++] = normData[v].y, vert_data[N_i++] = normData[v].z;
-		std::size_t C_i = 6 + v * 11; // Vert Index, Normal Offset
-		vert_data[C_i++] = colData[v].x, vert_data[C_i++] = colData[v].y, vert_data[C_i++] = colData[v].z;
-	}
-
-	// Refill Buffer
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 6 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -225,15 +177,31 @@ void Primitive::update_data_colour(const std::vector<glm::vec3> &colData)
 {
 	for (std::size_t v = 0; v < vert_count; ++v)
 	{
-		std::size_t i = 6 + v * 11; // Vert Index, Colour. 
+		std::size_t i = 3 + v * 6; // Vert Index, Colour. 
 		vert_data[i++] = colData[v].r;
 		vert_data[i++] = colData[v].g;
 		vert_data[i++] = colData[v].b;
 	}
-
 	// Refill Buffer
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, (vert_count * 11 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 6 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+// Update Pos and Colour Data
+void Primitive::update_data_position_col(const std::vector<glm::vec3> &posData, const std::vector<glm::vec3> &colData)
+{
+	for (std::size_t v = 0; v < vert_count; ++v)
+	{
+		std::size_t P_i = v * 6;     // Vert Index, Position Offset 
+		vert_data[P_i++] = posData[v].x, vert_data[P_i++] = posData[v].y, vert_data[P_i++] = posData[v].z;
+
+		std::size_t C_i = 3 + v * 6; // Vert Index, Colour Offset
+		vert_data[C_i++] = colData[v].x, vert_data[C_i++] = colData[v].y, vert_data[C_i++] = colData[v].z;
+	}
+	// Refill Buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, (vert_count * 6 * sizeof(float)), vert_data.data(), GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -288,12 +256,10 @@ void Primitive::debug() const
 	std::cout << "======== DEBUG::Camera::Primitive_" << name << "::Vertex_Data::BEGIN ========\n";
 	for (std::size_t v = 0; v < vert_count; ++v)
 	{
-		std::size_t i = v * 11;
+		std::size_t i = v * 6;
 		std::cout << "Vertex_" << v << "\n"
 			<< "Pos =  [" << vert_data[i++] << "," << vert_data[i++] << "," << vert_data[i++] << "]\n"
-			<< "Norm = [" << vert_data[i++] << "," << vert_data[i++] << "," << vert_data[i++] << "]\n"
-			<< "Col =  [" << vert_data[i++] << "," << vert_data[i++] << "," << vert_data[i++] << "]\n"
-			<< "Tex =  [" << vert_data[i++] << "," << vert_data[i++] << "\n";
+			<< "Col =  [" << vert_data[i++] << "," << vert_data[i++] << "," << vert_data[i++] << "]\n";
 	}
 	std::cout << "======== DEBUG::Camera::Primitive_" << name << "::Vertex_Data::END ========\n";
 }
