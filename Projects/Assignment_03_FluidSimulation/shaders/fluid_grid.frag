@@ -42,7 +42,10 @@ void main()
 	float vel_x = clamp(texture(v_u_tex, uv), 0.0, 1.0).r; 
 	float vel_y = clamp(texture(v_v_tex, uv), 0.0, 1.0).r; 
 	
+	float spd = fit(length(vec2(vel_x, vel_y)), 0.0, 2.5, 0.0, 1.0); 
+	
 	vec3 vel_f = vec3(vel_x, vel_y, 0.0);
+	vec3 vel_col = mix(vec3(0.1, 0.1, 1.0), vec3(1.0, 1.0, 1.0), spd) * dens;
 	
 	// If (within density iso threshold shade flat... color by vel)
 
@@ -50,9 +53,16 @@ void main()
 	
 	//frag_color = vec4(uv, 0, 1.0); 
 	
-	frag_color = vec4(dens, dens, dens, 1.0); 
+	//frag_color = vec4(dens, dens, dens, 1.0); 
+	
+	
+	//frag_color = vec4(dens * vel_x, dens * vel_y, 0, 1.0); 
 	
 	//frag_color = vec4(vel_x, vel_y, 0.0, 1.0); 
+	
+	//frag_color = vec4(spd, spd, spd, 1.0); 
+	
+	frag_color = vec4(vel_col, 1.0); 
 	
 	//frag_color = vpos;
 }

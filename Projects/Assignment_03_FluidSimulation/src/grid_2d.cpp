@@ -72,21 +72,22 @@ void Grid_2D::gather_particles()
 				//if (dist <= 1e-05f) // Using SDF Function 
 				if (dist > 0.75f)
 				{
+					float &cellDens = cell_dens[idx_1d]; 
+					float &cellU    = cell_u[idx_1d];
+					float &cellV    = cell_v[idx_1d];
 					//cell_dens[idx_1d] += pt.density;
 					//cell_dens[idx_1d] += std::fabs(dist);
 					cell_dens[idx_1d] = std::max(cell_dens[idx_1d], std::fabs(dist));
-				}
+					// Vel
+					cellU = std::max(std::fabs(pt.V.x), cellU);
+					cellV = std::max(std::fabs(pt.V.y), cellV);
 
-				// Standard Rastierize to grid cell (Gather based should use scatter so can do bilin more easily frac indices).
+					cell_count++;
+				}
 				/*
+				// Standard Rastierize to grid cell (Gather based should use scatter so can do bilin more easily frac indices).
 				if (pt.P.x >= min.x && pt.P.x <= max.x && pt.P.y >= min.y && pt.P.y <= max.y)
 				{
-					if ((pow(ws_x - pt.P.x, 2.f) + pow(ws_y - pt.P.y, 2.f)) - 10.f <= 1e01)
-					{
-						//cell_dens[idx_1d]     += pt.density;
-
-
-					}
 					//cell_dens[idx_1d]     += pt.density;
 					//cell_dens[idx_1d + 1] += pt.density;
 					//cell_dens[idx_1d - 1] += pt.density;
@@ -96,15 +97,15 @@ void Grid_2D::gather_particles()
 					cell_u[idx_1d] += pt.V.x; 
 					cell_v[idx_1d] += pt.V.y;
 					cell_count++;
-				}
-				*/
+				}*/
 			}
-			if (!cell_count) continue;
-			float r_c = 1.f / float(cell_count);
+
+			//if (!cell_count) continue;
+			//float r_c = 1.f / float(cell_count);
 			// Average Density
 			//cell_dens[idx_1d] *= r_c;
 			// Average Velocity 
-			cell_u[idx_1d] *= r_c, cell_v[idx_1d] *= r_c;
+			//cell_u[idx_1d] *= r_c, cell_v[idx_1d] *= r_c;
 		}
 	}
 }

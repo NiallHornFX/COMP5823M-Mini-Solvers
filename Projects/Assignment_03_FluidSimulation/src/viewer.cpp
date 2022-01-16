@@ -217,9 +217,9 @@ void Viewer::render()
 		axis->render();
 	}
 	// ==================== Render Fluid ====================
-	//fluid_object->render(Fluid_Object::Render_Type::POINT_VERTS, ortho);
-
 	fluid_object->render(Fluid_Object::Render_Type::GRID_FRAG, ortho);
+
+	fluid_object->render(Fluid_Object::Render_Type::POINT_VERTS, ortho);
 
 	// ==================== Render Fluid Colliders ====================
 	fluid_solver->render_colliders(ortho);
