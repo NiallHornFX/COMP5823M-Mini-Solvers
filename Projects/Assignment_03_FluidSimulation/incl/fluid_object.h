@@ -41,9 +41,9 @@ public:
 	void reset_fluid();
 
 	// ======== Render ========
-	enum render_type {POINT_VERTS = 0, FRAGMENT = 1};
+	enum Render_Type {POINT_VERTS = 0, GRID_FRAG = 1};
 	void render_setup();
-	void render(const glm::mat4 &ortho);
+	void render(Render_Type mode, const glm::mat4 &ortho);
 
 	// Get Fluid Textures from Grid2D (Called per tick render)
 	void get_textures();
@@ -68,20 +68,15 @@ public:
 	bool ptColour_ = false;
 
 	// ======== Render Primitives ========
-	// Point Rendering via Primitive
-	Primitive *ren_points; 
+	Primitive *ren_points; // Point Rendering via Primitive
 
-	// Rendering within Fragment Shader
-	Primitive *fsQuad; 
+	// Rendering grid within Fragment Shader
+	Primitive *ren_grid; 
 
-	// Rasterized Fluid Grid Data
-	Grid_2D grid_data;
+	Grid_2D grid_data; 	  // Rasterized Fluid Grid Data
+	GLuint tex_dens, tex_vel_u, tex_vel_v; 	// Texture Handles
 
-	// Texture Handles
-	GLuint tex_dens, tex_vel_u, tex_vel_v;
-
-	// Fluid Solver ref (for bidir access)
-	Fluid_Solver *solver; 
+	Fluid_Solver *solver; // Fluid Solver ref (for bidir access)
 };
 
 

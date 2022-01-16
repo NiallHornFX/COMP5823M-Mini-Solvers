@@ -14,7 +14,6 @@ uniform sampler2D v_u_tex;     // Texture Unit 1 : Velocity_u (Scalar R)
 uniform sampler2D v_v_tex;     // Texture Unit 2 : Veloicty_v (Scalar R) 
 
 // Constant Uniforms - 
-uniform int Mode; // 0 = Render Density, 1 = Render Velocity. 
 uniform int N_Size; // Number of cells per dim. 
 
 // ====== Util Functions ====== 
@@ -37,8 +36,8 @@ float rand(float n)
 void main()
 {
 	// Map from 0-N FragCoord_Space to 0-1 UV Space. 
-	vec2 uv = (gl_FragCoord.xy - 0.0) / N_Size; 
-
+	vec2 uv = (gl_FragCoord.xy - 0.0) / 1024;
+	
 	float dens =  clamp(texture(d_tex, uv),   0.0, 1.0).r; 
 	float vel_x = clamp(texture(v_u_tex, uv), 0.0, 1.0).r; 
 	float vel_y = clamp(texture(v_v_tex, uv), 0.0, 1.0).r; 
@@ -47,5 +46,13 @@ void main()
 	
 	// If (within density iso threshold shade flat... color by vel)
 
-	frag_color = vec4(1.0, 0, 0, 1.0);
+	//frag_color = vec4(1.0, 0, 0, 1.0);
+	
+	//frag_color = vec4(uv, 0, 1.0); 
+	
+	frag_color = vec4(dens, dens, dens, 1.0); 
+	
+	//frag_color = vec4(vel_x, vel_y, 0.0, 1.0); 
+	
+	//frag_color = vpos;
 }

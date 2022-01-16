@@ -25,7 +25,7 @@ Fluid_Object::~Fluid_Object()
 {
 	// Delete Primitives
 	if (ren_points) delete ren_points; 
-	if (fsQuad) delete fsQuad;
+	if (ren_grid)   delete ren_grid;
 }
 
 // Info : Reset fluid to inital state.
@@ -68,15 +68,26 @@ void Fluid_Object::emit_square()
 
 void Fluid_Object::render_setup()
 {
+	// Setup both render paths 
+
 	// =========== Point Vertices Render Setup ===========
 	ren_points = new Primitive("Render Fluid Points");
 	ren_points->set_shader("../../shaders/fluid_points.vert", "../../shaders/fluid_points.frag");
 	ren_points->mode = Render_Mode::RENDER_POINTS;
 
+	// Allocate GPU Resources
+	std::vector<vert> data(particles.size());
+	for (std::size_t p = 0; p < particles.size(); ++p)
+	{
+		data[p].pos = particles[p].P;
+		data[p].col = glm::vec3(0.1f, 0.1f, 1.f);
+	}
+	ren_points->set_data_mesh(data);
+
 	// =========== Grid Render Setup ===========
-	fsQuad = new Primitive("Render Fluid Quad");
-	fsQuad->set_shader("../../shaders/fluid_grid.vert", "../../shaders/fluid_grid.frag");
-	fsQuad->mode = Render_Mode::RENDER_MESH;
+	ren_grid = new Primitive("Render Fluid Quad");
+	ren_grid->set_shader("../../shaders/fluid_grid.vert", "../../shaders/fluid_grid.frag");
+	ren_grid->mode = Render_Mode::RENDER_MESH;
 	float quad_verts[36] =
 	{
 		// Tri 0
@@ -88,17 +99,15 @@ void Fluid_Object::render_setup()
 		-1.f,  1.f, 0.f, 0.f, 0.f, 0.f, 
 		-1.f, -1.f, 0.f, 0.f, 0.f, 0.f
 	};
-	fsQuad->set_data_mesh(quad_verts, 6);
+	ren_grid->set_data_mesh(quad_verts, 6);
 
 	// Texture Alloc
 	glGenTextures(1, &tex_dens);
 	glGenTextures(1, &tex_vel_u);
 	glGenTextures(1, &tex_vel_v);
-	// Set shader Sampler Uniforms to texture units
-	fsQuad->shader.setInt("d_tex"  , 0); // Density     = 0 
-	fsQuad->shader.setInt("v_u_tex", 1); // Velocity u  = 1 
-	fsQuad->shader.setInt("v_v_tex", 2); // Velocity v  = 2 
-	glUseProgram(0); 
+
+	// Set size uniform
+	ren_grid->shader.setInt("N_Size", grid_data.cell_dim);
 }
 
 void Fluid_Object::get_textures()
@@ -123,71 +132,92 @@ void Fluid_Object::get_textures()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, grid_data.cell_dim, grid_data.cell_dim, 0, GL_RED, GL_FLOAT, grid_data.cell_v.data());
+
+	// Set shader Sampler Uniforms to texture units
+	ren_grid->shader.setInt("d_tex",   0); // Density     = 0 
+	ren_grid->shader.setInt("v_u_tex", 1); // Velocity u  = 1 
+	ren_grid->shader.setInt("v_v_tex", 2); // Velocity v  = 2 
+
+	// Clear State
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glUseProgram(0);
 }
 
-void Fluid_Object::render(const glm::mat4 &ortho)
+void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 {
-	// =========== Point Vertices Render ===========
+	if (mode == Render_Type::POINT_VERTS)
+	{   // =================== Point Vertices Render ===================
 
-	// Set projection matrix from viewer passed ortho
-	ren_points->shader.setMat4("proj", ortho);
+		// Set Proj Mat
+		ren_points->shader.setMat4("proj", ortho);
 
-	if (!ren_points->flags.data_set) // Create GPU resources
-	{
-		std::vector<vert> data(particles.size());
-		for (std::size_t p = 0; p < particles.size(); ++p)
-		{
-			data[p].pos = particles[p].P;
-			data[p].col = glm::vec3(0.1f, 0.1f, 1.f);
-		}
-		ren_points->set_data_mesh(data);
-	}
-	else // Update Only
-	{
-		std::vector<glm::vec3> pos, norm, col;
-		pos.resize(particles.size()), norm.resize(particles.size()), col.resize(particles.size());
+		// Particle Attribs to Vert Data update
+		std::vector<glm::vec3> pos, col;
+		pos.resize(particles.size()), col.resize(particles.size());
 		for (std::size_t p = 0; p < particles.size(); ++p)
 		{
 			// Particle Colour : 
 			switch (particle_colour)
 			{
-				case Colour_Viz::Velocity: // Colour Particles by Velocity - speed
-				{
-					float speed = fitRange(glm::length(particles[p].V),0.f, 5.f, 0.f, 1.f);
-					col[p] = lerp_vec(glm::vec3(0.02f, 0.02f, 0.9f), glm::vec3(1.f, 1.f, 1.f), speed);
-					break;
-				}
-				case Colour_Viz::Pressure: // Colour Particles by Pressure 
-				{
-					col[p] = glm::vec3(fitRange(particles[p].pressure, 0.f, max_pres, 0.f, 1.f));
-					break;
-				}
-				case Colour_Viz::Density: // Colour Particles by Density 
-				{
-					col[p] = glm::vec3(fitRange(particles[p].density, 0.f, max_dens, 0.f, 1.f));
-					break;
-				}
-				case Colour_Viz::Colour: // Colour Particles by Colour Field
-				{
-					col[p] = glm::vec3(fitRange(particles[p].cf, min_cf, max_cf, 0.f, 1.f)); 
-					break;
-				}
-				case Colour_Viz::GridCell: // Colour particles by grid cell. 
-				{
-					col[p] = randRange(particles[p].cell_idx, 0.f, 1.f);
-					break;
-				}
+			case Colour_Viz::Velocity: // Colour Particles by Velocity - speed
+			{
+				float speed = fitRange(glm::length(particles[p].V), 0.f, 5.f, 0.f, 1.f);
+				col[p] = lerp_vec(glm::vec3(0.02f, 0.02f, 0.9f), glm::vec3(1.f, 1.f, 1.f), speed);
+				break;
 			}
-			// Pos and Normal (vel)
-			pos[p]  = particles[p].P;
-			norm[p] = particles[p].V;
+			case Colour_Viz::Pressure: // Colour Particles by Pressure 
+			{
+				col[p] = glm::vec3(fitRange(particles[p].pressure, 0.f, max_pres, 0.f, 1.f));
+				break;
+			}
+			case Colour_Viz::Density: // Colour Particles by Density 
+			{
+				col[p] = glm::vec3(fitRange(particles[p].density, 0.f, max_dens, 0.f, 1.f));
+				break;
+			}
+			case Colour_Viz::Colour: // Colour Particles by Colour Field
+			{
+				col[p] = glm::vec3(fitRange(particles[p].cf, min_cf, max_cf, 0.f, 1.f));
+				break;
+			}
+			case Colour_Viz::GridCell: // Colour particles by grid cell. 
+			{
+				col[p] = randRange(particles[p].cell_idx, 0.f, 1.f);
+				break;
+			}
+			}
+			// Update Position
+			pos[p] = particles[p].P;
 		}
+
 		// Pass updated attribute arrays to Primitve::update_data... 
 		ren_points->update_data_position_col(pos, col);
-	}
 
-	// Render
-	ren_points->point_size = spc * 75.f;
-	ren_points->render();
+		// Call Render Points as Verts
+		ren_points->point_size = spc * 75.f;
+		ren_points->render();
+	}
+	else if (mode == Render_Type::GRID_FRAG)
+	{ // =================== Grid Fragment Shader Render ===================
+	
+		// No Matrices needed for quad. 
+
+		// Update Grid and Textures
+		grid_data.gather_particles();
+
+		get_textures();
+
+		// Bind Texture State
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, tex_dens);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, tex_vel_u);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, tex_vel_v);
+
+		// Render Quad with Grid Textures
+		ren_grid->render();
+	}
+	
 }
 

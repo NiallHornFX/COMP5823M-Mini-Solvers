@@ -24,13 +24,19 @@ Grid_2D::Grid_2D(const char *Name, Fluid_Object *FluidData, float CellSize, floa
 
 	// Allocate Grid Fields
 	cell_dens = std::vector<float>(cell_count, 0.f);
-	cell_dens = std::vector<float>(cell_count, 0.f);
-	cell_dens = std::vector<float>(cell_count, 0.f);
+	cell_u    = std::vector<float>(cell_count, 0.f);
+	cell_v    = std::vector<float>(cell_count, 0.f);
 }
 
 // Info : Transform Grid into WS, gather particles per cell if they lie within cell bounds O(n). 
 void Grid_2D::gather_particles()
 {
+	// Reset Grid first
+	for (std::size_t i = 0; i < cell_count; ++i)
+	{
+		cell_dens[i] = 0.f, cell_u[i] = 0.f, cell_v[i] = 0.f; 
+	}
+	
 	// Loop over 2D Grid, cell wise. 
 	for (std::size_t i = 0; i < cell_dim; ++i)
 	{
@@ -61,6 +67,7 @@ void Grid_2D::gather_particles()
 					cell_count++;
 				}
 			}
+			if (!cell_count) continue;
 			// Average Velocity 
 			float r_c = 1.f / float(cell_count);
 			cell_u[idx_1d] *= r_c, cell_v[idx_1d] *= r_c;
