@@ -96,6 +96,7 @@
     <ClCompile Include="src\fluid_collider.cpp" />
     <ClCompile Include="src\fluid_object.cpp" />
     <ClCompile Include="src\fluid_solver.cpp" />
+    <ClCompile Include="src\grid_2d.cpp" />
     <ClCompile Include="src\hash_grid.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\primitive.cpp" />
@@ -108,6 +109,7 @@
     <ClInclude Include="incl\fluid_collider.h" />
     <ClInclude Include="incl\fluid_object.h" />
     <ClInclude Include="incl\fluid_solver.h" />
+    <ClInclude Include="incl\grid_2d.h" />
     <ClInclude Include="incl\hash_grid.h" />
     <ClInclude Include="incl\mesh.h" />
     <ClInclude Include="incl\primitive.h" />

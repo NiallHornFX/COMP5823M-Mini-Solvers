@@ -6,7 +6,7 @@
 // Std Headers
 
 Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc, float Jitter)
-	: pos(P), dim(Dim), spc(Spc), jitter(Jitter)
+	: pos(P), dim(Dim), spc(Spc), jitter(Jitter), grid_data("FluidData", this, 0.1f, 10.f)
 {
 	// Emission
 	emit_square();
@@ -15,10 +15,10 @@ Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc, 
 	render_setup();
 
 	// Init 
-	particle_colour = Colour_Viz::Standard;
+	particle_colour = Colour_Viz::Velocity;
 	min_dens = 0.f, max_dens = 0.f;
 	min_pres = 0.f, max_pres = 0.f;
-	//min_force = 0.f, max_force = 0.f;
+	min_cf   = 0.f, max_cf   = 0.f;
 }
 
 Fluid_Object::~Fluid_Object()
@@ -65,7 +65,6 @@ void Fluid_Object::emit_square()
 			particles.emplace_back(glm::vec3(xx,yy,0.f) + r, mass, id);
 		}
 	}
-
 }
 
 void Fluid_Object::render_setup()
@@ -104,32 +103,31 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 			// Particle Colour : 
 			switch (particle_colour)
 			{
-				case Colour_Viz::GridCell:
+				case Colour_Viz::Velocity: // Colour Particles by Velocity - speed
 				{
-					// Colour particles by grid cell. 
-					col[p] = randRange(particles[p].cell_idx, 0.f, 1.f);
+					float speed = fitRange(glm::length(particles[p].V),0.f, 5.f, 0.f, 1.f);
+					col[p] = lerp_vec(glm::vec3(0.02f, 0.02f, 0.9f), glm::vec3(1.f, 1.f, 1.f), speed);
 					break;
 				}
-				case Colour_Viz::Pressure:
+				case Colour_Viz::Pressure: // Colour Particles by Pressure 
 				{
-					// Colour Particles by Pressure 
 					col[p] = glm::vec3(fitRange(particles[p].pressure, 0.f, max_pres, 0.f, 1.f));
 					break;
 				}
-				case Colour_Viz::Density:
+				case Colour_Viz::Density: // Colour Particles by Density 
 				{
-					// Colour Particles by Density 
-					//col[p] = glm::vec3(fitRange(particles[p].density, 0.f, max_dens, 0.f, 1.f));
-					col[p] = glm::vec3(fitRange(particles[p].cf, min_cf, max_cf, 0.f, 1.f)); // CF Test
+					col[p] = glm::vec3(fitRange(particles[p].density, 0.f, max_dens, 0.f, 1.f));
 					break;
 				}
-				case Colour_Viz::Velocity: 
+				case Colour_Viz::Colour: // Colour Particles by Colour Field
 				{
+					col[p] = glm::vec3(fitRange(particles[p].cf, min_cf, max_cf, 0.f, 1.f)); 
 					break;
 				}
-				case Colour_Viz::Standard:
+				case Colour_Viz::GridCell: // Colour particles by grid cell. 
 				{
-					col[p] = glm::vec3(0.1f, 0.1f, 0.95f);
+					col[p] = randRange(particles[p].cell_idx, 0.f, 1.f);
+					break;
 				}
 			}
 			// Pos and Normal (vel)

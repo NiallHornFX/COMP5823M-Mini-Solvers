@@ -1033,11 +1033,15 @@ In Debug mode we have problems are with the render time been bottleneck when par
 
 ###### Rendering via Implicit Functions in Fragment Shader 
 
+Use SSBO or UBO to pass particle data to GPU, per pixel loop over particles check if within radius of each particle, accumulate radii etc. 
+
 ###### Rendering via Grid Rasterize Density (2D Grid)
 
 Could also rasterize to a 2D Grid based on per cell density using some interpolation (bilinear most likely). We could then even use the density to define an isocontour of the free surface. 
 
 Extract grid data as serialized texture data to pass to OpenGL, would implement GL Calls into grid member function.
+
+The rendering code can be kept within Fluid Object but extract texture from grid class.  I also want to store per cell velocity. 
 
 ###### Rendering via Marching Squares
 
@@ -1051,7 +1055,7 @@ Ok so I actually have a rush job on my hands to get a nicer fluid rendering impl
 
 I will try the Implicit function in fragment shader approach, to pass the particles to the shader I can ethier use a UBO or SSBO. Radius controlled by velocity, colour mapped to a ramp based on speed with density and pressure switches. 
 
-
+Might remove normals and UV from primitive class mesh data to try and optimize as they are not used here (UVs for full screen quad are calc'd in fragment shader anyway), will need to update attribute layout / strides in all relevant functions, can reduce from 11 floats per particle-vert to just 6 (Position and Colour). 
 
 
 

@@ -84,6 +84,7 @@ public:
 	float gravity, air_resist; 
 	// Internal Force Coeffs 
 	float k_viscosity, k_surftens; 
+	bool use_visc, use_surftens; 
 	
 	// ======= SPH =======
 	float kernel_radius, kernel_radius_sqr; // h

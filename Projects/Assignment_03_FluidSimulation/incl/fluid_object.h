@@ -9,6 +9,7 @@
 
 // Project Headers
 #include "primitive.h"
+#include "grid_2d.h"
 
 // Ext Headers 
 #include "ext/glm/glm.hpp" // GLM
@@ -48,10 +49,12 @@ public:
 	void render_setup();
 	void render(const glm::mat4 &ortho);
 
-public: 
-	enum Colour_Viz {Standard = 0, Density, Pressure, Velocity, GridCell};
-	Colour_Viz particle_colour;
+	// Get Fluid Textures from Grid2D (Called per solve step)
+	void get_textures();
 
+public: 
+	enum Colour_Viz {Velocity = 0, Density, Pressure, Colour, GridCell};
+	Colour_Viz particle_colour;
 
 	// ======== Fluid Data ========
 	std::vector<Particle> particles; 
@@ -75,11 +78,14 @@ public:
 	// Rendering within Fragment Shader
 	Primitive *fsQuad; 
 
-	// Marching Squares ... 
+	// Rasterized Fluid Grid Data
+	Grid_2D grid_data;
+
+	// Texture Handles
+	GLuint tex_dens, tex_vel_u, tex_vel_v;
 
 	// Fluid Solver ref (for bidir access)
 	Fluid_Solver *solver; 
-
 };
 
 
@@ -100,6 +106,14 @@ struct Particle
 INLINE float fitRange(float val, float a_min, float a_max, float b_min, float b_max)
 {
 	return b_min + (val - a_min)*(b_max - b_min) / (a_max - a_min);
+}
+
+INLINE glm::vec3 lerp_vec(glm::vec3 a, glm::vec3 b, float t)
+{
+	float x = a.x * (1.f - t) + b.x * t; 
+	float y = a.y * (1.f - t) + b.y * t;
+	float z = a.z * (1.f - t) + b.z * t;
+	return glm::vec3(x, y, z);
 }
 
 INLINE glm::vec3 randRange(std::size_t seed, float min, float max)

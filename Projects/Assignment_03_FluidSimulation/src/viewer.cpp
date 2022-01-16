@@ -304,6 +304,10 @@ void Viewer::gui_render()
 	static float pos [2] = { DEF_XP, DEF_YP };
 	static float dim [2] = { DEF_XS, DEF_YS };
 
+	// Checkboxes (Local booleans)
+	static bool use_visc = false; 
+	static bool use_surftens = false;
+
 	// Get current Kernels
 	std::string kern_pres = ""; 
 	if (fluid_solver->pressure_kernel == Fluid_Solver::kernel::POLY6) kern_pres = "Pressure Kernel : Poly6"; else kern_pres = "Pressure Kernel : Spiky";
@@ -361,17 +365,17 @@ void Viewer::gui_render()
 		ImGui::Text("Fluid State Controls");
 		ImGui::PopStyleColor();
 
+		// Rest Density
+		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 1000.f);
+
 		// Causes rebuild of Fluid_Object if changed (could just reset ideally)
 		if (ImGui::SliderFloat2("Fluid Pos", pos, 0.f, 10.f))
 		{
 			fluid_solver->simulate = false; 
 			delete fluid_object;
 			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
-			fluid_solver->fluidData = fluid_object;
-			fluid_object->solver = fluid_solver;
-
-			// Get Neighbours Initally for Hash Debug
-			fluid_solver->get_neighbours();
+			fluid_solver->fluidData = fluid_object; // Pass FluidObj ref to FluidSolver
+			fluid_object->solver = fluid_solver;    // Pass FluidSolver ref to FluidObj
 		}
 		if (ImGui::SliderFloat2("Fluid Dim", dim, 0.f, 10.f))
 		{
@@ -381,10 +385,8 @@ void Viewer::gui_render()
 			fluid_solver->fluidData = fluid_object; // Pass FluidObj ref to FluidSolver
 			fluid_object->solver = fluid_solver;    // Pass FluidSolver ref to FluidObj
 
-			// Get Neighbours Initally for Hash Debug
-			fluid_solver->get_neighbours();
 		}
-		if (ImGui::SliderFloat("Fluid Spc", &spc, 0.0001f, 0.5f))
+		if (ImGui::SliderFloat("Fluid Spc", &spc, 1e-05f, 0.25f))
 		{
 			fluid_solver->simulate = false;
 			Fluid_Object::Colour_Viz old_pc = fluid_object->particle_colour;
@@ -418,7 +420,7 @@ void Viewer::gui_render()
 			fluid_object->solver = fluid_solver; // Pass FluidSolver ref to FluidObj
 		}
 
-		// Kernel Selection
+		// ========== Pressure Kernel Selection ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Kernel Selection");
@@ -434,16 +436,33 @@ void Viewer::gui_render()
 			std::cout << "Fluid Solver::Pressure Kernel = Spiky Gradient\n";
 		}
 
-		// Free parameters (min,max enforced here)
+		// ========== Free parameters (min,max enforced here) ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
-		ImGui::Text("Fluid Solver Controls");
+		// -------- Internal Forces 
+		ImGui::Text("Internal Forces");
 		ImGui::PopStyleColor();
-		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density,    1.f, 1000.f);
+		// Pressure Gas Constant / Stiffness 
 		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 1000.f);
-		ImGui::SliderFloat("Viscosity", &fluid_solver->k_viscosity,     0.f, 100.f);
-		ImGui::SliderFloat("SurfTens",  &fluid_solver->k_surftens,      0.f, 100.f);
-		ImGui::SliderFloat("Gravity",   &fluid_solver->gravity,        -10.f, 10.f);
+		// Viscosity
+		if (ImGui::Checkbox("Use Viscosity", &use_visc))
+		{
+			fluid_solver->use_visc = !fluid_solver->use_visc;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		ImGui::SliderFloat("Viscosity", &fluid_solver->k_viscosity, 0.f, 100.f);
+		// Surface Tension
+		if (ImGui::Checkbox("Use SurfTens", &use_surftens))
+		{
+			fluid_solver->use_surftens = !fluid_solver->use_surftens;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		ImGui::SliderFloat("SurfTens", &fluid_solver->k_surftens, 0.f, 100.f);
+		// -------- External Forces 
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("External Forces");
+		ImGui::PopStyleColor();
+		ImGui::SliderFloat("Gravity",   &fluid_solver->gravity,        -20.f, 10.f);
 		ImGui::SliderFloat("AirResist", &fluid_solver->air_resist,       0.f, 5.f);
 
 		// ========== Fluid Rendering ==========
@@ -459,9 +478,9 @@ void Viewer::gui_render()
 		}
 
 		// Particle Colours 
-		if (ImGui::Button("Colour : Const"))
+		if (ImGui::Button("Colour : Velocity"))
 		{
-			fluid_object->particle_colour = Fluid_Object::Colour_Viz::Standard;
+			fluid_object->particle_colour = Fluid_Object::Colour_Viz::Velocity;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		if (ImGui::Button("Colour : Pressure"))
@@ -472,6 +491,11 @@ void Viewer::gui_render()
 		if (ImGui::Button("Colour : Density"))
 		{
 			fluid_object->particle_colour = Fluid_Object::Colour_Viz::Density;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		if (ImGui::Button("Colour : ColField"))
+		{
+			fluid_object->particle_colour = Fluid_Object::Colour_Viz::Colour;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		if (ImGui::Button("Colour : Cells"))

@@ -34,6 +34,7 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data)
 	simulate    = false;
 	got_neighbours = false; 
 	kernel_radius_sqr = kernel_radius * kernel_radius;
+	use_visc = false, use_surftens = false; 
 	stiffness_coeff = 500.f; 
 
 	// Default Kernels 
@@ -280,7 +281,7 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 	// Get Neighbour list
 	std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
 
-	// Use sep loops for now...
+	// ToDo : Put in single particle for loop. 
 
 	// =============== Compute Pressure Gradient --> Pressure Force ===============
 	glm::vec2 pressure_grad(0.f);
@@ -294,41 +295,43 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 	}
 	force_pressure = -glm::vec3(pressure_grad.x, pressure_grad.y, 0.f);
 
-
 	// =============== Compute Viscosity Laplacian --> Viscosity Force ===============
-	glm::vec3 visc_vec(0.f);
-	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+	if (use_visc)
 	{
-		const Particle &Pt_j = *(neighbours[p_j]);
-		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
+		glm::vec3 visc_vec(0.f);
+		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+		{
+			const Particle &Pt_j = *(neighbours[p_j]);
+			if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 
-		// Compute Symmetric Viscosity for particle pair
-		visc_vec += Pt_j.mass * ((Pt_j.V - Pt_i.V) / Pt_j.density) * (this->*w_visc_lapl)(Pt_i.P - Pt_j.P);
+			// Compute Symmetric Viscosity for particle pair
+			visc_vec += Pt_j.mass * ((Pt_j.V - Pt_i.V) / Pt_j.density) * (this->*w_visc_lapl)(Pt_i.P - Pt_j.P);
+		}
+		force_viscosity = k_viscosity * visc_vec;
 	}
-	force_viscosity = k_viscosity * visc_vec;
-
 	// =============== Compute Surface Gradient --> Surface Tension Force ===============
-	// Calculate gradient of color field. 
-	// Calculate divergence of gradient (to yield laplacian)
-	float col_lapl = 0.f;
-	glm::vec2 col_grad(0.f);
-	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+	if (use_surftens)
 	{
-		const Particle &Pt_j = *(neighbours[p_j]);
-		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
+		float col_lapl = 0.f;
+		glm::vec2 col_grad(0.f);
+		// Compute Gradient and Laplacian as per Mullers paper 
+		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
+		{
+			const Particle &Pt_j = *(neighbours[p_j]);
+			if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 
-		// Gradient and Laplacian as per Mullers paper 
-		// Compute Symmetric gradient for particle pair
-		col_grad += Pt_j.mass * (Pt_j.cf / Pt_j.density) * (this->*w_pres_grad)(Pt_i.P - Pt_j.P);
+			// Compute Symmetric gradient for particle pair
+			col_grad += Pt_j.mass * (Pt_j.cf / Pt_j.density) * (this->*w_pres_grad)(Pt_i.P - Pt_j.P);
 
-		// Laplacian (use visc kernel for now)
-		col_lapl += Pt_j.mass * (Pt_j.cf / Pt_j.density) * kernel_visc_laplacian(Pt_i.P - Pt_j.P);
+			// Laplacian (use visc kernel for now)
+			col_lapl += Pt_j.mass * (Pt_j.cf / Pt_j.density) * kernel_visc_laplacian(Pt_i.P - Pt_j.P);
+		}
+
+		// Check if colour field gradient length is non zero
+		if (!glm::dot(col_grad, col_grad)) force_surftension = glm::vec3(0.f);
+		// Should be neg sigma, but must have a wrong sign somewhere ... 
+		else force_surftension = k_surftens * col_lapl * glm::vec3(glm::normalize(col_grad), 0.f);
 	}
-
-	// Check if colour field gradient length is non zero
-	if (!glm::dot(col_grad, col_grad)) force_surftension = glm::vec3(0.f);
-	// Should be neg sigma, but must have a wrong sign somewhere ... 
-	else force_surftension = k_surftens * col_lapl * glm::vec3(glm::normalize(col_grad), 0.f);
 
 	// Accumulate forces
 	glm::vec3 acc_force = force_pressure + force_viscosity + force_surftension;
