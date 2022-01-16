@@ -6,7 +6,7 @@
 // Std Headers
 
 Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc, float Jitter)
-	: pos(P), dim(Dim), spc(Spc), jitter(Jitter), grid_data("FluidData", this, 0.1f, 10.f)
+	: pos(P), dim(Dim), spc(Spc), jitter(Jitter), grid_data("FluidData", this, 0.05f, 10.f)
 {
 	// Emission
 	emit_square();

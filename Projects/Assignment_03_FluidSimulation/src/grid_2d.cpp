@@ -49,6 +49,7 @@ void Grid_2D::gather_particles()
 			float gs_x = float(i) * r_cell_dim, gs_y = float(j) * r_cell_dim;
 			// Grid --> World Space
 			float ws_x = gs_x * ws_size, ws_y = gs_y * ws_size; // Node Position
+			float ws_x_c = (gs_x * ws_size) + h_cell_ext, ws_y_c = (gs_y * ws_size) + h_cell_ext; // Centre Position
 
 			// Get Cell Min Max Node Positions
 			glm::vec3 min(ws_x, ws_y, 0.f);
@@ -59,9 +60,34 @@ void Grid_2D::gather_particles()
 			for (std::size_t p = 0; p < fluid_data->particles.size(); ++p)
 			{
 				Particle &pt = fluid_data->particles[p];
+
+				// Implicit Cirlce SDF 
+				//float dist = (pow(ws_x - pt.P.x, 2.f) + pow(ws_y - pt.P.y, 2.f)) - 0.05f;
+				// Slow Metaballs
+				float r = 0.125f; 
+				//float s = glm::length(pt.V);
+				//r = s / 100.f; 
+				// terrible Metaball Function
+				float dist = r / glm::length(glm::vec2(ws_x_c - pt.P.x, ws_y_c - pt.P.y));
+				//if (dist <= 1e-05f) // Using SDF Function 
+				if (dist > 0.75f)
+				{
+					//cell_dens[idx_1d] += pt.density;
+					//cell_dens[idx_1d] += std::fabs(dist);
+					cell_dens[idx_1d] = std::max(cell_dens[idx_1d], std::fabs(dist));
+				}
+
+				// Standard Rastierize to grid cell (Gather based should use scatter so can do bilin more easily frac indices).
+				/*
 				if (pt.P.x >= min.x && pt.P.x <= max.x && pt.P.y >= min.y && pt.P.y <= max.y)
 				{
-					cell_dens[idx_1d]     += pt.density;
+					if ((pow(ws_x - pt.P.x, 2.f) + pow(ws_y - pt.P.y, 2.f)) - 10.f <= 1e01)
+					{
+						//cell_dens[idx_1d]     += pt.density;
+
+
+					}
+					//cell_dens[idx_1d]     += pt.density;
 					//cell_dens[idx_1d + 1] += pt.density;
 					//cell_dens[idx_1d - 1] += pt.density;
 					//cell_dens[idx_1d + cell_dim] += pt.density;
@@ -71,13 +97,13 @@ void Grid_2D::gather_particles()
 					cell_v[idx_1d] += pt.V.y;
 					cell_count++;
 				}
+				*/
 			}
 			if (!cell_count) continue;
 			float r_c = 1.f / float(cell_count);
 			// Average Density
-			cell_dens[idx_1d] *= r_c;
+			//cell_dens[idx_1d] *= r_c;
 			// Average Velocity 
-			
 			cell_u[idx_1d] *= r_c, cell_v[idx_1d] *= r_c;
 		}
 	}
