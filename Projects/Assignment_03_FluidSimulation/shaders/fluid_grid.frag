@@ -36,7 +36,7 @@ float rand(float n)
 void main()
 {
 	// Map from 0-N FragCoord_Space to 0-1 UV Space. 
-	vec2 uv = (gl_FragCoord.xy - 0.0) / 1024;
+	vec2 uv = (gl_FragCoord.xy - 0) / 1024;
 	
 	float dens =  clamp(texture(d_tex, uv),   0.0, 1.0).r; 
 	float vel_x = clamp(texture(v_u_tex, uv), 0.0, 1.0).r; 
@@ -50,9 +50,9 @@ void main()
 	
 	//frag_color = vec4(uv, 0, 1.0); 
 	
-	frag_color = vec4(dens, dens, dens, 1.0); 
+	//frag_color = vec4(dens, dens, dens, 1.0); 
 	
-	//frag_color = vec4(vel_x, vel_y, 0.0, 1.0); 
+	frag_color = vec4(vel_x, vel_y, 0.0, 1.0); 
 	
 	//frag_color = vpos;
 }

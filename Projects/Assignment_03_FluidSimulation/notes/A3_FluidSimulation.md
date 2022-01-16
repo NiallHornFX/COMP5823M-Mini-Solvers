@@ -1043,7 +1043,35 @@ Extract grid data as serialized texture data to pass to OpenGL, would implement 
 
 The rendering code can be kept within Fluid Object but extract texture from grid class.  I also want to store per cell velocity. 
 
-Grid won't match screen res so need to upscale (within frag shader or on host ? )
+Rasterized Particle grid is ofcourse lower res the the framebuffer itself, however we rely on OpenGL to upscale the texture, by passing the UV space of the framebuffer ie : 
+
+```glsl
+// Map from 0-Window FragCoord_Space to 0-1 UV Space. 
+vec2 uv = (gl_FragCoord.xy - 0) / 1024;
+float dens =  clamp(texture(d_tex, uv),   0.0, 1.0).r; 
+// [..]
+```
+
+So the upscaling currently is GL_LINEAR which is not great but good enough. 
+
+Note that my index order of the grid is (i,j) using i * m + j, which should be row major, however when retrieving the 1D index to write to the flat arrays of the grid it needs to be interchanged for OpenGL Texture format. Need to check this, but interchanging/transposing indices works. 
+
+Also Make sure 
+
+```
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+```
+
+Is used to prevent wrap around of frame buffer edges. 
+
+Note the sampling space is the size of the framebuffer not the texture (the upscaling is then done via GL_LINEAR as Min/Mag filter set). (Not related to the rasterization of particle to grid interpolation). 
+
+Scatter approach makes more sense so we can do bilinear rasterization to grid, because cell based gathering doesn't allow for interpolation unless we pass values to neighbouring cells by some bias. We'd need to calc where abouts in cell bounds does particle lie, to work out neighbour values. Scatter would be more efficient as we'd map position directly to indices using fractional part as bilinear interpolation coefficients. 
+
+Not really sure I thought this through as we just have discrete looking cells now as oppose to a smooth density field, we'd need to blur it or reduce the res of the grid futher, but then we get temporal stepping.
+
+Could do rasterization as implicit radii within grid2D ? Oppose to on the GPU
 
 ###### Rendering via Marching Squares
 

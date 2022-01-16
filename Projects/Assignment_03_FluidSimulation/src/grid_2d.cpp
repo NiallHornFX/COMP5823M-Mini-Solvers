@@ -43,7 +43,7 @@ void Grid_2D::gather_particles()
 		for (std::size_t j = 0; j < cell_dim; ++j)
 		{
 			// 1D Index
-			const std::size_t idx_1d = idx_2Dto1D(i, j);
+			const std::size_t idx_1d = idx_2Dto1D(j, i); // Interchange so data matches GL
 
 			// Index --> Grid Space
 			float gs_x = float(i) * r_cell_dim, gs_y = float(j) * r_cell_dim;
@@ -61,15 +61,23 @@ void Grid_2D::gather_particles()
 				Particle &pt = fluid_data->particles[p];
 				if (pt.P.x >= min.x && pt.P.x <= max.x && pt.P.y >= min.y && pt.P.y <= max.y)
 				{
-					cell_dens[idx_1d] += pt.density;
+					cell_dens[idx_1d]     += pt.density;
+					//cell_dens[idx_1d + 1] += pt.density;
+					//cell_dens[idx_1d - 1] += pt.density;
+					//cell_dens[idx_1d + cell_dim] += pt.density;
+					//cell_dens[idx_1d - cell_dim] += pt.density;
+
 					cell_u[idx_1d] += pt.V.x; 
 					cell_v[idx_1d] += pt.V.y;
 					cell_count++;
 				}
 			}
 			if (!cell_count) continue;
-			// Average Velocity 
 			float r_c = 1.f / float(cell_count);
+			// Average Density
+			cell_dens[idx_1d] *= r_c;
+			// Average Velocity 
+			
 			cell_u[idx_1d] *= r_c, cell_v[idx_1d] *= r_c;
 		}
 	}
