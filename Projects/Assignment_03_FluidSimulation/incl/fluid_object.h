@@ -45,7 +45,7 @@ public:
 	void render_setup();
 	void render(const glm::mat4 &ortho);
 
-	// Get Fluid Textures from Grid2D (Called per solve step)
+	// Get Fluid Textures from Grid2D (Called per tick render)
 	void get_textures();
 
 public: 

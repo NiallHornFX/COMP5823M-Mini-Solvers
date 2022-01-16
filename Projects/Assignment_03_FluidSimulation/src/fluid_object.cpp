@@ -36,7 +36,6 @@ void Fluid_Object::reset_fluid()
 		pt.P = pt.rest; float mass = pt.mass;
 		pt = Particle(pt.P, mass, pt.id);
 	}
-
 	// Reset Attrib Ranges
 	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f; min_force = 0.f, max_force = 0.f;
 }
@@ -73,8 +72,26 @@ void Fluid_Object::render_setup()
 	ren_points = new Primitive("Render Fluid Points");
 	ren_points->set_shader("../../shaders/fluid_points.vert", "../../shaders/fluid_points.frag");
 	ren_points->mode = Render_Mode::RENDER_POINTS;
-}
 
+
+	// =========== Grid Render Setup ===========
+	fsQuad = new Primitive("Render Fluid Quad");
+	fsQuad->set_shader("../../shaders/fluid_grid.vert", "../../shaders/fluid_grid.frag");
+	fsQuad->mode = Render_Mode::RENDER_MESH;
+	float quad_verts[44] =
+	{
+		// Tri 0
+		-1.f, -1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+		1.f, -1.f,  0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+		1.f, 1.f,   0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+		// Tri 1
+		1.f, 1.f,   0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+		-1.f, 1.f,  0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+		-1.f, -1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f
+	};
+	axis->set_data_mesh(data, 6);
+
+}
 
 void Fluid_Object::render(const glm::mat4 &ortho)
 {
@@ -143,9 +160,3 @@ void Fluid_Object::render(const glm::mat4 &ortho)
 	ren_points->render();
 }
 
-std::pair<glm::vec2, glm::vec2> Fluid_Object::get_fluid_bounds() const
-{
-	glm::vec2 min(particles[0].P.x, particles[0].P.y); 
-	glm::vec2 max(particles[particles.size()-1].P.x, particles[particles.size()-1].P.y);
-	return std::pair<glm::vec2, glm::vec2>(min, max); 
-}
