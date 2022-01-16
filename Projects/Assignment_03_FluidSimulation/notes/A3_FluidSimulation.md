@@ -1033,7 +1033,7 @@ In Debug mode we have problems are with the render time been bottleneck when par
 
 ###### Rendering via Implicit Functions in Fragment Shader 
 
-Use SSBO or UBO to pass particle data to GPU, per pixel loop over particles check if within radius of each particle, accumulate radii etc. 
+Use SSBO or UBO to pass particle data to GPU, per pixel loop over particles check if within radius of each particle, accumulate overlapping radii etc. 
 
 ###### Rendering via Grid Rasterize Density (2D Grid)
 

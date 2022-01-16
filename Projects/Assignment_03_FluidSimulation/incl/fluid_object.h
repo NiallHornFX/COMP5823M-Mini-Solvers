@@ -5,7 +5,6 @@
 // Std Headers
 #include <vector>
 #include <random>
-#include <tuple>
 
 // Project Headers
 #include "primitive.h"
@@ -40,9 +39,6 @@ public:
 	// ======== Emit + Reset ========
 	void emit_square();
 	void reset_fluid();
-
-	// ======== Util ========
-	std::pair<glm::vec2, glm::vec2> get_fluid_bounds() const; 
 
 	// ======== Render ========
 	enum render_type {POINT_VERTS = 0, FRAGMENT = 1};
