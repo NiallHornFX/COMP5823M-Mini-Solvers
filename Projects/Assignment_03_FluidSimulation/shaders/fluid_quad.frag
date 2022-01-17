@@ -22,23 +22,23 @@ struct particle
 	float dens; 
 };*/
 
+/*
 struct particle
 {
 	float p_x, p_y; 
 	float v_x, v_y;  
 	float dens; 
-};
+}; */
 
-struct foo
+struct particle
 {
-	float r, g; 
-};
+	float p_x, p_y, spd, dens; 
+}; 
 
 // SSBO 
-layout(std430, binding = 0) buffer data
+layout(std140, binding = 0) buffer data
 {
-	//particle pts[];  
-	foo baz[];
+	particle pts[];  
 };
 
 // ===== Util Functions =====
@@ -63,13 +63,15 @@ void main()
 	// Scale to (0-10, XY to match simulation domain space).
 	uv *= 10.0; 
 	
-	vec2 val = vec2(0, 0); 
+	/*
+	float val = 0.0;
 	for (int p = 0; p < pt_count; ++p)
 	{
-		val += vec2(baz[p].r, baz[p].g);
+		val += pts[p].spd; 
 	}
-	frag_color = vec4(val, 0.0, 1.0); 
-	/*
+	frag_color = vec4(val, val, val, 1.0);  */
+	
+	
 	// Loop through particles, eval implicit function
 	float val = 0.0;
 	for (int p = 0; p < pt_count; ++p)
@@ -84,5 +86,5 @@ void main()
 	{
 		frag_color = vec4(val, val, val, 1.0); 
 	} 
-	*/
+	
 }

@@ -93,20 +93,17 @@ struct Particle
 	float density, pressure, mass, cf;
 };
 
-struct Particle_GPU
+struct /*(alignas(16)*/ Particle_GPU
 {
-	float p_x, p_y;
-	float v_x, v_y;
-	float dens; 
+	float p_x, p_y, spd, dens; 
+	//float p_x, p_y;
+	//float v_x, v_y;
+	//float dens; 
 	//glm::vec2 pos;
 	//glm::vec2 vel; 
 	//float dens; 
 };
 
-struct alignas(16) foo
-{
-	float r, g; 
-};
 
 // =================================== Util Functions ===================================
 INLINE float fitRange(float val, float a_min, float a_max, float b_min, float b_max)
