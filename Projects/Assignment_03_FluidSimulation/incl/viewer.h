@@ -16,7 +16,7 @@ using byte = unsigned char;
 
 // OpenGL Version
 #define GL_MAJOR 4
-#define GL_MINOR 0
+#define GL_MINOR 3
 
 // FD 
 class Fluid_Object;

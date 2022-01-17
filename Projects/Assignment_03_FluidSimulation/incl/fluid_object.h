@@ -71,6 +71,8 @@ public:
 	// Rendering grid within Fragment Shader
 	Primitive *ren_quad; 
 
+	GLuint ssbo_pts; 
+
 	Grid_2D grid_data; 	  // Rasterized Fluid Grid Data
 	GLuint tex_dens, tex_vel_u, tex_vel_v; 	// Texture Handles
 
@@ -89,6 +91,13 @@ struct Particle
 	glm::vec3 rest; 
 	std::size_t id, cell_idx;
 	float density, pressure, mass, cf;
+};
+
+struct Particle_GPU
+{
+	glm::vec2 pos;
+	glm::vec2 vel; 
+	float dens; 
 };
 
 // =================================== Util Functions ===================================

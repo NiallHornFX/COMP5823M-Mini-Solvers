@@ -1,5 +1,5 @@
 // COMP5823M - A3 : Niall Horn - basic.vert
-#version 400 core 
+#version 430 core 
 
 // Input 
 layout (location = 0) in vec3 v_P;

@@ -85,7 +85,7 @@ void Fluid_Object::render_setup()
 	}
 	ren_points->set_data_mesh(data);
 
-	// =========== Grid Render Setup ===========
+	// =========== Quad Render Setup ===========
 	ren_quad = new Primitive("Render Fluid Quad");
 	ren_quad->set_shader("../../shaders/fluid_quad.vert", "../../shaders/fluid_quad.frag");
 	ren_quad->mode = Render_Mode::RENDER_MESH;
@@ -101,6 +101,9 @@ void Fluid_Object::render_setup()
 		-1.f, -1.f, 0.f, 0.f, 0.f, 0.f
 	};
 	ren_quad->set_data_mesh(quad_verts, 6);
+
+	// SSBO Setup
+	glGenBuffers(1, &ssbo_pts);
 }
 
 
@@ -160,35 +163,29 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 	}
 	else if (mode == Render_Type::METABALL)
 	{ // =================== Fragment Shader Metaballs Render ===================
-	
-		// Set Uniform Particle Array
-		Shader &shad = ren_quad->shader;
 
-
-		for (std::size_t i = 0; i < particles.size(); ++i)
+		// Get CPU-GPU Particle Struct
+		std::vector<Particle_GPU> pts_gpu(particles.size());
+		for (std::size_t p = 0; p < particles.size(); ++p)
 		{
-			const Particle &pt = particles[i];
-			glm::vec2 pos_2(pt.P.x, pt.P.y);
-			glm::vec2 vel_2(pt.V.x, pt.V.y);
+			const Particle &pt = particles[p];
 
-			// Loc String
-			std::string pt_str = "pts[" + std::to_string(i) + "].";
-			shad.use();
-			// Pos
-			GLuint pos_loc = glGetUniformLocation(shad.ID, (pt_str + "pos").c_str());
-			glUniform2fv(pos_loc, 1, glm::value_ptr(pos_2));
-			// Vel
-			GLuint vel_loc = glGetUniformLocation(shad.ID, (pt_str + "vel").c_str());
-			glUniform2fv(vel_loc, 1, glm::value_ptr(vel_2));
-			// Dens
-			GLuint dens_loc = glGetUniformLocation(shad.ID, (pt_str + "dens").c_str());
-			glUniform1f(dens_loc, pt.density); 
+			Particle_GPU pt_gpu; 
+			pt_gpu.pos = glm::vec2(pt.P.x, pt.P.y);
+			pt_gpu.vel = glm::vec2(pt.V.x, pt.V.y);
+			pt_gpu.dens = pt.density;
+			pts_gpu.push_back(std::move(pt_gpu));
 		}
-		glUseProgram(0);
-		// As Uniform array is fixed size, set current particle count uniform : 
-		shad.setInt("pt_count", particles.size());
 
-		// Pass min and max density range
+		// SSBO Fill
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pts);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, (sizeof(Particle_GPU) * particles.size()), pts_gpu.data(), GL_STATIC_DRAW);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_pts);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+		// Set Uniforms
+		Shader &shad = ren_quad->shader;
+		shad.setInt("pt_count", particles.size());
 		shad.setFloat("min_dens", min_dens);
 		shad.setFloat("max_dens", max_dens);
 
