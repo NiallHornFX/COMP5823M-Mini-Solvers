@@ -18,7 +18,7 @@ struct particle
 
 // Fixed size xxx, pass in current pt count as uniform; 
 uniform int pt_count;
-uniform particle pts[100];
+uniform particle pts[256];
 uniform float min_dens; 
 uniform float max_dens;
 
@@ -44,20 +44,16 @@ void main()
 	uv *= 10.0; 
 	
 	// Loop through particles, eval implicit function
-	float dens = 0.0;
-	for (int p = 0; p < 100; ++p)
+	float val = 0.0;
+	for (int p = 0; p < pt_count; ++p)
 	{
 		particle pt = pts[p];
 		float rad = fit(pt.dens, min_dens, max_dens, 0.25, 0.35);
 		vec2 r_pt = uv - pt.pos;
-		dens += meta(r_pt, rad);  
+		val += meta(r_pt, rad);  
 	}
-	
-	if (dens >= 0.5)
+	if (val >= 0.5) // Iso threshold
 	{
-		frag_color = vec4(dens, dens, dens, 1.0); 
+		frag_color = vec4(val, val, val, 1.0); 
 	}
-	//dens = clamp(dens * 10.f, 0.0, 1.0); 
-
-
 }

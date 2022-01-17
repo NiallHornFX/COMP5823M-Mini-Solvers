@@ -1035,7 +1035,7 @@ In Debug mode we have problems are with the render time been bottleneck when par
 
 Use SSBO or UBO to pass particle data to GPU, per pixel loop over particles check if within radius of each particle, accumulate overlapping radii etc. Using Implicit Circle function to create 2D SDF like surface or Metaballs via a field like function. 
 
-Trying to pass the particle data via pure uniform arrays is useless as there is a 1024 constant limit which when passing even a reduced particle struct of 2 vec2s (pos and vel) and a single float (density) is exceeded with only a few hundred particles. The other option is use textures or SSBO. SSBO is core in 4.3 so will need to move from OpenGL 4.0 to 4.3 I don't think it matters, its 2022 and most likely this will never get ran anywhere else ever, my concern was if someone tries to compile and run this on a mac where Core OpenGL ends at 4.1 but I highly doubt that will happen as this probably won't even compile on Mac OS as is. So I think it will just be easier to use SSBOs. 
+Trying to pass the particle data via pure uniform arrays is useless as there is a 1024 float constant limit which when passing even a reduced particle struct of 2 vec2s (pos and vel) and a single float (density) is exceeded with only a few hundred particles. The other option is use textures or SSBO. SSBO is core in 4.3 so will need to move from OpenGL 4.0 to 4.3 I don't think it matters, its 2022 and most likely this will never get ran anywhere else ever, my concern was if someone tries to compile and run this on a mac where Core OpenGL ends at 4.1 but I highly doubt that will happen as this probably won't even compile on Mac OS as is. So I think it will just be easier to use SSBOs. 
 
 
 
@@ -1044,11 +1044,17 @@ Trying to pass the particle data via pure uniform arrays is useless as there is 
 Metaball basics (Using  Uniform arrays testing with limited particle count) : 
 
 ```GLSL
+// Fixed size 256, so pass in current pt count as uniform; 
+uniform int pt_count;
+uniform particle pts[256]; // Beyond this will run into uniform upper limit
+uniform float min_dens; 
+uniform float max_dens;
+
 float fit (float value, float min_a, float max_a, float min_b, float max_b)
 {
 	return min_b + (value - min_a)*(max_b - min_b) / (max_a - min_a);
 }
-float meta(vec2 r, float h)
+float meta(vec2 r, float h) // Slow (use sqrt for length)
 {
 	float rl = length(r); 
 	if (rl > h) return 0.0;
@@ -1063,15 +1069,18 @@ void main()
 	uv *= 10.0; 
 	
 	// Loop through particles, eval implicit function
-	float dens = 0.0;
+	float val = 0.0;
 	for (int p = 0; p < 100; ++p)
 	{
 		particle pt = pts[p];
-		float r_sqr = pow(fit(pt.dens, min_dens, max_dens, 0.05, 0.2) + 0.025, 2.0); 
-		vec2 c = uv - pt.pos;
-		dens += meta(c, 0.5);  
+		float rad = fit(pt.dens, min_dens, max_dens, 0.25, 0.35);
+		vec2 r_pt = uv - pt.pos;
+		val += meta(r_pt, rad);  
 	}
-	frag_color = vec4(dens, dens, dens, 1.0); 
+	if (val >= 0.5) // Iso threshold
+	{
+		frag_color = vec4(val, val, val, 1.0); 
+	}
 }
 ```
 

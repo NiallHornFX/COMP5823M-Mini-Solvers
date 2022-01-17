@@ -221,7 +221,7 @@ void Viewer::render()
 
 	fluid_object->render(Fluid_Object::Render_Type::METABALL, ortho);
 
-	//fluid_object->render(Fluid_Object::Render_Type::POINT_VERTS, ortho);
+	fluid_object->render(Fluid_Object::Render_Type::POINT_VERTS, ortho);
 
 	// ==================== Render Fluid Colliders ====================
 	fluid_solver->render_colliders(ortho);
