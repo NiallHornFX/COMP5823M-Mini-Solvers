@@ -14,17 +14,31 @@ uniform float min_dens;
 uniform float max_dens;
 
 // GPU Particle Struct
+/*
 struct particle
 {
 	vec2 pos;
 	vec2 vel; 
 	float dens; 
+};*/
+
+struct particle
+{
+	float p_x, p_y; 
+	float v_x, v_y;  
+	float dens; 
+};
+
+struct foo
+{
+	float r, g; 
 };
 
 // SSBO 
 layout(std430, binding = 0) buffer data
 {
-	particle pts[];  
+	//particle pts[];  
+	foo baz[];
 };
 
 // ===== Util Functions =====
@@ -49,20 +63,26 @@ void main()
 	// Scale to (0-10, XY to match simulation domain space).
 	uv *= 10.0; 
 	
-	//frag_color = vec4(1.0, 0, 0, 1.0); 
-	
-	
+	vec2 val = vec2(0, 0); 
+	for (int p = 0; p < pt_count; ++p)
+	{
+		val += vec2(baz[p].r, baz[p].g);
+	}
+	frag_color = vec4(val, 0.0, 1.0); 
+	/*
 	// Loop through particles, eval implicit function
 	float val = 0.0;
 	for (int p = 0; p < pt_count; ++p)
 	{
 		particle pt = pts[p];
+		vec2 pos = vec2(pt.p_x, pt.p_y); 
 		float rad = fit(pt.dens, min_dens, max_dens, 0.25, 0.35);
-		vec2 r_pt = uv - pt.pos;
+		vec2 r_pt = uv - pos;
 		val += meta(r_pt, rad);  
 	}
 	if (val >= 0.5) // Iso threshold
 	{
 		frag_color = vec4(val, val, val, 1.0); 
 	} 
+	*/
 }

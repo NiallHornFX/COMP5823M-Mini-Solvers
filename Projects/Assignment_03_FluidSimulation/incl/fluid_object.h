@@ -95,9 +95,17 @@ struct Particle
 
 struct Particle_GPU
 {
-	glm::vec2 pos;
-	glm::vec2 vel; 
+	float p_x, p_y;
+	float v_x, v_y;
 	float dens; 
+	//glm::vec2 pos;
+	//glm::vec2 vel; 
+	//float dens; 
+};
+
+struct alignas(16) foo
+{
+	float r, g; 
 };
 
 // =================================== Util Functions ===================================

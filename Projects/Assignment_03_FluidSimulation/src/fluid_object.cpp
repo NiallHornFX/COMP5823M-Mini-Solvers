@@ -171,21 +171,36 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 			const Particle &pt = particles[p];
 
 			Particle_GPU pt_gpu; 
-			pt_gpu.pos = glm::vec2(pt.P.x, pt.P.y);
-			pt_gpu.vel = glm::vec2(pt.V.x, pt.V.y);
+			//pt_gpu.pos = glm::vec2(pt.P.x, pt.P.y);
+			//pt_gpu.vel = glm::vec2(pt.V.x, pt.V.y);
+			pt_gpu.p_x = pt.P.x, pt_gpu.p_y = pt.P.y;
+			pt_gpu.v_x = pt.V.x, pt_gpu.v_y = pt.V.y;
 			pt_gpu.dens = pt.density;
 			pts_gpu.push_back(std::move(pt_gpu));
 		}
 
+		std::vector<foo> test(10);
+		for (std::size_t i = 0; i < 10; ++i)
+		{
+			test[i].r = /*float(i + 1) * 0.5f*/ 0.f; 
+			test[i].g = /*float(i + 2) * 0.33f*/  0.f;
+		}
+		test[4].r = 1.f, test[4].g = 0.f; 
+
+
 		// SSBO Fill
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pts);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, (sizeof(Particle_GPU) * particles.size()), pts_gpu.data(), GL_STATIC_DRAW);
+		//glBufferData(GL_SHADER_STORAGE_BUFFER, (sizeof(Particle_GPU) * particles.size()), pts_gpu.data(), GL_STATIC_DRAW);
+		//glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_pts);
+
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(foo) * 10, test.data(), GL_STATIC_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_pts);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 		// Set Uniforms
 		Shader &shad = ren_quad->shader;
-		shad.setInt("pt_count", particles.size());
+		//shad.setInt("pt_count", particles.size());
+		shad.setInt("pt_count", 10);
 		shad.setFloat("min_dens", min_dens);
 		shad.setFloat("max_dens", max_dens);
 
