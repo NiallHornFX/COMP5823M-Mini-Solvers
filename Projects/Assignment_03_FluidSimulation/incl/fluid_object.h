@@ -41,12 +41,10 @@ public:
 	void reset_fluid();
 
 	// ======== Render ========
-	enum Render_Type {POINT_VERTS = 0, GRID_FRAG = 1};
+	enum Render_Type {POINT_VERTS = 0, METABALL, GRID_FRAG};
 	void render_setup();
 	void render(Render_Type mode, const glm::mat4 &ortho);
 
-	// Get Fluid Textures from Grid2D (Called per tick render)
-	void get_textures();
 
 public: 
 	enum Colour_Viz {Velocity = 0, Density, Pressure, Colour, GridCell};
@@ -71,7 +69,7 @@ public:
 	Primitive *ren_points; // Point Rendering via Primitive
 
 	// Rendering grid within Fragment Shader
-	Primitive *ren_grid; 
+	Primitive *ren_quad; 
 
 	Grid_2D grid_data; 	  // Rasterized Fluid Grid Data
 	GLuint tex_dens, tex_vel_u, tex_vel_v; 	// Texture Handles

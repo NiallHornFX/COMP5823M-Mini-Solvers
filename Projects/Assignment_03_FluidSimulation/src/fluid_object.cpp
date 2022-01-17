@@ -25,7 +25,7 @@ Fluid_Object::~Fluid_Object()
 {
 	// Delete Primitives
 	if (ren_points) delete ren_points; 
-	if (ren_grid)   delete ren_grid;
+	if (ren_quad)   delete ren_quad;
 }
 
 // Info : Reset fluid to inital state.
@@ -66,6 +66,7 @@ void Fluid_Object::emit_square()
 	}
 }
 
+// Info : Called once (on construction of Fluid Object) to setup render paths. 
 void Fluid_Object::render_setup()
 {
 	// Setup both render paths 
@@ -85,9 +86,9 @@ void Fluid_Object::render_setup()
 	ren_points->set_data_mesh(data);
 
 	// =========== Grid Render Setup ===========
-	ren_grid = new Primitive("Render Fluid Quad");
-	ren_grid->set_shader("../../shaders/fluid_grid.vert", "../../shaders/fluid_grid.frag");
-	ren_grid->mode = Render_Mode::RENDER_MESH;
+	ren_quad = new Primitive("Render Fluid Quad");
+	ren_quad->set_shader("../../shaders/fluid_quad.vert", "../../shaders/fluid_quad.frag");
+	ren_quad->mode = Render_Mode::RENDER_MESH;
 	float quad_verts[36] =
 	{
 		// Tri 0
@@ -99,55 +100,9 @@ void Fluid_Object::render_setup()
 		-1.f,  1.f, 0.f, 0.f, 0.f, 0.f, 
 		-1.f, -1.f, 0.f, 0.f, 0.f, 0.f
 	};
-	ren_grid->set_data_mesh(quad_verts, 6);
-
-	// Texture Alloc
-	glGenTextures(1, &tex_dens);
-	glGenTextures(1, &tex_vel_u);
-	glGenTextures(1, &tex_vel_v);
-
-	// Set size uniform
-	ren_grid->shader.setInt("N_Size", grid_data.cell_dim);
+	ren_quad->set_data_mesh(quad_verts, 6);
 }
 
-void Fluid_Object::get_textures()
-{
-	// Density Grid -> 4 Byte R (tex_dens)
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, tex_dens);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, grid_data.cell_dim, grid_data.cell_dim, 0, GL_RED, GL_FLOAT, grid_data.cell_dens.data());
-
-	// Vel U Grid -> 4 Byte R (tex_vel_u)
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, tex_vel_u);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, grid_data.cell_dim, grid_data.cell_dim, 0, GL_RED, GL_FLOAT, grid_data.cell_u.data());
-
-	// Vel V Grid -> 4 Byte R (tex_vel_v)
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, tex_vel_v);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, grid_data.cell_dim, grid_data.cell_dim, 0, GL_RED, GL_FLOAT, grid_data.cell_v.data());
-
-	// Set shader Sampler Uniforms to texture units
-	ren_grid->shader.setInt("d_tex",   0); // Density     = 0 
-	ren_grid->shader.setInt("v_u_tex", 1); // Velocity u  = 1 
-	ren_grid->shader.setInt("v_v_tex", 2); // Velocity v  = 2 
-
-	// Clear State
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glUseProgram(0);
-}
 
 void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 {
@@ -203,26 +158,42 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 		ren_points->point_size = spc * 75.f;
 		ren_points->render();
 	}
-	else if (mode == Render_Type::GRID_FRAG)
-	{ // =================== Grid Fragment Shader Render ===================
+	else if (mode == Render_Type::METABALL)
+	{ // =================== Fragment Shader Metaballs Render ===================
 	
-		// No Matrices needed for quad. 
+		// Set Uniform Particle Array
+		Shader &shad = ren_quad->shader;
 
-		// Update Grid and Textures
-		grid_data.gather_particles();
 
-		get_textures();
+		for (std::size_t i = 0; i < particles.size(); ++i)
+		{
+			const Particle &pt = particles[i];
+			glm::vec2 pos_2(pt.P.x, pt.P.y);
+			glm::vec2 vel_2(pt.V.x, pt.V.y);
 
-		// Bind Texture State
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, tex_dens);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, tex_vel_u);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, tex_vel_v);
+			// Loc String
+			std::string pt_str = "pts[" + std::to_string(i) + "].";
+			shad.use();
+			// Pos
+			GLuint pos_loc = glGetUniformLocation(shad.ID, (pt_str + "pos").c_str());
+			glUniform2fv(pos_loc, 1, glm::value_ptr(pos_2));
+			// Vel
+			GLuint vel_loc = glGetUniformLocation(shad.ID, (pt_str + "vel").c_str());
+			glUniform2fv(vel_loc, 1, glm::value_ptr(vel_2));
+			// Dens
+			GLuint dens_loc = glGetUniformLocation(shad.ID, (pt_str + "dens").c_str());
+			glUniform1f(dens_loc, pt.density); 
+		}
+		glUseProgram(0);
+		// As Uniform array is fixed size, set current particle count uniform : 
+		shad.setInt("pt_count", particles.size());
 
-		// Render Quad with Grid Textures
-		ren_grid->render();
+		// Pass min and max density range
+		shad.setFloat("min_dens", min_dens);
+		shad.setFloat("max_dens", max_dens);
+
+		// Render
+		ren_quad->render();
 	}
 	
 }

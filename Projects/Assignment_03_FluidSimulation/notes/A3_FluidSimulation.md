@@ -1031,9 +1031,11 @@ In Debug mode we have problems are with the render time been bottleneck when par
 
 
 
-###### Rendering via Implicit Functions in Fragment Shader 
+###### Rendering via Implicit Functions / Metaballs in Fragment Shader 
 
-Use SSBO or UBO to pass particle data to GPU, per pixel loop over particles check if within radius of each particle, accumulate overlapping radii etc. 
+Use SSBO or UBO to pass particle data to GPU, per pixel loop over particles check if within radius of each particle, accumulate overlapping radii etc. Using Implicit Circle function to create 2D SDF like surface or Metaballs via a field like function. 
+
+Trying to pass the particle data via pure uniform arrays is useless as there is a 1024 constant limit which when passing even a reduced particle struct of 2 vec2s (pos and vel) and a single float (density) is exceeded with only a few hundred particles. The other option is use textures or SSBO. SSBO is core in 4.3 so will need to move from OpenGL 4.0 to 4.3 I don't think it matters, its 2022 and most likely this will never get ran anywhere else ever, my concern was if someone tries to compile and run this on a mac where Core OpenGL ends at 4.1 but I highly doubt that will happen as this probably won't even compile on Mac OS as is. So I think it will just be easier to use SSBOs. 
 
 ###### Rendering via Grid Rasterize Density (2D Grid)
 
@@ -1047,7 +1049,7 @@ Rasterized Particle grid is ofcourse lower res the the framebuffer itself, howev
 
 ```glsl
 // Map from 0-Window FragCoord_Space to 0-1 UV Space. 
-vec2 uv = (gl_FragCoord.xy - 0) / 1024;
+vec2 uv = (gl_FragCoord.xy - 0) / 1024; // Assumes fixed window size of (1024^2)
 float dens =  clamp(texture(d_tex, uv),   0.0, 1.0).r; 
 // [..]
 ```
@@ -1071,9 +1073,26 @@ Scatter approach makes more sense so we can do bilinear rasterization to grid, b
 
 Not really sure I thought this through as we just have discrete looking cells now as oppose to a smooth density field, we'd need to blur it or reduce the res of the grid futher, but then we get temporal stepping.
 
-Could do rasterization as implicit radii within grid2D ? Oppose to on the GPU
+Could do rasterization as implicit radii within grid2D ? Oppose to on the GPU, but its more efficient to do this on the GPU. Within `Grid_2D::gather_particles()` for example, per cell (i,j) (indexed as (j,i)) we can do something like : 
+
+```C++
+// for(cell i,j) [..]
+for (std::size_t p = 0; p < fluid_data->particles.size(); ++p)
+{
+	Particle &pt = fluid_data->particles[p];
+	// Terrible invsqr Metaball Function
+	float dist = r / glm::length(glm::vec2(ws_x_c - pt.P.x, ws_y_c - pt.P.y));
+	if (dist > 0.75f) cell_dens[idx_1d] = std::max(cell_dens[idx_1d], std::fabs(dist));
+// [..]
+```
+
+But the whole point of the grid approach was not to use Metaballs or Implicit functions, to then pass to the fragment shader to sample, because that's a separate workflow and we'd pass the particle data directly as a Uniform Buffer and eval per fragment oppose to using an intermediate grid as for implicit functions we want the same resolution as the framebuffer. The grid approach is so we get a smooth density field we can then define a 2D Isosurface / Implicit surface out of, but without good interpolation to the grid the approach is not going to work. 
+
+For now I'm gonna implement meatballs / implicit function surfacing in the shader, then come back to this as that will be my safety net. 
 
 ###### Rendering via Marching Squares
+
+
 
 ###### Rendering via Anisotropic Kernels
 
