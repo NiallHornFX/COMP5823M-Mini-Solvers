@@ -16,6 +16,7 @@ Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc, 
 
 	// Init 
 	particle_colour = Colour_Viz::Velocity;
+	pts_scale = 1.f, surf_scale = 1.f; 
 	min_dens = 0.f, max_dens = 0.f;
 	min_pres = 0.f, max_pres = 0.f;
 	min_cf   = 0.f, max_cf   = 0.f;
@@ -158,7 +159,7 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 		ren_points->update_data_position_col(pos, col);
 
 		// Call Render Points as Verts
-		ren_points->point_size = spc * 75.f;
+		ren_points->point_size = spc * 75.f * pts_scale;
 		ren_points->render();
 	}
 	else if (mode == Render_Type::METABALL)
@@ -187,6 +188,7 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 		// Set Uniforms
 		Shader &shad = ren_quad->shader;
 		shad.setInt("pt_count", particles.size());
+		shad.setFloat("radius", surf_scale);
 		shad.setFloat("min_dens", min_dens);
 		shad.setFloat("max_dens", max_dens);
 

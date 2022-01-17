@@ -12,6 +12,7 @@ out vec4 frag_color;
 uniform int pt_count;
 uniform float min_dens; 
 uniform float max_dens;
+uniform float radius; 
 
 // ========== Particle Data ==========
 struct particle
@@ -52,7 +53,7 @@ void main()
 	for (int p = 0; p < pt_count; ++p)
 	{
 		particle pt = pts[p];
-		float rad = fit(pt.dens, min_dens, max_dens, 0.25, 0.35);
+		float rad = fit(pt.dens, min_dens, max_dens, 0.25, 0.35) * radius;
 		vec2 r_pt = uv - pt.pos;
 		val += meta(r_pt, rad);  
 	}

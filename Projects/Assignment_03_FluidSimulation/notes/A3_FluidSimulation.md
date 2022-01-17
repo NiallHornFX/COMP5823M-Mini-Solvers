@@ -1154,7 +1154,7 @@ float meta(vec2 r, float h) // Slow (use sqrt for length)
 void main()
 {
 	// Map from 0-Window FragCoord_Space to 0-1 UV Space. 
-	vec2 uv = (gl_FragCoord.xy - 0) / 1024;
+	vec2 uv = (gl_FragCoord.xy - 0) / 1024; // Assume window is fixed (1024^2)
 	// Scale to (0-10, XY to match simulation domain space).
 	uv *= 10.0; 
 	
@@ -1176,6 +1176,8 @@ void main()
 ```
 
 The total field value of the metaballs for each particle is accumulated for each fragment, then if the total value is above some "Iso threshold" we use this value to define the final colour. This works, however it doesn't then allow use to use the particle values as we are just showing the metaball / field value. 
+
+Note that the rasterized quad screen space UV's are scaled into the simulation domain $[0, 10]$ (x,y) so that when the per particle positions are subtracted as the metaball centres they are within the same space.  
 
 ###### Rendering via Grid Rasterize Density (2D Grid)
 

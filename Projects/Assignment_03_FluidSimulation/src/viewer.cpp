@@ -357,7 +357,7 @@ void Viewer::gui_render()
 		ImGui::Text("Particle Count : %d", fluid_object->particles.size());
 		ImGui::Text(kern_pres.c_str());
 		ImGui::Text("Mass : %f", fluid_object->particles[0].mass);
-		ImGui::Text("Density : min = %f | max = %f",  fluid_object->min_dens, fluid_object->max_dens);
+		ImGui::Text("Density :  min = %f | max = %f",  fluid_object->min_dens, fluid_object->max_dens);
 		ImGui::Text("Pressure : min = %f | max = %f", fluid_object->min_pres, fluid_object->max_pres);
 		ImGui::Text("ColorFld : min = %f | max = %f", fluid_object->min_cf,   fluid_object->max_cf);
 		//ImGui::Text("Forcesqr : min = %f | max = %f", fluid_solver->min_force, fluid_solver->max_force);
@@ -475,8 +475,12 @@ void Viewer::gui_render()
 		ImGui::PopStyleColor();
 
 		// Render Flags
+		// Particles
 		ImGui::Checkbox("Render Particles",  &ren_pts);
-		ImGui::Checkbox("Render Surface",    &ren_meta);
+		ImGui::SliderFloat("Pt Radius",      &fluid_object->pts_scale, 0.1f, 5.f);	
+		// Surface
+		ImGui::Checkbox("Render Surface", &ren_meta);
+		ImGui::SliderFloat("Surf Radius", &fluid_object->surf_scale, 0.1f, 5.f);
 
 		// Particle Colours 
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));

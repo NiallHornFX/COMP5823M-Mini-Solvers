@@ -69,7 +69,7 @@ public:
 	// Render State 
 	enum Colour_Viz { Velocity = 0, Density, Pressure, Colour, GridCell };
 	Colour_Viz particle_colour;
-	float point_scale, surf_scale; 
+	float pts_scale, surf_scale; 
 
 	// OpenGL Data
 	GLuint ssbo_pts; 
