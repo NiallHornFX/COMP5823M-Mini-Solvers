@@ -1037,6 +1037,46 @@ Use SSBO or UBO to pass particle data to GPU, per pixel loop over particles chec
 
 Trying to pass the particle data via pure uniform arrays is useless as there is a 1024 constant limit which when passing even a reduced particle struct of 2 vec2s (pos and vel) and a single float (density) is exceeded with only a few hundred particles. The other option is use textures or SSBO. SSBO is core in 4.3 so will need to move from OpenGL 4.0 to 4.3 I don't think it matters, its 2022 and most likely this will never get ran anywhere else ever, my concern was if someone tries to compile and run this on a mac where Core OpenGL ends at 4.1 but I highly doubt that will happen as this probably won't even compile on Mac OS as is. So I think it will just be easier to use SSBOs. 
 
+
+
+
+
+Metaball basics (Using  Uniform arrays testing with limited particle count) : 
+
+```GLSL
+float fit (float value, float min_a, float max_a, float min_b, float max_b)
+{
+	return min_b + (value - min_a)*(max_b - min_b) / (max_a - min_a);
+}
+float meta(vec2 r, float h)
+{
+	float rl = length(r); 
+	if (rl > h) return 0.0;
+	float rlh = rl / h;
+	return 1.0 - 3.0 * pow(rlh, 2.0) + 3.0 * pow(rlh, 4.0) - pow(rlh, 6.0);
+}
+void main()
+{
+	// Map from 0-Window FragCoord_Space to 0-1 UV Space. 
+	vec2 uv = (gl_FragCoord.xy - 0) / 1024;
+	// Scale to (0-10, XY to match simulation domain space).
+	uv *= 10.0; 
+	
+	// Loop through particles, eval implicit function
+	float dens = 0.0;
+	for (int p = 0; p < 100; ++p)
+	{
+		particle pt = pts[p];
+		float r_sqr = pow(fit(pt.dens, min_dens, max_dens, 0.05, 0.2) + 0.025, 2.0); 
+		vec2 c = uv - pt.pos;
+		dens += meta(c, 0.5);  
+	}
+	frag_color = vec4(dens, dens, dens, 1.0); 
+}
+```
+
+
+
 ###### Rendering via Grid Rasterize Density (2D Grid)
 
 Could also rasterize to a 2D Grid based on per cell density using some interpolation (bilinear most likely). We could then even use the density to define an isocontour of the free surface. 

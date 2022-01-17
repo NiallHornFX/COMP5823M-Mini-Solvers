@@ -48,16 +48,16 @@ void main()
 	for (int p = 0; p < 100; ++p)
 	{
 		particle pt = pts[p];
-		float r_sqr = pow(fit(pt.dens, min_dens, max_dens, 0.05, 0.2) + 0.025, 2.0); 
-		vec2 c = uv - pt.pos;
-		dens += meta(c, 0.5);  
-		/*
-		// Implicit Circle
-		if (dot(c,c) - r_sqr <= 0.001)
-		{
-			dens = 1.0;
-		}*/
+		float rad = fit(pt.dens, min_dens, max_dens, 0.25, 0.35);
+		vec2 r_pt = uv - pt.pos;
+		dens += meta(r_pt, rad);  
 	}
-	frag_color = vec4(dens, dens, dens, 1.0); 
+	
+	if (dens >= 0.5)
+	{
+		frag_color = vec4(dens, dens, dens, 1.0); 
+	}
+	//dens = clamp(dens * 10.f, 0.0, 1.0); 
+
 
 }
