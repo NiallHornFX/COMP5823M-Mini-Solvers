@@ -41,15 +41,12 @@ public:
 	void reset_fluid();
 
 	// ======== Render ========
-	enum Render_Type {POINT_VERTS = 0, METABALL, GRID_FRAG};
+	enum Render_Type {POINT_VERTS = 0, METABALL};
 	void render_setup();
 	void render(Render_Type mode, const glm::mat4 &ortho);
 
 
 public: 
-	enum Colour_Viz {Velocity = 0, Density, Pressure, Colour, GridCell};
-	Colour_Viz particle_colour;
-
 	// ======== Fluid Data ========
 	std::vector<Particle> particles; 
 	std::vector<std::vector<Particle*>> particle_neighbours; 
@@ -62,8 +59,6 @@ public:
 	float min_pres,  max_pres;
 	float min_force, max_force;
 
-	// View State
-	bool ptColour_ = false;
 
 	// ======== Render Primitives ========
 	Primitive *ren_points; // Point Rendering via Primitive
@@ -71,10 +66,13 @@ public:
 	// Rendering grid within Fragment Shader
 	Primitive *ren_quad; 
 
-	GLuint ssbo_pts; 
+	// Render State 
+	enum Colour_Viz { Velocity = 0, Density, Pressure, Colour, GridCell };
+	Colour_Viz particle_colour;
+	float point_scale, surf_scale; 
 
-	Grid_2D grid_data; 	  // Rasterized Fluid Grid Data
-	GLuint tex_dens, tex_vel_u, tex_vel_v; 	// Texture Handles
+	// OpenGL Data
+	GLuint ssbo_pts; 
 
 	Fluid_Solver *solver; // Fluid Solver ref (for bidir access)
 };
@@ -93,15 +91,11 @@ struct Particle
 	float density, pressure, mass, cf;
 };
 
-struct /*(alignas(16)*/ Particle_GPU
+struct alignas(16) Particle_GPU
 {
-	float p_x, p_y, spd, dens; 
-	//float p_x, p_y;
-	//float v_x, v_y;
-	//float dens; 
-	//glm::vec2 pos;
-	//glm::vec2 vel; 
-	//float dens; 
+	glm::vec2 pos;
+	glm::vec2 vel; 
+	float dens; 
 };
 
 

@@ -6,7 +6,7 @@
 // Std Headers
 
 Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc, float Jitter)
-	: pos(P), dim(Dim), spc(Spc), jitter(Jitter), grid_data("FluidData", this, 0.05f, 10.f)
+	: pos(P), dim(Dim), spc(Spc), jitter(Jitter)
 {
 	// Emission
 	emit_square();
@@ -171,12 +171,8 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 			const Particle &pt = particles[p];
 			Particle_GPU pt_gpu; 
 
-			//pt_gpu.pos = glm::vec2(pt.P.x, pt.P.y);
-			//pt_gpu.vel = glm::vec2(pt.V.x, pt.V.y);
-
-			pt_gpu.p_x = pt.P.x, pt_gpu.p_y = pt.P.y;
-			//pt_gpu.v_x = pt.V.x, pt_gpu.v_y = pt.V.y;
-			pt_gpu.spd = glm::length(pt.V);
+			pt_gpu.pos = glm::vec2(pt.P.x, pt.P.y);
+			pt_gpu.vel = glm::vec2(pt.V.x, pt.V.y);
 			pt_gpu.dens = pt.density;
 
 			pts_gpu[p] = pt_gpu;

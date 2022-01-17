@@ -67,6 +67,7 @@ private:
 	std::size_t width, height;
 	std::string title; 
 	bool draw_axis;
+	bool ren_pts, ren_meta; 
 
 	const byte *render_device;
 	const byte *version;

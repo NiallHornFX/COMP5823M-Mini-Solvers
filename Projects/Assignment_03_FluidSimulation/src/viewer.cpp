@@ -57,6 +57,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	fluid_object = new Fluid_Object;
 	fluid_solver = new Fluid_Solver((1.f / 196.f), 0.5f, fluid_object);
 	fluid_object->solver = fluid_solver; 
+	ren_pts = true, ren_meta = false; 
 
 	// Get Neighbours Initally for Hash Debug
 	fluid_solver->get_neighbours();
@@ -184,8 +185,8 @@ void Viewer::render_prep()
 
 	// Blending
 	//glEnable(GL_DEPTH_TEST); // 2D No depth in viewer app.
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// ============= Create Viewer Primtivies =============
 	// Axis
@@ -217,11 +218,9 @@ void Viewer::render()
 		axis->render();
 	}
 	// ==================== Render Fluid ====================
-	//fluid_object->render(Fluid_Object::Render_Type::GRID_FRAG, ortho);
+	if (ren_meta) fluid_object->render(Fluid_Object::Render_Type::METABALL, ortho);
 
-	fluid_object->render(Fluid_Object::Render_Type::METABALL, ortho);
-
-	fluid_object->render(Fluid_Object::Render_Type::POINT_VERTS, ortho);
+	if (ren_pts)  fluid_object->render(Fluid_Object::Render_Type::POINT_VERTS, ortho);
 
 	// ==================== Render Fluid Colliders ====================
 	fluid_solver->render_colliders(ortho);
@@ -474,14 +473,15 @@ void Viewer::gui_render()
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Render Controls");
 		ImGui::PopStyleColor();
-		// Draw Axis
-		if (ImGui::Button("Draw Origin Axis"))
-		{
-			draw_axis = !draw_axis; 
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
+
+		// Render Flags
+		ImGui::Checkbox("Render Particles",  &ren_pts);
+		ImGui::Checkbox("Render Surface",    &ren_meta);
 
 		// Particle Colours 
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
+		ImGui::Text("Point Mode");
+		ImGui::PopStyleColor();
 		if (ImGui::Button("Colour : Velocity"))
 		{
 			fluid_object->particle_colour = Fluid_Object::Colour_Viz::Velocity;
@@ -505,6 +505,13 @@ void Viewer::gui_render()
 		if (ImGui::Button("Colour : Cells"))
 		{
 			fluid_object->particle_colour = Fluid_Object::Colour_Viz::GridCell;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+
+		// Draw Axis
+		if (ImGui::Button("Draw Origin Axis"))
+		{
+			draw_axis = !draw_axis;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 

@@ -1037,19 +1037,109 @@ Use SSBO or UBO to pass particle data to GPU, per pixel loop over particles chec
 
 Trying to pass the particle data via pure uniform arrays is useless as there is a 1024 float constant limit which when passing even a reduced particle struct of 2 vec2s (pos and vel) and a single float (density) is exceeded with only a few hundred particles. The other option is use textures or SSBO. SSBO is core in 4.3 so will need to move from OpenGL 4.0 to 4.3 I don't think it matters, its 2022 and most likely this will never get ran anywhere else ever, my concern was if someone tries to compile and run this on a mac where Core OpenGL ends at 4.1 but I highly doubt that will happen as this probably won't even compile on Mac OS as is. So I think it will just be easier to use SSBOs. 
 
+Using an SSBO turned out to be pretty simple, the Render Code is just : 
 
+```C++
+// Fluid_Object::render()
+// [..]
+else if (mode == Render_Type::METABALL)
+{ // =================== Fragment Shader Metaballs Render ===================
 
+// Get CPU-GPU Particle Struct
+std::vector<Particle_GPU> pts_gpu(particles.size());
+for (std::size_t p = 0; p < particles.size(); ++p)
+{
+	const Particle &pt = particles[p];
+	Particle_GPU pt_gpu; 
+	pt_gpu.pos = glm::vec2(pt.P.x, pt.P.y);
+	pt_gpu.vel = glm::vec2(pt.V.x, pt.V.y);
+	pt_gpu.dens = pt.density;
+	pts_gpu[p] = pt_gpu;
+}
 
+// SSBO Fill
+glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pts);
+glBufferData(GL_SHADER_STORAGE_BUFFER, (sizeof(Particle_GPU) * particles.size()), pts_gpu.data(), GL_STATIC_DRAW);
+glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_pts);
+glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-Metaball basics (Using  Uniform arrays testing with limited particle count) : 
+// Set Uniforms
+Shader &shad = ren_quad->shader;
+shad.setInt("pt_count", particles.size());
+shad.setFloat("min_dens", min_dens);
+shad.setFloat("max_dens", max_dens);
+
+// Render
+ren_quad->render();
+```
+
+Note that I convert my CPU Particle based data to a struct that is reduced to just 3 elements (2 vec2 for pos and velocity and a float for density). Because of the alignment of this into GPU memory and the alignment specified I'm using is layout `std140` I need to explicitly tell the compiler to align on 16 byte boundaries via the C++ specifier `alignas(16)` we can see this here : 
+
+```C++
+// Fluid_Object.h
+struct alignas(16) Particle_GPU
+{
+	glm::vec2 pos;
+	glm::vec2 vel; 
+	float dens; 
+};
+```
+
+I need to re-read up on the layout offsets / alignment but when I tried with `std430` I got jumbled data even when aligned on 16 byte boundaries but that's just my bad for not looking it up, however as `std140` is working with 16 byte aligned structs on the host side, that's what I'm using. 
+
+So then in my shader I have : 
 
 ```GLSL
-// Fixed size 256, so pass in current pt count as uniform; 
+// fluid_quad.frag
+// [..]
+// Uniforms
 uniform int pt_count;
-uniform particle pts[256]; // Beyond this will run into uniform upper limit
 uniform float min_dens; 
 uniform float max_dens;
+// ========== Particle Data ==========
+struct particle
+{
+	vec2 pos;
+	vec2 vel; 
+	float dens; 
+};
+// Particles Struct Array SSBO 
+layout(std140, binding = 0) buffer data
+{
+	particle pts[];  
+};
+// [..]
+```
 
+Where we define a buffer interface block, with a layout qualifier that specifies the layout standard (as above) and the SSBO buffer binding index. The block name itself is not used when getting the data, just its inner data, which for me is an array of particle structs, which match the data of the host passed data. 
+
+###### Metaballs
+
+I decided to use metaballs as oppose to Implicit functions as they produce nice results quickly and I can define the per particle radius based on remapped density. For the metaball function I used the Wyvill equation :
+$$
+f_i(r_i) = \left\{\begin{array}{} 1-3(r_i/R)^2 + 3(r_i/R)^4 - (r_i/R)^6 \:\:\: r_i \leq R \\  0 \:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:\:
+r_i > R \end{array}\right.
+$$
+Which is implemented into GLSL as : 
+
+```glsl
+// fluid_quad.frag
+float meta(vec2 r, float h) 
+{
+	float rl = length(r); 
+	if (rl > h) return 0.0;
+	float rlh = rl / h;
+	return 1.0 - 3.0 * pow(rlh, 2.0) + 3.0 * pow(rlh, 4.0) - pow(rlh, 6.0);
+}
+```
+
+There is a version that uses squared terms to avoid the length square root calc, but for now this is fine. 
+
+The Metaball code within the shader using the SSBO can be see : 
+
+```GLSL
+// fluid_quad.frag
+// [..]
 float fit (float value, float min_a, float max_a, float min_b, float max_b)
 {
 	return min_b + (value - min_a)*(max_b - min_b) / (max_a - min_a);
@@ -1070,9 +1160,10 @@ void main()
 	
 	// Loop through particles, eval implicit function
 	float val = 0.0;
-	for (int p = 0; p < 100; ++p)
+	for (int p = 0; p < pt_count; ++p)
 	{
 		particle pt = pts[p];
+        // Remap density to radius
 		float rad = fit(pt.dens, min_dens, max_dens, 0.25, 0.35);
 		vec2 r_pt = uv - pt.pos;
 		val += meta(r_pt, rad);  
@@ -1080,11 +1171,11 @@ void main()
 	if (val >= 0.5) // Iso threshold
 	{
 		frag_color = vec4(val, val, val, 1.0); 
-	}
+	} 
 }
 ```
 
-
+The total field value of the metaballs for each particle is accumulated for each fragment, then if the total value is above some "Iso threshold" we use this value to define the final colour. This works, however it doesn't then allow use to use the particle values as we are just showing the metaball / field value. 
 
 ###### Rendering via Grid Rasterize Density (2D Grid)
 
@@ -1120,7 +1211,7 @@ Note the sampling space is the size of the framebuffer not the texture (the upsc
 
 Scatter approach makes more sense so we can do bilinear rasterization to grid, because cell based gathering doesn't allow for interpolation unless we pass values to neighbouring cells by some bias. We'd need to calc where abouts in cell bounds does particle lie, to work out neighbour values. Scatter would be more efficient as we'd map position directly to indices using fractional part as bilinear interpolation coefficients. 
 
-Not really sure I thought this through as we just have discrete looking cells now as oppose to a smooth density field, we'd need to blur it or reduce the res of the grid futher, but then we get temporal stepping.
+Not really sure I thought this through as we just have discrete looking cells now as oppose to a smooth density field, we'd need to blur it or reduce the res of the grid further, but then we get temporal stepping.
 
 Could do rasterization as implicit radii within grid2D ? Oppose to on the GPU, but its more efficient to do this on the GPU. Within `Grid_2D::gather_particles()` for example, per cell (i,j) (indexed as (j,i)) we can do something like : 
 
