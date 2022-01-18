@@ -1,4 +1,4 @@
-// COMP5823M - A2 : Niall Horn - viewer.cpp
+// COMP5823M - A3 : Niall Horn - viewer.cpp
 // Implements
 #include "viewer.h"
 
@@ -24,8 +24,6 @@
 #include "fluid_object.h"
 #include "fluid_solver.h"
 #include "spatial_grid.h"
-
-#define USE_FREE_CAMERA 1
 
 // Global GLFW State
 struct
@@ -59,9 +57,6 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	fluid_solver = new Fluid_Solver((1.f / 196.f), 0.5f, fluid_object);
 	fluid_object->solver = fluid_solver; 
 	ren_pts = true, ren_meta = true; 
-
-	// Get Neighbours Initally for Hash Debug
-	fluid_solver->get_neighbours();
 }
 
 Viewer::~Viewer() 
@@ -126,7 +121,7 @@ void Viewer::window_context()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, GL_MAJOR);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, GL_MINOR);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	//glfwWindowHint(GLFW_RESIZABLE, GL_FALSE); // Fixed Window Size. 
+	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE); // Fixed Window Size. 
 	glfwWindowHint(GLFW_SAMPLES, 4); // MSAA.
 	// Create Window
 	window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
@@ -198,13 +193,6 @@ void Viewer::render()
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// ==================== Render Viewer Primtivies ====================
-	// Draw Axis
-	if (draw_axis)
-	{
-		axis->line_width = 2.5f; // Reset for axis width.
-		axis->render();
-	}
 	// ==================== Render Fluid ====================
 	if (ren_meta) fluid_object->render(Fluid_Object::Render_Type::METABALL, ortho);
 
@@ -224,7 +212,7 @@ void Viewer::render()
 
 void Viewer::query_drawState()
 {
-	// 
+	// Defered to GUI input
 }
 
 void Viewer::update_window()
@@ -258,7 +246,6 @@ bool Viewer::esc_pressed()
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) return true;
 	return false; 
 }
-
 
 // =========================================== DearImGUI Implementation ===========================================
 

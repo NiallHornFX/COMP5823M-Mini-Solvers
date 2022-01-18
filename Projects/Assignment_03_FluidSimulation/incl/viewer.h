@@ -1,4 +1,4 @@
-// COMP5823M A2 : Niall Horn 201486968 - viewer.h
+// COMP5823M - A3 : Niall Horn - viewer.h
 #ifndef VIEWER_H
 #define VIEWER_H
 
@@ -78,9 +78,6 @@ private:
 	// Fluid Simulation
 	Fluid_Object *fluid_object; 
 	Fluid_Solver *fluid_solver; 
-
-	// Primtivies
-	Primitive *axis;
 
 	// Viewer Intrinsics
 	std::size_t tick_c; 

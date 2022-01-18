@@ -85,10 +85,10 @@ public:
 struct Particle
 {
 	Particle(const glm::vec3 &p, float Mass, std::size_t idx)
-		: P(p), mass(Mass), rest(P), V(glm::vec3(0.f)), F(glm::vec3(0.f)), id(idx), cell_idx(-1),
+		: P(p), mass(Mass), rest(P), V(glm::vec3(0.f)), id(idx), cell_idx(-1),
 		   cf(0.f), density(0.f), pressure(0.f) {}
 
-	glm::vec3 P, V, F;
+	glm::vec3 P, V;
 	glm::vec3 rest; 
 	std::size_t id, cell_idx;
 	float density, pressure, mass, cf;

@@ -23,7 +23,6 @@ Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc, 
 	cell_c   = 0,   cell_s   = 0.f; 
 	max_spd  = 0.f; 
 	iso_thresh = 0.5f; 
-
 }
 
 Fluid_Object::~Fluid_Object()
@@ -54,7 +53,7 @@ void Fluid_Object::emit_square()
 
 	// Compute particle mass
 	float mass = 100.f / std::sqrtf(n_i * n_j);
-	mass = 1.f; // Debug.
+	mass = 1.f; // Could compute mass from spacing. 
 
 	for (std::size_t i = 0; i < n_i; ++i)
 	{
@@ -111,11 +110,14 @@ void Fluid_Object::render_setup()
 	glGenBuffers(1, &ssbo_pts);
 }
 
-
+// Info : Render Fluid as Points / Vertices or Metaballs. 
+//        Point_Verts : Uses Primitive class to render particles as vertices coloured by attribute data.
+//        Metaball    : Uses Shader Storage Buffer Objects to pass data to GPU and fragment shader to render onto quad. 
+// Note : As particle count increases Metaball caluclation time will increase due to per fragment operations, ideally would be precomputed. 
 void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 {
 	if (mode == Render_Type::POINT_VERTS)
-	{   // =================== Point Vertices Render ===================
+	{   // =================== Point Vertices Render Path ===================
 
 		// Set Proj Mat
 		ren_points->shader.setMat4("proj", ortho);
@@ -167,7 +169,7 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 		ren_points->render();
 	}
 	else if (mode == Render_Type::METABALL)
-	{ // =================== Fragment Shader Metaballs Render ===================
+	{ // =================== Fragment Shader Metaballs Render Path ===================
 
 		// Get CPU-GPU Particle Struct
 		std::vector<Particle_GPU> pts_gpu(particles.size());
@@ -183,7 +185,7 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 			pts_gpu[p] = pt_gpu;
 		}
 
-		// SSBO Fill
+		// Fill SSBO with particle data 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pts);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, (sizeof(Particle_GPU) * particles.size()), pts_gpu.data(), GL_STATIC_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo_pts);
@@ -203,6 +205,5 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 		// Render
 		ren_quad->render();
 	}
-	
 }
 

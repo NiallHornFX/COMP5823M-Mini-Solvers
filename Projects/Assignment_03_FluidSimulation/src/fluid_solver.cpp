@@ -15,8 +15,6 @@
 #include "Spatial_Grid.h"
 
 #define INTEGRATE_LEAPFROG  1
-#define DEBUG_TEST_ADJACENT 0
-
 
 // ================================== Fluid_Solver Class Implementation ===============================
 
@@ -39,7 +37,7 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data)
 	stiffness_coeff = 500.f; 
 
 	// Default Kernels 
-	pressure_kernel  = kernel::SPIKY; // (Should be default poly6 for assignment demo, then switch to spiky)
+	pressure_kernel  = kernel::SPIKY; 
 	surftens_kernel  = kernel::POLY6;
 	
 	// ===== Setup Tank Boundary Collider Planes =====
@@ -65,17 +63,17 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data)
 	visc_lapl_s  = 45.f  / (M_PI * std::powf(kernel_radius, 6.f));
 }
 
-// Info : Tick Simulation for number of timesteps determined by viewer Dt. Uses Hybrid Timestepping approach purposed by Glenn Fiedler
-// Physics Dt is constant (based on UI value), while using Viewer app Dt to define number of solve substeps.
+// Info : Performs single step of simulation, using fixed physics timestep of 1/n. 
+// Multistep approach based on viewer_Dt is deprecated. 
 void Fluid_Solver::tick(float viewer_Dt)
 {
 	if (!simulate || fluidData->particles.size() == 0) return;
-	timestep = 0;
 
 	// Single Fixed Step 
 	step(); 
 
 	frame++;
+	timestep = 0;
 }
 
 // Info : Reset Fluid Object State and Solver Time State
@@ -129,9 +127,9 @@ void Fluid_Solver::integrate()
 	// ======= Chosen Kernel Functions based on GUI =======
 	kernel_func      attr_kernel = &Fluid_Solver::kernel_poly6;          // Attribs always sampled using Poly6. 
 	kernel_lapl_func visc_lapl_k = &Fluid_Solver::kernel_visc_laplacian; // Viscosity always uses Visc Kernel Laplacian. 
-	// Pressure and Surface Tension may use ethier Poly6 or Spiky Gradient kernel functions. 
+	kernel_grad_func surf_grad   = &Fluid_Solver::kernel_spiky_gradient; // Surface Tension always uses Poly6 gradient.
+	// Pressure may use ethier Poly6 or Spiky Gradient kernel functions. 
 	kernel_grad_func pres_grad = pressure_kernel == kernel::POLY6 ? &Fluid_Solver::kernel_poly6_gradient : &Fluid_Solver::kernel_spiky_gradient;
-	kernel_grad_func surf_grad = surftens_kernel == kernel::POLY6 ? &Fluid_Solver::kernel_poly6_gradient : &Fluid_Solver::kernel_spiky_gradient;
 
 	// Ext Forces 
 	glm::vec3 g(0.f, gravity, 0.f); 
@@ -160,10 +158,6 @@ void Fluid_Solver::integrate()
 		float r_dens = 1.f / pt.density; 
 		glm::vec3 air_res = -air_resist * pt.V; 
 
-		// Debug 
-		float test = glm::dot(pt.P, pt.P);
-		if (std::isnan(glm::dot(test, test))) throw std::runtime_error("nan");
-		
 		// Eval RHS forces 0 
 		glm::vec3 a_0 = (eval_forces(pt, pres_grad, surf_grad, visc_lapl_k) * r_dens) + g + air_res;
 		// Integrate P 
@@ -174,13 +168,15 @@ void Fluid_Solver::integrate()
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
 
-		// Store max speed sqrd
+		// Store max speed squared.
 		float f_s = glm::dot(pt.V, pt.V);
 		if (f_s > fluidData->max_spd) fluidData->max_spd = f_s; 
 	} 
 #endif
 }
 
+// Info : Using 2D Spatial Acceleration grid, caches particle neighbours based adjacent and current cell. 
+//        Cell size is fixed at kernel radius 'h' with size 10^2 (x,y) matching the simulation domain. 
 void Fluid_Solver::get_neighbours()
 {
 	// =========== Spatial Accel : Uniform Grid ===========
@@ -204,22 +200,6 @@ void Fluid_Solver::get_neighbours()
 	{
 		fluidData->particle_neighbours[p] = accel_grid->get_adjcell_particles(fluidData->particles[p]);
 	} 
-
-	//std::cout << "DEBUG, Grid Cell Size = " << accel_grid->cell_size << " Grid Cell Count = " << accel_grid->cell_count << "\n";
-
-#if DEBUG_TEST_ADJACENT == 1
-	// Test : Adjacent Hash of single particle, viz adj cells. 
-	Particle &testPt = fluidData->particles[100];
-	auto pts = accel_grid->get_adjcell_particles(testPt);
-	// Rm all pts cell indices first
-	for (Particle &pt : fluidData->particles) pt.cell_idx = 0;
-	// Fill Adj particle list cell_idx with same idx for viz debgging.
-	for (Particle *pt : pts)
-	{
-		pt->cell_idx = 1;
-	}
-	testPt.cell_idx = 2; 
-#endif
 }
 
 // ================================== Eval Attrib Functions ===============================
@@ -228,15 +208,15 @@ void Fluid_Solver::get_neighbours()
 
 void Fluid_Solver::compute_dens_pres(kernel_func w)
 {	
-	// Check Hash Grid has been evaulated
-	if (!got_neighbours) { std::cerr << "ERROR::Frame::" << frame << " Fluid_Solver::Particles Neighbours not retrived from grid" << std::endl; return; }
-
+	// Reset min/max values. 
 	fluidData->min_dens = 1e06f, fluidData->max_dens = 0.f, fluidData->min_pres = 1e06f, fluidData->max_pres = 0.f;
+	// Compute density and pressure per particle. 
 	for (std::size_t p_i = 0; p_i < fluidData->particles.size(); ++p_i)
 	{
 		Particle &Pt_i = fluidData->particles[p_i];
 		float dens_tmp = 0.0f; // Start w small min density. 
 
+		// Inner neighbourhood loop. 
 		std::vector<Particle*> &neighbours = fluidData->particle_neighbours[p_i];
 		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
 		{
@@ -245,29 +225,22 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		}
 		Pt_i.density = dens_tmp; 
 
-		// Calc Pressure using equation of state : pres_i = k(rho - rho_0). No Negative Pressure (Use Surf Tens force).
+		// Calc Pressure using equation of state : pres_i = k(rho - rho_0). 
+		// Note : Clamped negative pressure (use surface tension force for this).
 		Pt_i.pressure = std::max((stiffness_coeff * (Pt_i.density - rest_density)), 0.f); 
 
-		// Store Min/Max Dens (Debug) 
+		// Store Min/Max Dens
 		if (Pt_i.density  < fluidData->min_dens) fluidData->min_dens = Pt_i.density;
 		if (Pt_i.pressure < fluidData->min_pres) fluidData->min_pres = Pt_i.pressure;
 		if (Pt_i.density  > fluidData->max_dens) fluidData->max_dens = Pt_i.density;
 		if (Pt_i.pressure > fluidData->max_pres) fluidData->max_pres = Pt_i.pressure;
 	}
 	if (frame == 0 && compute_rest) rest_density = fluidData->max_dens * 1.01f; // Use as inital rest_dens
-
-	// Debug Ensure no particle has zero density...
-	//if (fluidData->min_dens == 0.f) throw std::runtime_error("0 Dens Error");
 }
 
+// Info : Calculate interal fluid forces for passed particle Pt_i, note this is a per particle operation, doesn't contain a for particle loop.
 glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad, kernel_grad_func w_surf_grad, kernel_lapl_func w_visc_lapl)
 {
-	// Check Hash Grid has been evaulated
-	if (!got_neighbours) { std::cerr << "ERROR::Frame::" << frame << " Fluid_Solver::Particles Neighbours not retrived from grid" << std::endl;  return glm::vec3(0.f); }
-
-	// Reset Particle forces 
-	Pt_i.F.x = 0.f, Pt_i.F.y = 0.f, Pt_i.F.z = 0.f;
-
 	glm::vec3 force_pressure    (0.f); 
 	glm::vec3 force_viscosity   (0.f);
 	glm::vec3 force_surftension (0.f);
@@ -276,14 +249,13 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 	std::vector<Particle*> &neighbours = fluidData->particle_neighbours[Pt_i.id];
 
 	// ToDo : Put in single particle for loop. 
-
 	// =============== Compute Pressure Gradient --> Pressure Force ===============
 	glm::vec2 pressure_grad(0.f);
 	for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
 	{
 		const Particle &Pt_j = *(neighbours[p_j]);
 		if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
-		if (Pt_j.density == 0.f) throw std::runtime_error("0 Dens pt");
+
 		// Compute Symmetric Pressure gradient for particle pair
 		pressure_grad += Pt_j.mass * ((Pt_i.pressure + Pt_j.pressure) / (2.f * Pt_j.density)) * (this->*w_pres_grad)(Pt_i.P - Pt_j.P);
 	}
@@ -308,34 +280,31 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 	{
 		float col_lapl = 0.f;
 		glm::vec2 col_grad(0.f);
-		// Compute Gradient and Laplacian as per Mullers paper 
+		// Compute Gradient and Laplacian of Colour Field quantity, as per Mullers paper 
 		for (std::size_t p_j = 0; p_j < neighbours.size(); ++p_j)
 		{
 			const Particle &Pt_j = *(neighbours[p_j]);
 			if (Pt_j.id == Pt_i.id) continue;  // Skip Self 
 
 			// Compute Symmetric gradient for particle pair
-			col_grad += Pt_j.mass * (Pt_j.cf / Pt_j.density) * (this->*w_pres_grad)(Pt_i.P - Pt_j.P);
+			col_grad += Pt_j.mass * (Pt_j.cf / Pt_j.density) * (this->*w_surf_grad)(Pt_i.P - Pt_j.P);
 
-			// Laplacian (use visc kernel for now)
+			// Laplacian (using viscosity kernel laplacian)
 			col_lapl += Pt_j.mass * (Pt_j.cf / Pt_j.density) * kernel_visc_laplacian(Pt_i.P - Pt_j.P);
 		}
 
-		// Check if colour field gradient length is non zero
+		// Only apply if colour field gradient length is non zero
 		if (!glm::dot(col_grad, col_grad)) force_surftension = glm::vec3(0.f);
-		// Should be neg sigma, but must have a wrong sign somewhere ... 
-		// sigma * lapl * unit grad
 		else force_surftension = k_surftens * col_lapl * glm::vec3(glm::normalize(col_grad), 0.f);
 	}
 
-	// Accumulate forces
+	// Accumulate particle forces
 	glm::vec3 acc_force = force_pressure + force_viscosity + force_surftension;
 
-	// ret instead of write to Pt.F
 	return acc_force;
 }
 
-// Info : Calc Colour Field of fluid particles to use for surface tension force computation
+// Info : Compute Colour Field of fluid particles to use for surface tension force computation using Poly6 kernel. 
 void Fluid_Solver::calc_colour_field()
 {
 	fluidData->min_cf = 1e06f, fluidData->max_cf = 0.f;
@@ -350,12 +319,10 @@ void Fluid_Solver::calc_colour_field()
 			const Particle &Pt_j = *(neighbours[p_j]);
 			Pt_i.cf += Pt_j.mass * (1.f / Pt_j.density) * kernel_poly6(Pt_i.P - Pt_j.P);
 		}
-
 		if (Pt_i.cf < fluidData->min_cf) fluidData->min_cf = Pt_i.cf; 
 		if (Pt_i.cf > fluidData->max_cf) fluidData->max_cf = Pt_i.cf;
 	}
 }
-
 
 // ================================== Util Functions ===============================
 // Info : Calc an estimate of the rest density from the maxium density value * some offset. 
@@ -371,55 +338,50 @@ void Fluid_Solver::calc_restdens()
 // Info : Smoothing Kernel functions and their derivatives, using pre-caluclated scalar coefficents using smoothing radius 'h'.
 
 // ========== Smooting Kernel - Poly6 ==========
+// Poly 6: Outside smoothing radius ? Ret 0f
 float Fluid_Solver::kernel_poly6(const glm::vec3 &r)
 {
 	float r_sqr = glm::dot(r, r);
-	if (std::isnan(r_sqr)) throw std::runtime_error("nan");
-
-	// Outside smoothing radius ? Ret 0f
 	if (r_sqr > kernel_radius_sqr) return 0.f;
+
 	return poly6_s * std::powf((kernel_radius_sqr - r_sqr), 3.f);
 }
 
+// Poly6 Gradient : Outside smoothing radius or zero vector ? Ret 0 vec
 glm::vec2 Fluid_Solver::kernel_poly6_gradient(const glm::vec3 &r)
 {
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
 	float r_sqr = glm::dot(r, r);
-
-	// Outside Smoothing Radius or zero vector ? Ret 0 vec
 	if (r_sqr == 0.f || r_sqr > kernel_radius_sqr ) return glm::vec2(0.f);
-	glm::vec2 val = poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
-	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
-	return val;
+
+	return poly6_grad_s * std::powf((kernel_radius - r_sqr), 2.f) * r_n2;
 }
 
 // ========== Smooting Kernel - Spiky ==========
+// Spiky : Outside smoothing radius ? Ret 0f
 float Fluid_Solver::kernel_spiky(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
-	// Outside Smoothing Radius ? Ret 0f
 	if (r_l > kernel_radius) return 0.f; 
+
 	return spiky_s * std::powf((kernel_radius - r_l), 3.f);
 }
-
+// Spiky Gradient : Outside smoothing radius or zero vector ? Ret 0 vec
 glm::vec2 Fluid_Solver::kernel_spiky_gradient(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
-
-	// Outside Smoothing Radius or zero vector ? Ret 0.
 	if (r_l == 0.f || r_l > kernel_radius) return glm::vec2(0.f);
 	glm::vec2 r_n2 = glm::normalize(glm::vec2(r.x, r.y));
-	glm::vec2 val = spiky_grad_s * std::powf((kernel_radius - r_l), 3.f) * r_n2; 
 
-	if (std::isnan(glm::dot(val, val))) throw std::runtime_error("nan");
-	return val; 
+	return spiky_grad_s * std::powf((kernel_radius - r_l), 3.f) * r_n2; 
 }
 
 // ========== Smooting Kernel - Viscosity ==========
+// Viscosity : Outside smoothing radius ? Ret 0f
 float Fluid_Solver::kernel_visc_laplacian(const glm::vec3 &r)
 {
 	float r_l = glm::length(r);
-	// Outside Smoothing Radius ? Ret 0.
 	if (r_l > kernel_radius) return 0.f; 
+
 	return visc_lapl_s * (kernel_radius - r_l);
 }
