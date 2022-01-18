@@ -13,9 +13,6 @@
     <ClCompile Include="src\shader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="src\texture.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="src\viewer.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -43,9 +40,6 @@
     <ClCompile Include="src\fluid_collider.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="src\hash_grid.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="src\fluid_object.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -53,9 +47,6 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="src\spatial_grid.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="src\grid_2d.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -69,9 +60,6 @@
     <ClInclude Include="incl\shader.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="incl\texture.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="incl\viewer.h">
       <Filter>Headers</Filter>
     </ClInclude>
@@ -81,16 +69,10 @@
     <ClInclude Include="incl\fluid_collider.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="incl\hash_grid.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="incl\fluid_object.h">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="incl\spatial_grid.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="incl\grid_2d.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

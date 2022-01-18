@@ -5,8 +5,6 @@
 // Std Headers
 #include <vector>
 
-// Project Headers
-
 // Ext Headers 
 // GLM
 #include "ext/glm/glm.hpp"
@@ -14,7 +12,6 @@
 // Forward Decls 
 class Fluid_Object; 
 class Fluid_Collider; 
-class Hash_Grid;
 class Spatial_Grid;
 struct Particle; 
 
@@ -72,7 +69,6 @@ public:
 	bool simulate;
 	float at, dt; // Acumulated Time, Fixed Physics timestep. 
 	std::size_t frame, timestep;
-	Hash_Grid *hg;
 	Spatial_Grid *accel_grid; 
 	bool got_neighbours; 
 

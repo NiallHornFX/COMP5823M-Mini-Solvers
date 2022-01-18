@@ -7,11 +7,11 @@
 #include <math.h>
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
 // Project Headers
 #include "fluid_object.h"
 #include "fluid_collider.h"
-#include "hash_grid.h"
 #include "Spatial_Grid.h"
 
 #define INTEGRATE_LEAPFROG  1
@@ -187,10 +187,15 @@ void Fluid_Solver::get_neighbours()
 	// Delete old grid
 	got_neighbours = false; 
 	if (accel_grid) delete accel_grid;
+
 	// Allocate New Grid
 	accel_grid = new Spatial_Grid(fluidData, kernel_radius, 10.f);
 	accel_grid->gather_particles();
 	got_neighbours = true; 
+
+	// Pass grid state to fluidobj
+	fluidData->cell_c = accel_grid->cell_count; 
+	fluidData->cell_s = accel_grid->cell_size;
 
 	// Cache Particle Neighbours into array per particle. 
 	fluidData->particle_neighbours.clear();
@@ -199,6 +204,8 @@ void Fluid_Solver::get_neighbours()
 	{
 		fluidData->particle_neighbours[p] = accel_grid->get_adjcell_particles(fluidData->particles[p]);
 	} 
+
+	//std::cout << "DEBUG, Grid Cell Size = " << accel_grid->cell_size << " Grid Cell Count = " << accel_grid->cell_count << "\n";
 
 #if DEBUG_TEST_ADJACENT == 1
 	// Test : Adjacent Hash of single particle, viz adj cells. 

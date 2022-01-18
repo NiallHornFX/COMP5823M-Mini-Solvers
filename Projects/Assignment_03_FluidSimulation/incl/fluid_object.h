@@ -8,7 +8,6 @@
 
 // Project Headers
 #include "primitive.h"
-#include "grid_2d.h"
 
 // Ext Headers 
 #include "ext/glm/glm.hpp" // GLM
@@ -28,7 +27,8 @@ struct Particle;
 class Fluid_Solver; 
 
 // =================================== Fluid Object Class ===================================
-// Info : Class containing fluid state and data, also responsible for rendering the fluid. 
+// Info : Class containing fluid state and data, also responsible for rendering the fluid using
+//        metaball or point based render paths. 
 
 class Fluid_Object
 {
@@ -58,6 +58,10 @@ public:
 	float min_pres,  max_pres;
 	float max_spd; 
 
+	// Accel Grid State (for viewer)
+	float cell_s; 
+	std::size_t cell_c; 
+
 	// ======== Render Primitives ========
 	Primitive *ren_points; // Point Rendering via Primitive
 
@@ -73,7 +77,7 @@ public:
 	// OpenGL Data
 	GLuint ssbo_pts; 
 
-	Fluid_Solver *solver; // Fluid Solver ref (for bidir access)
+	Fluid_Solver *solver; // Fluid Solver ref (for bidir pipe)
 };
 
 
@@ -96,7 +100,6 @@ struct alignas(16) Particle_GPU
 	glm::vec2 vel; 
 	float dens; 
 };
-
 
 // =================================== Util Functions ===================================
 INLINE float fitRange(float val, float a_min, float a_max, float b_min, float b_max)

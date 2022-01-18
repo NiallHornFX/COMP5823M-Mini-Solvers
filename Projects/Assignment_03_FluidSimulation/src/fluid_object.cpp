@@ -20,8 +20,10 @@ Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc, 
 	min_dens = 0.f, max_dens = 0.f;
 	min_pres = 0.f, max_pres = 0.f;
 	min_cf   = 0.f, max_cf   = 0.f;
-	max_spd = 0.f; 
+	cell_c   = 0,   cell_s   = 0.f; 
+	max_spd  = 0.f; 
 	iso_thresh = 0.5f; 
+
 }
 
 Fluid_Object::~Fluid_Object()

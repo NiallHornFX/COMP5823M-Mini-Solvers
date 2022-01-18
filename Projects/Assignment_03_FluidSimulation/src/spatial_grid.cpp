@@ -19,9 +19,6 @@ Spatial_Grid::Spatial_Grid(Fluid_Object *FluidData, float CellSize, float WsSize
 	h_cell_ext     = 0.5f * cell_ext;
 	h_cell_ext_sqr = h_cell_ext * h_cell_ext; 
 
-	// Debug
-	std::cout << "Cell Dim = " << cell_dim << "  Cell Count = " << cell_count << "  Cell Ext = " << cell_ext << "\n";
-
 	// Allocate Grid Fields
 	cell_pts = new std::vector<Particle*>[cell_count]; // Per Cell, list of particles within.
 	cell_dens = std::vector<float>(cell_count, 0.f);

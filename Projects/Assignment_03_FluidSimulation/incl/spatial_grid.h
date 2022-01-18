@@ -42,6 +42,9 @@ private:
 
 	// Fluid Data Ptr
 	Fluid_Object *fluid_data;
+
+	friend class Viewer; 
+	friend class Fluid_Solver; 
 };
 
 #endif 

@@ -23,6 +23,7 @@
 // Project Headers
 #include "fluid_object.h"
 #include "fluid_solver.h"
+#include "spatial_grid.h"
 
 #define USE_FREE_CAMERA 1
 
@@ -294,13 +295,13 @@ void Viewer::gui_render()
 	static float pos [2] = { DEF_XP, DEF_YP };
 	static float dim [2] = { DEF_XS, DEF_YS };
 	float pt_s = 1.f, surf_s = 1.f; 
-
+	
 	// Checkboxes (Local booleans)
 	static bool compute_rest = true;
 	static bool use_visc = false; 
 	static bool use_surftens = false;
 
-	// Get current Kernels
+	// Get current pressure kernel string
 	std::string kern_pres = ""; 
 	if (fluid_solver->pressure_kernel == Fluid_Solver::kernel::POLY6) kern_pres = "Pressure Kernel : Poly6"; else kern_pres = "Pressure Kernel : Spiky";
 
@@ -311,12 +312,12 @@ void Viewer::gui_render()
 	float n = 1.f / fluid_solver->dt;
 	static int tmp_count = 90;
 
-	// ============= Imgui layout =============
+	// =================== Imgui layout ===================
 	{
 		// Begin ImGui
 		ImGui::Begin("Simulation Controls");
 
-		// ========== Solver State ==========
+		// =================== Solver State ===================
 		// Labels
 		if (fluid_solver->simulate) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); else ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 		ImGui::Text(state.c_str());
@@ -338,19 +339,21 @@ void Viewer::gui_render()
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 
-		// ========== Fluid Attributes  ==========
+		// =================== Fluid Attributes ===================
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Fluid Attributes");
 		ImGui::PopStyleColor();
 		ImGui::Text("Particle Count : %d", fluid_object->particles.size());
+		ImGui::Text("Simulation Domain : 0.0 - 10.0 (X,Y)");
 		ImGui::Text(kern_pres.c_str());
 		ImGui::Text("Mass : %f", fluid_object->particles[0].mass);
 		ImGui::Text("Density :  min = %f | max = %f",  fluid_object->min_dens, fluid_object->max_dens);
 		ImGui::Text("Pressure : min = %f | max = %f", fluid_object->min_pres, fluid_object->max_pres);
 		ImGui::Text("ColorFld : min = %f | max = %f", fluid_object->min_cf,   fluid_object->max_cf);
+		ImGui::Text("Grid : cell_size = %f | cell_count = %d", fluid_object->cell_s, fluid_object->cell_c);
 
-		// ========== Fluid State Controls ==========
+		// =================== Fluid State Controls ===================
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Fluid State Controls");
@@ -363,10 +366,10 @@ void Viewer::gui_render()
 		}
 		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 1000.f);
 
-		// Info : as these parameters require rebuilding of the Fluid Object or solver, their state has to be transfered for persitence. 
-		// a bit ugly looking within an imode gui. 
 
-		// Causes rebuild of Fluid_Object if changed (could just reset ideally)
+		// =================== Rebuild Fluid Object / Solver if change ===================
+		/* Info : as these parameters require rebuilding of the Fluid Object or solver, their state has to be transfered for persitence. 
+		          a bit ugly looking within an imode gui. */ 
 		if (ImGui::SliderFloat2("Fluid Pos", pos, 0.f, 10.f))
 		{
 			// Dealloc old fobj
@@ -447,7 +450,7 @@ void Viewer::gui_render()
 			fluid_object->solver = fluid_solver; // Pass FluidSolver ref to FluidObj
 		}
 
-		// ========== Pressure Kernel Selection ==========
+		// =================== Pressure Kernel Selection ===================
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Kernel Selection");
@@ -463,7 +466,7 @@ void Viewer::gui_render()
 			std::cout << "Fluid Solver::Pressure Kernel = Spiky Gradient\n";
 		}
 
-		// ========== Free parameters (min,max enforced here) ==========
+		// =================== Free parameters (min,max enforced here) ===================
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		// -------- Internal Forces 
@@ -492,7 +495,7 @@ void Viewer::gui_render()
 		ImGui::SliderFloat("Gravity",   &fluid_solver->gravity,        -20.f, 10.f);
 		ImGui::SliderFloat("AirResist", &fluid_solver->air_resist,       0.f, 5.f);
 
-		// ========== Fluid Rendering ==========
+		// =================== Fluid Rendering ===================
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("Render Controls");
@@ -540,7 +543,7 @@ void Viewer::gui_render()
 		ImGui::End();
 	}
 
-	// ============= Imgui Render =============
+	// =================== Imgui Render ===================
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	get_GLError();
