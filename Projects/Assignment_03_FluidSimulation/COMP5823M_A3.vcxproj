@@ -43,12 +43,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)\build\bin</OutDir>
-    <IntDir>$(SolutionDir)\build\intermediate</IntDir>
+    <OutDir>$(SolutionDir)\build\bin\</OutDir>
+    <IntDir>$(SolutionDir)\build\intermediate\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)\build\bin</OutDir>
-    <IntDir>$(SolutionDir)\build\intermediate</IntDir>
+    <OutDir>$(SolutionDir)\build\bin\</OutDir>
+    <IntDir>$(SolutionDir)\build\intermediate\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -85,7 +85,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\ext.cpp" />
     <ClCompile Include="src\ext\dearimgui\imgui.cpp" />
     <ClCompile Include="src\ext\dearimgui\imgui_demo.cpp" />
     <ClCompile Include="src\ext\dearimgui\imgui_draw.cpp" />

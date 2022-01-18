@@ -18,6 +18,7 @@ Fluid_Collider_Plane::Fluid_Collider_Plane(const char *name, const glm::vec3 &Q,
 	render_setup();
 }
 
+// Info : Setup collision render primitive data. 
 void Fluid_Collider_Plane::render_setup()
 {
 	prim = new Primitive((name + "Prim").c_str());
@@ -66,7 +67,6 @@ void Fluid_Collider_Plane::eval_collision(std::vector<Particle> &particles)
 	for (Particle &curPt : particles)
 	{
 		float dist = glm::dot((curPt.P - q), N);
-		float thick = 2.f; 
 		float eps = 0.1f;
 
 		switch (type) // Account for Plane Bounds over length or height.

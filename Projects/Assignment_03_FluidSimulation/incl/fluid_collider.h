@@ -14,6 +14,9 @@
 
 struct Particle; 
 
+// Info : A basic polymorphic collider class to implement primtivie collision detection and response 
+//        with passed fluid particles. 
+
 // Base Collider Abstract Base 
 class Fluid_Collider
 {
@@ -45,7 +48,7 @@ public:
 private:
 	void render_setup();
 
-	glm::vec3 q, N; // Q defines start position, not centre. 
+	glm::vec3 q, N; // q defines start position, not center. 
 	float length, height; 
 	Type type; 
 };

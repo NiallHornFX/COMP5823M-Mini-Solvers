@@ -332,7 +332,7 @@ void Viewer::gui_render()
 		ImGui::Text("Fluid Attributes");
 		ImGui::PopStyleColor();
 		ImGui::Text("Particle Count : %d", fluid_object->particles.size());
-		ImGui::Text("Simulation Domain : 0.0 - 10.0 (X,Y)");
+		ImGui::Text("Simulation Domain : [0,10] (X,Y)");
 		ImGui::Text(kern_pres.c_str());
 		ImGui::Text("Mass : %f", fluid_object->particles[0].mass);
 		ImGui::Text("Density :  min = %f | max = %f",  fluid_object->min_dens, fluid_object->max_dens);
@@ -352,7 +352,6 @@ void Viewer::gui_render()
 			fluid_solver->compute_rest = compute_rest;
 		}
 		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 1000.f);
-
 
 		// =================== Rebuild Fluid Object / Solver if change ===================
 		/* Info : as these parameters require rebuilding of the Fluid Object or solver, their state has to be transfered for persitence. 

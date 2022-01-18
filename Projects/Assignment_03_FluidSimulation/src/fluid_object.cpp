@@ -52,7 +52,7 @@ void Fluid_Object::emit_square()
 	float h_dim_x = dim.x * 0.5f, h_dim_y = dim.y * 0.5f; 
 
 	// Compute particle mass
-	float mass = 100.f / std::sqrtf(n_i * n_j);
+	float mass = 100.f / std::sqrtf(float(n_i * n_j));
 	mass = 1.f; // Could compute mass from spacing. 
 
 	for (std::size_t i = 0; i < n_i; ++i)
@@ -193,11 +193,11 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 
 		// Set Uniforms
 		Shader &shad = ren_quad->shader;
-		shad.setInt("pt_count", particles.size());
-		shad.setFloat("radius", surf_scale);
+		shad.setInt("pt_count",     int(particles.size()));
+		shad.setFloat("radius",     surf_scale);
 		shad.setFloat("iso_thresh", iso_thresh);
-		shad.setFloat("min_dens", min_dens);
-		shad.setFloat("max_dens", max_dens);
+		shad.setFloat("min_dens",   min_dens);
+		shad.setFloat("max_dens",   max_dens);
 
 		float spd = glm::sqrt(max_spd);
 		shad.setFloat("max_speed", spd);

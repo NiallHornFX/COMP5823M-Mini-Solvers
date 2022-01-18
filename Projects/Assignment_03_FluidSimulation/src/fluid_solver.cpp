@@ -40,6 +40,7 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data)
 	pressure_kernel  = kernel::SPIKY; 
 	surftens_kernel  = kernel::POLY6;
 	
+	// Setup Colliders within simulation domain [0,10] (x,y). 
 	// ===== Setup Tank Boundary Collider Planes =====
 	Fluid_Collider_Plane *left  = new Fluid_Collider_Plane("Tank_Left",  glm::vec3(2.5f, 0.0f, 0.f), glm::vec3(1.f, 0.f, 0.f),  glm::vec2(0.0f, 5.0f));
 	Fluid_Collider_Plane *right = new Fluid_Collider_Plane("Tank_Right", glm::vec3(7.5f, 0.f, 0.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec2(0.0f, 5.0f));
