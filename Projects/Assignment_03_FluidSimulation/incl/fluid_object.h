@@ -36,7 +36,6 @@ public:
 	Fluid_Object(const glm::vec2 &P = glm::vec2(DEF_XP, DEF_YP), const glm::vec2 &Dim = glm::vec2(DEF_XS, DEF_YS), float Spc = DEF_SPC, float Jitter = DEF_JIT);
 	~Fluid_Object(); 
 
-	// ======== Emit + Reset ========
 	void emit_square();
 	void reset_fluid();
 
@@ -58,7 +57,6 @@ public:
 	float min_cf,    max_cf; 
 	float min_pres,  max_pres;
 	float min_force, max_force;
-
 
 	// ======== Render Primitives ========
 	Primitive *ren_points; // Point Rendering via Primitive

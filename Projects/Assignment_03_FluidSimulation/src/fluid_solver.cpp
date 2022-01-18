@@ -35,6 +35,7 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data)
 	got_neighbours = false; 
 	kernel_radius_sqr = kernel_radius * kernel_radius;
 	use_visc = false, use_surftens = false; 
+	compute_rest = true; 
 	stiffness_coeff = 500.f; 
 
 	// Default Kernels 
@@ -69,28 +70,12 @@ Fluid_Solver::Fluid_Solver(float Sim_Dt, float KernelRad, Fluid_Object *Data)
 void Fluid_Solver::tick(float viewer_Dt)
 {
 	if (!simulate || fluidData->particles.size() == 0) return;
-
-	// Reset Timestep (solvestep) counter (per tick)
 	timestep = 0;
 
-	// Debug use single time/substep 
+	// Single Fixed Step 
 	step(); 
-	frame++;
 
-	// DEBUG - auto reset
-	//if (frame > 30) { simulate = false; reset(); return; }
-
-	/*
-	// Subdivide Accumulated Viewer Timestep into Solver Substeps
-	at += viewer_Dt;
-	while (at > dt)
-	{
-		step(); // Single Timestep
-		at -= dt;
-		timestep++;
-	}
 	frame++;
-	*/
 }
 
 // Info : Reset Fluid Object State and Solver Time State
@@ -260,7 +245,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		if (Pt_i.density  > fluidData->max_dens) fluidData->max_dens = Pt_i.density;
 		if (Pt_i.pressure > fluidData->max_pres) fluidData->max_pres = Pt_i.pressure;
 	}
-	if (frame == 0) rest_density = fluidData->max_dens * 1.01f; // Use as inital rest_dens
+	if (frame == 0 && compute_rest) rest_density = fluidData->max_dens * 1.01f; // Use as inital rest_dens
 
 	// Debug Ensure no particle has zero density...
 	//if (fluidData->min_dens == 0.f) throw std::runtime_error("0 Dens Error");

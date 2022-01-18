@@ -1158,7 +1158,7 @@ void main()
 	// Scale to (0-10, XY to match simulation domain space).
 	uv *= 10.0; 
 	
-	// Loop through particles, eval implicit function
+	// Loop through particles, accum metaball fields
 	float val = 0.0;
 	for (int p = 0; p < pt_count; ++p)
 	{

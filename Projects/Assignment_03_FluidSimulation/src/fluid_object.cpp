@@ -159,7 +159,7 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 		ren_points->update_data_position_col(pos, col);
 
 		// Call Render Points as Verts
-		ren_points->point_size = spc * 75.f * pts_scale;
+		ren_points->point_size = spc * 50.f * pts_scale;
 		ren_points->render();
 	}
 	else if (mode == Render_Type::METABALL)

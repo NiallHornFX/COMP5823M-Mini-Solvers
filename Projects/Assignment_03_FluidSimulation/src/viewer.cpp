@@ -57,7 +57,7 @@ Viewer::Viewer(std::size_t W, std::size_t H, const char *Title)
 	fluid_object = new Fluid_Object;
 	fluid_solver = new Fluid_Solver((1.f / 196.f), 0.5f, fluid_object);
 	fluid_object->solver = fluid_solver; 
-	ren_pts = true, ren_meta = false; 
+	ren_pts = true, ren_meta = true; 
 
 	// Get Neighbours Initally for Hash Debug
 	fluid_solver->get_neighbours();
@@ -99,6 +99,7 @@ void Viewer::tick()
 	update_window();
 
 	// ============= Input Query =============
+	//
 
 	// ============= Simulation =============
 	fluid_solver->tick(dt);
@@ -306,8 +307,10 @@ void Viewer::gui_render()
 	static float jit = DEF_JIT;
 	static float pos [2] = { DEF_XP, DEF_YP };
 	static float dim [2] = { DEF_XS, DEF_YS };
+	float pt_s = 1.f, surf_s = 1.f; 
 
 	// Checkboxes (Local booleans)
+	static bool compute_rest = true;
 	static bool use_visc = false; 
 	static bool use_surftens = false;
 
@@ -369,45 +372,77 @@ void Viewer::gui_render()
 		ImGui::PopStyleColor();
 
 		// Rest Density
+		if (ImGui::Checkbox("Comput Rest Dens", &compute_rest))
+		{
+			fluid_solver->compute_rest = compute_rest;
+		}
 		ImGui::SliderFloat("Rest Dens", &fluid_solver->rest_density, 1.f, 1000.f);
+
+		// Info : as these parameters require rebuilding of the Fluid Object or solver, their state has to be transfered for persitence. 
+		// a bit ugly looking within an imode gui. 
 
 		// Causes rebuild of Fluid_Object if changed (could just reset ideally)
 		if (ImGui::SliderFloat2("Fluid Pos", pos, 0.f, 10.f))
 		{
+			// Dealloc old fobj
 			fluid_solver->simulate = false; 
+			Fluid_Object::Colour_Viz o_c = fluid_object->particle_colour;
+			float o_ps = fluid_object->pts_scale, o_ss = fluid_object->surf_scale;
 			delete fluid_object;
+			// Alloc New fobj
 			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
-			fluid_solver->fluidData = fluid_object; // Pass FluidObj ref to FluidSolver
-			fluid_object->solver = fluid_solver;    // Pass FluidSolver ref to FluidObj
+			fluid_object->particle_colour = o_c;
+			fluid_object->pts_scale = o_ps, fluid_object->surf_scale = o_ss;
+			// Update Pipes 
+			fluid_solver->fluidData = fluid_object;    // Pass FluidObj ref to FluidSolver
+			fluid_object->solver    = fluid_solver;    // Pass FluidSolver ref to FluidObj
 		}
 		if (ImGui::SliderFloat2("Fluid Dim", dim, 0.f, 10.f))
 		{
+			// Dealloc old fobj
 			fluid_solver->simulate = false;
+			Fluid_Object::Colour_Viz o_c = fluid_object->particle_colour;
+			float o_ps = fluid_object->pts_scale, o_ss = fluid_object->surf_scale;
 			delete fluid_object;
+			// Alloc New fobj
 			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
-			fluid_solver->fluidData = fluid_object; // Pass FluidObj ref to FluidSolver
-			fluid_object->solver = fluid_solver;    // Pass FluidSolver ref to FluidObj
+			fluid_object->particle_colour = o_c;
+			fluid_object->pts_scale = o_ps, fluid_object->surf_scale = o_ss;
+			// Update Pipes 
+			fluid_solver->fluidData = fluid_object;    // Pass FluidObj ref to FluidSolver
+			fluid_object->solver    = fluid_solver;    // Pass FluidSolver ref to FluidObj
 
 		}
 		if (ImGui::SliderFloat("Fluid Spc", &spc, 1e-05f, 0.25f))
 		{
+			// Dealloc old fobj
 			fluid_solver->simulate = false;
-			Fluid_Object::Colour_Viz old_pc = fluid_object->particle_colour;
+			Fluid_Object::Colour_Viz o_c = fluid_object->particle_colour;
+			float o_ps = fluid_object->pts_scale, o_ss = fluid_object->surf_scale;
+			
 			delete fluid_object;
+			// Alloc new fobj
 			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
-			fluid_object->particle_colour = old_pc;
-			fluid_solver->fluidData = fluid_object;  // Pass FluidObj ref to FluidSolver
-			fluid_object->solver = fluid_solver;     // Pass FluidSolver ref to FluidObj
+			fluid_object->particle_colour = o_c;
+			fluid_object->pts_scale = o_ps, fluid_object->surf_scale = o_ss;
+			// Update Pipes 
+			fluid_solver->fluidData = fluid_object;     // Pass FluidObj ref to FluidSolver
+			fluid_object->solver    = fluid_solver;     // Pass FluidSolver ref to FluidObj
 		}
 		if (ImGui::SliderFloat("Fluid Jitter", &jit, 0.f, 1.f))
 		{
+			// Dealloc old fobj
 			fluid_solver->simulate = false;
-			Fluid_Object::Colour_Viz old_pc = fluid_object->particle_colour;
+			Fluid_Object::Colour_Viz o_c = fluid_object->particle_colour;
+			float o_ps = fluid_object->pts_scale, o_ss = fluid_object->surf_scale;
 			delete fluid_object;
+			// Alloc new fobj
 			fluid_object = new Fluid_Object(glm::vec2(pos[0], pos[1]), glm::vec2(dim[0], dim[1]), spc, jit);
-			fluid_object->particle_colour = old_pc;
-			fluid_solver->fluidData = fluid_object; // Pass FluidObj ref to FluidSolver
-			fluid_object->solver = fluid_solver;    // Pass FluidSolver ref to FluidObj
+			fluid_object->particle_colour = o_c;
+			fluid_object->pts_scale = o_ps, fluid_object->surf_scale = o_ss;
+			// Update Pipes 
+			fluid_solver->fluidData = fluid_object;    // Pass FluidObj ref to FluidSolver
+			fluid_object->solver    = fluid_solver;    // Pass FluidSolver ref to FluidObj
 		}
 
 		// Causes rebuild of Fluid_Solver if changed (this is so kernel coeffs can be pre-computed) 
@@ -416,10 +451,14 @@ void Viewer::gui_render()
 			// Store old state and dealloc solver
 			fluid_solver->simulate = false;
 			float dt = fluid_solver->dt, rest_dens = fluid_solver->rest_density, stiff = fluid_solver->stiffness_coeff, g = fluid_solver->gravity, ar = fluid_solver->air_resist;
+			bool b_visc = fluid_solver->use_visc, b_surf = fluid_solver->use_surftens;
+			float f_visc = fluid_solver->k_viscosity, f_st = fluid_solver->k_surftens;
 			delete fluid_solver;
-			// Alloc new solver with updated kernel size
+			// Alloc new solver with updated kernel size and old state. 
 			fluid_solver = new Fluid_Solver(dt, kernel_radius, fluid_object);
-			fluid_solver->stiffness_coeff = stiff, fluid_solver->gravity = g, fluid_solver->air_resist = ar;
+			fluid_solver->rest_density = rest_dens;
+			fluid_solver->stiffness_coeff = stiff, fluid_solver->gravity = g, fluid_solver->air_resist = ar, fluid_solver->k_viscosity = f_visc, fluid_solver->k_surftens = f_st; 
+			fluid_solver->use_visc = b_visc, fluid_solver->use_surftens = b_surf;
 			fluid_object->solver = fluid_solver; // Pass FluidSolver ref to FluidObj
 		}
 

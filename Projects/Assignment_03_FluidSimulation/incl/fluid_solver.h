@@ -76,6 +76,8 @@ public:
 	Spatial_Grid *accel_grid; 
 	bool got_neighbours; 
 
+	bool compute_rest;
+
 	// Kernel Selection
 	kernel pressure_kernel, surftens_kernel;
 

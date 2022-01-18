@@ -48,7 +48,7 @@ void main()
 	// Scale to (0-10, XY to match simulation domain space).
 	uv *= 10.0; 
 	
-	// Loop through particles, eval implicit function
+	// Loop through particles, accum metaball fields
 	float val = 0.0;
 	for (int p = 0; p < pt_count; ++p)
 	{
@@ -57,10 +57,8 @@ void main()
 		vec2 r_pt = uv - pt.pos;
 		val += meta(r_pt, rad);  
 	}
-	//if (val == 0.0) discard;
 	if (val >= 0.5) // Iso threshold
 	{
 		frag_color = vec4(val, val, val, 1.0); 
 	} 
-
 }
