@@ -216,8 +216,8 @@ void Fluid_Solver::get_neighbours()
 }
 
 // ================================== Eval Attrib Functions ===============================
-// Loop over particle neighbours (within hash cell) calc density using passed smoothing kernel func ptr. 
-// Can be safely multithreaded 
+// Info : Loop over particle neighbours and calcuate density using passed smoothing kernel func ptr. 
+// From this density, using the equation of state, calculate pressure.  
 
 void Fluid_Solver::compute_dens_pres(kernel_func w)
 {	
@@ -238,7 +238,7 @@ void Fluid_Solver::compute_dens_pres(kernel_func w)
 		}
 		Pt_i.density = dens_tmp; 
 
-		// Calc Pressure using equation of state : pres_i = k (rho - rho_0). No Negative Pressure (Use Surf Tens force).
+		// Calc Pressure using equation of state : pres_i = k(rho - rho_0). No Negative Pressure (Use Surf Tens force).
 		Pt_i.pressure = std::max((stiffness_coeff * (Pt_i.density - rest_density)), 0.f); 
 
 		// Store Min/Max Dens (Debug) 
@@ -317,6 +317,7 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 		// Check if colour field gradient length is non zero
 		if (!glm::dot(col_grad, col_grad)) force_surftension = glm::vec3(0.f);
 		// Should be neg sigma, but must have a wrong sign somewhere ... 
+		// sigma * lapl * unit grad
 		else force_surftension = k_surftens * col_lapl * glm::vec3(glm::normalize(col_grad), 0.f);
 	}
 
@@ -327,7 +328,7 @@ glm::vec3 Fluid_Solver::eval_forces(Particle &Pt_i, kernel_grad_func w_pres_grad
 	return acc_force;
 }
 
-// Info : Calc Colour Field of fluid particls
+// Info : Calc Colour Field of fluid particles to use for surface tension force computation
 void Fluid_Solver::calc_colour_field()
 {
 	fluidData->min_cf = 1e06f, fluidData->max_cf = 0.f;
@@ -351,7 +352,7 @@ void Fluid_Solver::calc_colour_field()
 
 // ================================== Util Functions ===============================
 // Info : Calc an estimate of the rest density from the maxium density value * some offset. 
-//        This can be called external of solve step, to get inital estimate of rest_density. 
+// This is also caluclated on frame 0 within compute_dens_pres() if enabled. 
 void Fluid_Solver::calc_restdens()
 {
 	get_neighbours();
@@ -360,8 +361,7 @@ void Fluid_Solver::calc_restdens()
 }
 
 // ================================== Kernel Functions ===============================
-// Info : Smoothing Kernel functions and their derivatives, using pre-caluclated scalar coefficents, based on
-// kernel radius h.
+// Info : Smoothing Kernel functions and their derivatives, using pre-caluclated scalar coefficents using smoothing radius 'h'.
 
 // ========== Smooting Kernel - Poly6 ==========
 float Fluid_Solver::kernel_poly6(const glm::vec3 &r)
