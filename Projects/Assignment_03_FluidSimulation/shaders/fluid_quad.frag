@@ -12,7 +12,9 @@ out vec4 frag_color;
 uniform int pt_count;
 uniform float min_dens; 
 uniform float max_dens;
+uniform float max_speed; 
 uniform float radius; 
+uniform float iso_thresh;
 
 // ========== Particle Data ==========
 struct particle
@@ -50,15 +52,27 @@ void main()
 	
 	// Loop through particles, accum metaball fields
 	float val = 0.0;
+	float spd;
+	int count = 0;
 	for (int p = 0; p < pt_count; ++p)
 	{
 		particle pt = pts[p];
 		float rad = fit(pt.dens, min_dens, max_dens, 0.25, 0.35) * radius;
 		vec2 r_pt = uv - pt.pos;
-		val += meta(r_pt, rad);  
+		float m = meta(r_pt, rad);  
+		val += m;
+		// Accumulate Speed for this fragment.
+		if (m > 0.1) {spd += length(vec2(pt.vel)); count++;}
 	}
-	if (val >= 0.5) // Iso threshold
+	if (val >= iso_thresh) // Iso threshold
 	{
-		frag_color = vec4(val, val, val, 1.0); 
+		// Speed colour
+		spd /= float(count); 
+		float t = fit(spd, 0.1, max_speed, 0, 1.0); 
+		vec3 col = mix(vec3(0.05, 0.05, 1.0), vec3(1,1,1), t);
+		
+		frag_color = vec4(col, 1.0); 
+		
+		//frag_color = vec4(val, val, val, 1.0); 
 	} 
 }

@@ -1179,6 +1179,8 @@ The total field value of the metaballs for each particle is accumulated for each
 
 Note that the rasterized quad screen space UV's are scaled into the simulation domain $[0, 10]$ (x,y) so that when the per particle positions are subtracted as the metaball centres they are within the same space.  
 
+The issue with this is that it slows down heavily when the particle count is increases, which makes sense because each particle has to be looped over and metaball function evaluated per fragment. This is where rasterized to a grid with a fixed res on the host makes sense and then the GPU is only doing texture reads. But it will be ok for the time I have, the solver itself is pretty un-optimized so I cannot see it needing to demo too many particles and if we do we can just turn of surface rendering. 
+
 ###### Rendering via Grid Rasterize Density (2D Grid)
 
 Could also rasterize to a 2D Grid based on per cell density using some interpolation (bilinear most likely). We could then even use the density to define an isocontour of the free surface. 

@@ -56,7 +56,7 @@ public:
 	float min_dens,  max_dens;
 	float min_cf,    max_cf; 
 	float min_pres,  max_pres;
-	float min_force, max_force;
+	float max_spd; 
 
 	// ======== Render Primitives ========
 	Primitive *ren_points; // Point Rendering via Primitive
@@ -68,6 +68,7 @@ public:
 	enum Colour_Viz { Velocity = 0, Density, Pressure, Colour, GridCell };
 	Colour_Viz particle_colour;
 	float pts_scale, surf_scale; 
+	float iso_thresh; 
 
 	// OpenGL Data
 	GLuint ssbo_pts; 

@@ -136,6 +136,9 @@ void Fluid_Solver::integrate()
 	// Ext Forces 
 	glm::vec3 g(0.f, gravity, 0.f); 
 
+	// Reset max speed
+	fluidData->max_spd = 0.f;
+
 #if INTEGRATE_LEAPFROG == 0
 	// Semi Implicit Euler Integration (testing)
 	for (Particle &p : fluidData->particles)
@@ -171,10 +174,9 @@ void Fluid_Solver::integrate()
 		// Integrate V
 		pt.V += 0.5f * (a_0 + a_1) * dt; 
 
-		// Store Min/Max Attribs, post integration
-		float f_s = glm::dot(a_1, a_1);
-		if (f_s < fluidData->min_force) fluidData->min_force = f_s; 
-		if (f_s > fluidData->max_force) fluidData->max_force = f_s; 
+		// Store max speed sqrd
+		float f_s = glm::dot(pt.V, pt.V);
+		if (f_s > fluidData->max_spd) fluidData->max_spd = f_s; 
 	} 
 #endif
 }

@@ -188,20 +188,6 @@ void Viewer::render_prep()
 	//glEnable(GL_DEPTH_TEST); // 2D No depth in viewer app.
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	// ============= Create Viewer Primtivies =============
-	// Axis
-	axis = new Primitive("axis");
-	float data[24] =
-	{
-		0.f,  0.f, 0.f, 1.f, 0.f, 0.f, 
-		.5f,  0.f, 0.f, 1.f, 0.f, 0.f, 
-		0.f,  0.f, 0.f, 0.f, 1.f, 0.f, 
-		0.f,  .5f, 0.f, 0.f, 1.f, 0.f 
-	};
-	axis->set_data_mesh(data, 6);
-	axis->set_shader("../../shaders/basic.vert", "../../shaders/basic.frag");
-	axis->mode = Render_Mode::RENDER_LINES;
 }
 
 // Render Operations
@@ -363,7 +349,6 @@ void Viewer::gui_render()
 		ImGui::Text("Density :  min = %f | max = %f",  fluid_object->min_dens, fluid_object->max_dens);
 		ImGui::Text("Pressure : min = %f | max = %f", fluid_object->min_pres, fluid_object->max_pres);
 		ImGui::Text("ColorFld : min = %f | max = %f", fluid_object->min_cf,   fluid_object->max_cf);
-		//ImGui::Text("Forcesqr : min = %f | max = %f", fluid_solver->min_force, fluid_solver->max_force);
 
 		// ========== Fluid State Controls ==========
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
@@ -485,7 +470,7 @@ void Viewer::gui_render()
 		ImGui::Text("Internal Forces");
 		ImGui::PopStyleColor();
 		// Pressure Gas Constant / Stiffness 
-		ImGui::SliderFloat("Stiffness", &fluid_solver->stiffness_coeff, 0.f, 1000.f);
+		ImGui::SliderFloat("Pressure", &fluid_solver->stiffness_coeff, 0.f, 1000.f);
 		// Viscosity
 		if (ImGui::Checkbox("Use Viscosity", &use_visc))
 		{
@@ -494,12 +479,12 @@ void Viewer::gui_render()
 		}
 		ImGui::SliderFloat("Viscosity", &fluid_solver->k_viscosity, 0.f, 100.f);
 		// Surface Tension
-		if (ImGui::Checkbox("Use SurfTens", &use_surftens))
+		if (ImGui::Checkbox("Use Surface Tension", &use_surftens))
 		{
 			fluid_solver->use_surftens = !fluid_solver->use_surftens;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		ImGui::SliderFloat("SurfTens", &fluid_solver->k_surftens, 0.f, 100.f);
+		ImGui::SliderFloat("Surface Tension", &fluid_solver->k_surftens, 0.f, 100.f);
 		// -------- External Forces 
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
 		ImGui::Text("External Forces");
@@ -514,16 +499,16 @@ void Viewer::gui_render()
 		ImGui::PopStyleColor();
 
 		// Render Flags
-		// Particles
-		ImGui::Checkbox("Render Particles",  &ren_pts);
-		ImGui::SliderFloat("Pt Radius",      &fluid_object->pts_scale, 0.1f, 5.f);	
 		// Surface
 		ImGui::Checkbox("Render Surface", &ren_meta);
 		ImGui::SliderFloat("Surf Radius", &fluid_object->surf_scale, 0.1f, 5.f);
-
+		ImGui::SliderFloat("Iso Threshold", &fluid_object->iso_thresh, 0.1f, 2.0f);
+		// Particles
+		ImGui::Checkbox("Render Particles",  &ren_pts);
+		ImGui::SliderFloat("Pt Radius",      &fluid_object->pts_scale, 0.1f, 5.f);	
 		// Particle Colours 
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(250, 200, 150, 255));
-		ImGui::Text("Point Mode");
+		ImGui::Text("Particle Mode");
 		ImGui::PopStyleColor();
 		if (ImGui::Button("Colour : Velocity"))
 		{
@@ -548,13 +533,6 @@ void Viewer::gui_render()
 		if (ImGui::Button("Colour : Cells"))
 		{
 			fluid_object->particle_colour = Fluid_Object::Colour_Viz::GridCell;
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
-
-		// Draw Axis
-		if (ImGui::Button("Draw Origin Axis"))
-		{
-			draw_axis = !draw_axis;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 

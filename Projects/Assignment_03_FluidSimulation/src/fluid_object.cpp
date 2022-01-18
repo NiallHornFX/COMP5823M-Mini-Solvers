@@ -20,6 +20,8 @@ Fluid_Object::Fluid_Object(const glm::vec2 &P, const glm::vec2 &Dim, float Spc, 
 	min_dens = 0.f, max_dens = 0.f;
 	min_pres = 0.f, max_pres = 0.f;
 	min_cf   = 0.f, max_cf   = 0.f;
+	max_spd = 0.f; 
+	iso_thresh = 0.5f; 
 }
 
 Fluid_Object::~Fluid_Object()
@@ -38,7 +40,7 @@ void Fluid_Object::reset_fluid()
 		pt = Particle(pt.P, mass, pt.id);
 	}
 	// Reset Attrib Ranges
-	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f; min_force = 0.f, max_force = 0.f;
+	min_dens = 0.f, max_dens = 0.f, min_pres = 0.f, max_pres = 0.f, max_spd = 0.f; 
 }
 
 // Info : Emit Fluid in square at P, defined by Dim with spacing h.
@@ -189,8 +191,12 @@ void Fluid_Object::render(Render_Type mode, const glm::mat4 &ortho)
 		Shader &shad = ren_quad->shader;
 		shad.setInt("pt_count", particles.size());
 		shad.setFloat("radius", surf_scale);
+		shad.setFloat("iso_thresh", iso_thresh);
 		shad.setFloat("min_dens", min_dens);
 		shad.setFloat("max_dens", max_dens);
+
+		float spd = glm::sqrt(max_spd);
+		shad.setFloat("max_speed", spd);
 
 		// Render
 		ren_quad->render();
