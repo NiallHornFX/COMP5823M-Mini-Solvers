@@ -161,7 +161,7 @@ $$
 
 (Derivation Later ...)
 $$
-\nabla\omega_{spiky} (r, h) = -({45\over\pi h^6} (h-||r||)^2) {\vec{r}\over ||r||}  
+\nabla\omega_{spiky} (r, h) = -({45\over\pi h^6} (h-||r||)^2) {\vec{r}\over ||r||}
 $$
 
 
