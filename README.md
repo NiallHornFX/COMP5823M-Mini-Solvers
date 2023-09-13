@@ -1,26 +1,19 @@
-### COMP5823MM : Animation & Simulation
+#### COMP5823M : Animation & Simulation - Projects
 
-#### MSc High Performance Graphics (2021-2022) - Niall Horn - University Of Leeds 
-
-This Repo is a tracked repo of :
- ***<MSc_HPG_21-22/Modules/COMP5823M_Animation-Simulation/_module>***
-Which contains the project and notes for this university module.
-
-Please note, any submissions are tracked in their own separate git repos, located locally within :
- ***<MSc_HPG_21-22/Modules/COMP5823M_Animation-Simulation/_submission>***
-
-Within the './_module' subdir there are two subdirectories, './_module/Projects' and './_module/Notes' which contain programming projects and related notes respectively. 
-
-This git repo is explicitly for ***my own use***, as it contains both my formative and summative assignments along with my own lecture notes (along with provided lecture material).
+###### Niall Horn - University Of Leeds (2021)
 
 ____
 
-##### Project Binaries:
+#### Summary
 
-Make sure each Modules, Projects build directories are excluded from their own submodule via '.gitignore' files, so we dont push binaries / intermediates to remote repo. 
+This repository contains 3 projects which I completed as coursework for COMP5823M. These are based around the topic animation and simulation within computer graphics. This module was taken during my MSc at University of Leeds in 2021-2022. 
 
-##### Module - Notes 
+Due to my prior experience in this domain, I found the scope of these projects quite trivial. However I used this as a chance to try and write, three clean and efficient applications. 
 
-All notes are stored as either ''*.md' (Markdown) | '*.tex' (Tex / Latex)| '*.txt' (Standard UTF-8 text) files. 
+#### Projects
 
-Provided lecture slides are ".pdf" based. 
+Each project has a `README.md` which provides more details about their original papers, algorithms used and implementation into C++ code. 
+
+* **Kinematic Viewer:** A utility to view BVH motion capture data, using forward kinematics.
+* **Cloth Solver:** A Mass-Spring based cloth solver, with real-time rendering. 
+* **2D Fluid Solver:** A 2D Smoothed Particle Hydrodynamics (SPH) fluid solver, with Wyvill/Gaussian based metaball surfacing. 
