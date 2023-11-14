@@ -16,19 +16,19 @@ Each project has a `README.md` which provides more details about their original 
 
 ### Kinematic Viewer
 
-<img src="D:\DEV\_University\MSc_HPG_21-22\Modules\COMP5823M_Animation-Simulation\_public\A1_Screenshot.png" alt="A1_Screenshot" style="zoom:30%;" />
+<img src="A1_Screenshot.png" alt="A1_Screenshot" width='512'/>
 
 This application implements a small utility to view BVH motion capture data, which is assembled utilising forward kinematics. 
 
 ### 3D Mass-Spring Cloth Solver
 
-<img src="D:\DEV\_University\MSc_HPG_21-22\Modules\COMP5823M_Animation-Simulation\_public\A2_Screenshot.png" alt="A2_Screenshot" style="zoom:30%;" />
+<img src="A2_Screenshot.png" alt="A2_Screenshot" width='512'/>
 
 A pretty simple mass-spring based cloth solver, implementing parametric collisions, basic friction handling, hybrid time-stepping [1] and a basic modern OpenGL based renderer. 
 
 ### 2D Smoothed Particle Hydrodynamics (SPH) Fluid Solver
 
-<img src="D:\DEV\_University\MSc_HPG_21-22\Modules\COMP5823M_Animation-Simulation\_public\A3_Screenshot.png" alt="A3_Screenshot" style="zoom:30%;" />
+<img src="A3_Screenshot.png" alt="A3_Screenshot" width='512'/>
 
 A 2D SPH fluid solver, utilising a hash + explicit grid [3] for particle neighbour searching, Leapfrog Symplectic Integration, Wyvill/Gaussian based 'Metaball' [4] surfacing and a selection of different kernel functions for approximating particle derivatives. Pressure is computed utilising a simple equation of state. Modern OpenGL is used for rendering. 
 
